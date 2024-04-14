@@ -12,6 +12,7 @@
 	"author": "",
 	"license": "MIT",
 	"devDependencies": {
+		"@types/lodash": "^4.17.0",
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
@@ -25,6 +26,7 @@
 		"@socialgouv/dila-api-client": "^1.2.4",
 		"debug": "^4.3.4",
 		"dotenv": "^16.4.5",
+		"lodash": "^4.17.21",
 		"mustache": "^4.2.0",
 		"simple-oauth2": "^5.0.0"
 	}

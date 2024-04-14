@@ -8,6 +8,7 @@ export interface LegifranceIntegrationSettings {
 	apiHost: string;
 	tokenHost: string;
 	template: string;
+	fileTitle:string;
 }
 
 const DEFAULT_SETTINGS: LegifranceIntegrationSettings = {
@@ -35,7 +36,8 @@ const DEFAULT_SETTINGS: LegifranceIntegrationSettings = {
 	
 	## Décision 
 	
-	{{decision}}`
+	{{decision}}`,
+	fileTitle: '{{annee}}'
 }
 
 export default class LegifranceIntegrationPlugin extends Plugin {
@@ -49,12 +51,15 @@ export default class LegifranceIntegrationPlugin extends Plugin {
 		process.env.TOKEN_HOST = this.settings.tokenHost;
 
 		const { searchText } = await import('api/utilities');
-		const { ChercherTexteModal } = await import('modals/SearchModal');
+		const { SearchCaseModal } = await import('modals/SearchModal');
 
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('scale', 'Légifrance intégration', (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
-
+			const untitledFile = this.app.vault.getAbstractFileByPath("Untitled.md");
+			const wsLeaf = this.app.workspace.getLeaf();
+			console.log(untitledFile);
+			wsLeaf.openFile(untitledFile);
 		});
 
 		// Perform additional things with the ribbon
@@ -65,7 +70,7 @@ export default class LegifranceIntegrationPlugin extends Plugin {
 			id: 'create-note-legi',
 			name: 'Créer une nouvelle fiche juridique.',
 			callback: () => {
-				new ChercherTexteModal(this.app, this.settings).open();
+				new SearchCaseModal(this.app, this.settings).open();
 			}
 		});
 
@@ -150,6 +155,8 @@ class LegifranceSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 		
+		new Setting(containerEl).setName("Personnalisation").setHeading();
+
 		new Setting(containerEl)
 			.setName('Template')
 			.setDesc('Template')
@@ -158,6 +165,17 @@ class LegifranceSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.template)
 				.onChange(async (value) => {
 					this.plugin.settings.template = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Nom du fichier')
+			.setDesc('Nom du fichier')
+			.addText(text => text
+				.setPlaceholder("Set Token Host")
+				.setValue(this.plugin.settings.fileTitle)
+				.onChange(async (value) => {
+					this.plugin.settings.fileTitle = value;
 					await this.plugin.saveSettings();
 				}));
 	}

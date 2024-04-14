@@ -3,7 +3,7 @@ import { MontrerResultatsModal } from "./ShowModal";
 import { searchText } from "api/utilities";
 import { LegifranceIntegrationSettings } from "main";
 
-export class ChercherTexteModal extends Modal {
+export class SearchCaseModal extends Modal {
 	onSubmit: (result: string) => void;
 	valeurRecherche: string;
 	fond: string;
@@ -54,5 +54,20 @@ export class ChercherTexteModal extends Modal {
 	onClose() {
 		const {contentEl} = this;
 		contentEl.empty();
+	}
+}
+
+
+export class SearchStatuteModal extends Modal {
+	constructor(app: App) {
+		super(app);
+	}
+
+	onOpen(): void {
+		
+	}
+
+	onClose(): void {
+		
 	}
 }

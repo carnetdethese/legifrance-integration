@@ -1,13 +1,13 @@
 import { newNote } from "creation/newNote";
 import { App, SuggestModal, Notice } from "obsidian";
-import { Decisions, findLink, getDecisionInfo } from "abstracts/decisions" ;
+import { Decision, findLink, getDecisionInfo } from "abstracts/decisions" ;
 import { LegifranceIntegrationSettings } from "main";
 
-export class MontrerResultatsModal extends SuggestModal<Decisions> {
+export class MontrerResultatsModal extends SuggestModal<Decision> {
     results:object;
 	settings:LegifranceIntegrationSettings;
 	valeurRecherche:string;
-	ALL_DECISIONS:Decisions[];
+	ALL_DECISIONS:Decision[];
 
 	constructor(app: App, settings:LegifranceIntegrationSettings, content:object, valeurRecherche:string) {
 		super(app);
@@ -17,12 +17,13 @@ export class MontrerResultatsModal extends SuggestModal<Decisions> {
 		this.valeurRecherche = valeurRecherche || "";
 	}
 
-	// fonction qui construit une liste d'objet Decisions permettant d'être rendu par la fonction de rendu plus bas. 
+	// fonction qui construit une liste d'objet Decision permettant d'être rendu par la fonction de rendu plus bas. 
 
     getResults(data:object) {
-		let resultsDic:Decisions[] = [];
+		const resultsDic:Decision[] = [];
 		let contenuTexte:string;
 		let origine:string;
+
         if (data && data.results && Array.isArray(data.results)) {
 			data.results.forEach(result => {
 				// Process each search result here
@@ -45,23 +46,24 @@ export class MontrerResultatsModal extends SuggestModal<Decisions> {
     }
 
 	// Tri des résultats - reprise de la doc.
-	getSuggestions(query: string): Decisions[] {
-		return this.ALL_DECISIONS.filter((decision:Decisions) =>
+	getSuggestions(query: string): Decision[] {
+		return this.ALL_DECISIONS.filter((decision:Decision) =>
 			decision.titre.toLowerCase().includes(query.toLowerCase())
 		);
 	}
 	
 	// Renders each suggestion item.
-	renderSuggestion(decision: Decisions, el: HTMLElement) {
+	renderSuggestion(decision: Decision, el: HTMLElement) {
 		el.createEl("div", { text: decision.titre  });
 		el.createEl("small", { text: decision.texte });
 	}
 	
 	// Perform action on the selected suggestion.
-	async onChooseSuggestion(decision: Decisions, evt: MouseEvent | KeyboardEvent) {
-		let selectedDecision:Decisions = this.ALL_DECISIONS.find(elt => elt.id == decision.id);
+	async onChooseSuggestion(decision: Decision, evt: MouseEvent | KeyboardEvent) {
+		let selectedDecision:Decision = this.ALL_DECISIONS.find(elt => elt.id == decision.id);
 		selectedDecision = await getDecisionInfo(selectedDecision, this.valeurRecherche);
-		new newNote(this.app, this.settings.template, selectedDecision).createNote(decision.id);
+		console.log(selectedDecision);
+		new newNote(this.app, this.settings.template, this.settings.fileTitle, selectedDecision).createNote();
 		new Notice(`Selected ${decision.id}`);
 	}
 }
