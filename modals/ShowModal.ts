@@ -32,7 +32,7 @@ export class MontrerResultatsModal extends SuggestModal<Decisions> {
 						resultsDic.push({
 							titre: entree.title.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**"), // je n'ai pas encore trouvé de solution pour afficher les éléments avec le tag <mark> de manière jolie. Visiblement, les chaines de caratères demeurent au format brut dans le Modal.
 							id: entree.id,
-							texte: contenuTexte.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**"),
+							texte: contenuTexte,
 							lien: findLink(origine, entree.id),
 							origin: origine
 						});
@@ -61,7 +61,6 @@ export class MontrerResultatsModal extends SuggestModal<Decisions> {
 	async onChooseSuggestion(decision: Decisions, evt: MouseEvent | KeyboardEvent) {
 		let selectedDecision:Decisions = this.ALL_DECISIONS.find(elt => elt.id == decision.id);
 		selectedDecision = await getDecisionInfo(selectedDecision, this.valeurRecherche);
-		console.log(selectedDecision.texteIntegral);
 		new newNote(this.app, this.settings.template, selectedDecision).createNote(decision.id);
 		new Notice(`Selected ${decision.id}`);
 	}
