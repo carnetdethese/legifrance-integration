@@ -1,4 +1,3 @@
-import { newNote } from 'creation/newNote';
 import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
@@ -53,9 +52,9 @@ export default class LegifranceIntegrationPlugin extends Plugin {
 		const { ChercherTexteModal } = await import('modals/SearchModal');
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
+		const ribbonIconEl = this.addRibbonIcon('scale', 'Légifrance intégration', (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
-			
+
 		});
 
 		// Perform additional things with the ribbon

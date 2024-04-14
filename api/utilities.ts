@@ -2,8 +2,6 @@ import { DilaApiClient } from '@socialgouv/dila-api-client'
 
 const dilaApi = new DilaApiClient();
 
-
-
 function rechercheSimple(valeur:string, fond:string) {
   return {
     "recherche": {
@@ -35,10 +33,17 @@ export async function searchText(search:string, fond:string) {
     method: "POST",
     params: rechercheSimple(search, fond)
   }
-
-  const results = await dilaApi.fetch(requestOptions);
-
-  return results
+  return await dilaApi.fetch(requestOptions)
 }
 
-
+export async function fetchText(id:string, valeurRecherche:string) {
+  const requestOptions = {
+    path: "/consult/juri",
+    method: "POST",
+    params: {
+      "textId": id,
+      "searchedString": valeurRecherche
+    }};
+    
+  return await dilaApi.fetch(requestOptions)
+}

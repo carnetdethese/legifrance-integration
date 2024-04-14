@@ -47,8 +47,7 @@ export class ChercherTexteModal extends Modal {
 					.onClick(async () => {
 						this.close();
                         this.dicRecherche = await searchText(this.valeurRecherche, this.fond);
-						console.log(this.dicRecherche);
-                        new MontrerResultatsModal(this.app, this.settings, this.dicRecherche).open();
+                        new MontrerResultatsModal(this.app, this.settings, this.dicRecherche, this.valeurRecherche).open();
 					}));
 	}
 

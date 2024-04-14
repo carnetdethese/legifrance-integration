@@ -1,18 +1,20 @@
 import { newNote } from "creation/newNote";
 import { App, SuggestModal, Notice } from "obsidian";
-import { Decisions, findLink } from "abstracts/decisions" ;
+import { Decisions, findLink, getDecisionInfo } from "abstracts/decisions" ;
 import { LegifranceIntegrationSettings } from "main";
 
 export class MontrerResultatsModal extends SuggestModal<Decisions> {
     results:object;
 	settings:LegifranceIntegrationSettings;
+	valeurRecherche:string;
 	ALL_DECISIONS:Decisions[];
 
-	constructor(app: App, settings:LegifranceIntegrationSettings, content:object, ) {
+	constructor(app: App, settings:LegifranceIntegrationSettings, content:object, valeurRecherche:string) {
 		super(app);
         this.results = content;
 		this.settings = settings;
 		this.ALL_DECISIONS = this.getResults(content);
+		this.valeurRecherche = valeurRecherche || "";
 	}
 
 	// fonction qui construit une liste d'objet Decisions permettant d'être rendu par la fonction de rendu plus bas. 
@@ -36,7 +38,6 @@ export class MontrerResultatsModal extends SuggestModal<Decisions> {
 						});
 					});
 			});
-			console.log(resultsDic);
 		} else {
 			console.error('Réponse invalide ou manquante à la requête.');
 		}
@@ -57,8 +58,10 @@ export class MontrerResultatsModal extends SuggestModal<Decisions> {
 	}
 	
 	// Perform action on the selected suggestion.
-	onChooseSuggestion(decision: Decisions, evt: MouseEvent | KeyboardEvent) {
+	async onChooseSuggestion(decision: Decisions, evt: MouseEvent | KeyboardEvent) {
 		let selectedDecision:Decisions = this.ALL_DECISIONS.find(elt => elt.id == decision.id);
+		selectedDecision = await getDecisionInfo(selectedDecision, this.valeurRecherche);
+		console.log(selectedDecision.texteIntegral);
 		new newNote(this.app, this.settings.template, selectedDecision).createNote(decision.id);
 		new Notice(`Selected ${decision.id}`);
 	}
