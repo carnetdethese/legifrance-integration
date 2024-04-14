@@ -62,7 +62,6 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 	async onChooseSuggestion(decision: Decision, evt: MouseEvent | KeyboardEvent) {
 		let selectedDecision:Decision = this.ALL_DECISIONS.find(elt => elt.id == decision.id);
 		selectedDecision = await getDecisionInfo(selectedDecision, this.valeurRecherche);
-		console.log(selectedDecision);
 		new newNote(this.app, this.settings.template, this.settings.fileTitle, selectedDecision).createNote();
 		new Notice(`Selected ${decision.id}`);
 	}

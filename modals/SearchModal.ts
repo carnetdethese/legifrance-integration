@@ -46,7 +46,7 @@ export class SearchCaseModal extends Modal {
 					.setCta()
 					.onClick(async () => {
 						this.close();
-                        this.dicRecherche = await searchText(this.valeurRecherche, this.fond);
+                        this.dicRecherche = await searchText(this.valeurRecherche, this.fond, this.settings.maxResults);
                         new MontrerResultatsModal(this.app, this.settings, this.dicRecherche, this.valeurRecherche).open();
 					}));
 	}

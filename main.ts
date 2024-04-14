@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
 
@@ -9,6 +9,7 @@ export interface LegifranceIntegrationSettings {
 	tokenHost: string;
 	template: string;
 	fileTitle:string;
+	maxResults:number;
 }
 
 const DEFAULT_SETTINGS: LegifranceIntegrationSettings = {
@@ -37,7 +38,8 @@ const DEFAULT_SETTINGS: LegifranceIntegrationSettings = {
 	## Décision 
 	
 	{{decision}}`,
-	fileTitle: '{{annee}}'
+	fileTitle: '{{annee}}',
+	maxResults: 20
 }
 
 export default class LegifranceIntegrationPlugin extends Plugin {
@@ -178,6 +180,20 @@ class LegifranceSettingTab extends PluginSettingTab {
 					this.plugin.settings.fileTitle = value;
 					await this.plugin.saveSettings();
 				}));
+
+		new Setting(containerEl)
+			.setName('Nombre de résultats maximum')
+			.setDesc('Nombre de résultats maximum')
+			.addSlider(cb => cb
+				.setLimits(5, 50, 5)
+				.setValue(this.plugin.settings.maxResults)
+				.onChange(async (value) => {
+					this.plugin.settings.maxResults = value;
+					await this.plugin.saveSettings();
+				})
+				.setDynamicTooltip()
+
+			);
 	}
 }
 

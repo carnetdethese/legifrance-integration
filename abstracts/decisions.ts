@@ -1,6 +1,5 @@
 import { fetchText } from "api/utilities";
 import { htmlToMarkdown } from "obsidian";
-import { upperFirst, lowerCase } from "lodash";
 
 export interface Decision {
 	titre: string;
@@ -29,7 +28,7 @@ const codeFond = new Map<string, string>([
 	["JURI", "/juri/id/"]
 ]);
 
-export const codeJuridiction = new Map<string, string>([
+const codeJuridiction = new Map<string, string>([
 	["CONSEIL_ETAT", "Conseil d'État"],
 	["Conseil constitutionnel", "Conseil constitutionnel"],
 	["Cour de cassation", "Cour de cassation"],
@@ -49,8 +48,6 @@ export async function getDecisionInfo(decision:Decision, valeurRecherche:string)
 	// Variable qui contient la réponse de la requête 
 	const response = await fetchText(decision.id, valeurRecherche); // requête à l'API
 
-	console.log(response);
-
 	// Texte intégral au format markdown
 	infoDecision.texteIntegral = htmlToMarkdown(response.text.texteHtml);
 
@@ -61,10 +58,16 @@ export async function getDecisionInfo(decision:Decision, valeurRecherche:string)
 	infoDecision.annee = dateDec.getFullYear();
 
 	// Juridiction - je passe par une variable Map parce que certaines juridiction ne sont pas formattées comme je le veux !
-	infoDecision.juridiction = upperFirst(lowerCase(response.text.natureJuridiction.replace("_", " ")));
+	if (response.text.natureJuridiction != null) {
+		infoDecision.juridiction = codeJuridiction.get(response.text.natureJuridiction);
+		console.log(infoDecision.juridiction);
+	}
 
 	// La formation de la juridiction
-	infoDecision.formation = upperFirst(lowerCase(response.text.formation.replace("_", " ")));
+	if (response.text.formation != null) {
+		infoDecision.formation = response.text.formation;
+		console.log(infoDecision.formation);
+	}
 
 	// La solution 
 	infoDecision.solution = response.text.solution;

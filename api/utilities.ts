@@ -2,10 +2,10 @@ import { DilaApiClient } from '@socialgouv/dila-api-client'
 
 const dilaApi = new DilaApiClient();
 
-function rechercheSimple(valeur:string, fond:string) {
+function rechercheSimple(valeur:string, fond:string, nbResultat:number) {
   return {
     "recherche": {
-        "pageSize":20,
+        "pageSize":nbResultat,
         "sort": "PERTINENCE",
         "pageNumber": 1,
         "champs": [
@@ -27,11 +27,11 @@ function rechercheSimple(valeur:string, fond:string) {
   }
 }
 
-export async function searchText(search:string, fond:string) {
+export async function searchText(search:string, fond:string, maxResults:number) {
   const requestOptions = {
     path: "/search",
     method: "POST",
-    params: rechercheSimple(search, fond)
+    params: rechercheSimple(search, fond, maxResults)
   }
   return await dilaApi.fetch(requestOptions)
 }
