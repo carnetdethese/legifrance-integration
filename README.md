@@ -50,19 +50,19 @@ ex. `{{titre}}`
 
 Voilà les variables accessibles :
 
--   {{ titre }} - titre de l'entrée. Correspond en général à la citation de la décision
--   {{ id }} - l'identifiant de la décision sur la base de données de Légifrance
--   {{ lien }} - lien vers le site de Légifrance
--   {{ origin }} - Fond dans lequel se trouve la décision
--   {{ texteIntegral }} - Le texte intégral de la décision
--   {{ numero }} - Le numéro de l'affaire, de la décision
--   {{ date }} - Date de la décisions sous la forme YYYY-MM-DD
--   {{ annee }} - Année de la décision
--   {{ juridiction }} - Juridiction qui a rendu la décision
--   {{ formation }} - Formation de la juridction
--   {{ solution }} - Solution de la décision
--   {{ urlCC }} - Lien vers le site du Conseil constitutionnel pour les décisions du Conseil constitutionnel
--   {{ #sommaires }} {{ resume }} {{ /sommaires }} (c'est une liste qui peut contenir plusieurs entrées. La syntaxe ici permet de faire une boucle et d'afficher toutes les entrées) - Liste des sommaires.
+-   `{{ titre }}` - titre de l'entrée. Correspond en général à la citation de la décision
+-   `{{ id }}` - l'identifiant de la décision sur la base de données de Légifrance
+-   `{{ lien }}` - lien vers le site de Légifrance
+-   `{{ origin }}` - Fond dans lequel se trouve la décision
+-   `{{ texteIntegral }}` - Le texte intégral de la décision
+-   `{{ numero }}` - Le numéro de l'affaire, de la décision
+-   `{{ date }}` - Date de la décisions sous la forme YYYY-MM-DD
+-   `{{ annee }}` - Année de la décision
+-   `{{ juridiction }}` - Juridiction qui a rendu la décision
+-   `{{ formation }}` - Formation de la juridction
+-   `{{ solution }}` - Solution de la décision
+-   `{{ urlCC }}` - Lien vers le site du Conseil constitutionnel pour les décisions du Conseil constitutionnel
+-   `{{ #sommaires }} {{ resume }} {{ /sommaires }}` (c'est une liste qui peut contenir plusieurs entrées. La syntaxe ici permet de faire une boucle et d'afficher toutes les entrées) - Liste des sommaires.
 
 ## Comment l'utiliser
 
