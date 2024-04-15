@@ -52,7 +52,7 @@ export class DilaApiClient {
         debug(`fetching route ${routeName} with ${body}...`);
         const token = await this.getAccessToken();
         const url = `${this.apiHost}/${path}`;
-        const data = await (0, node_fetch_1.default)(url, {
+        const data = await node_fetch_1.default(url, {
             body,
             headers: {
                 Authorization: `Bearer ${token}`,
