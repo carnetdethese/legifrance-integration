@@ -1,7 +1,7 @@
 {
 	"id": "legifrance-integration",
 	"name": "Légifrance Intégration",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"minAppVersion": "0.15.0",
 	"description": "Module d'intégration de l'API Légifrance dans l'environnement de travail Obsidian.",
 	"author": "hurj",
