@@ -46,7 +46,7 @@ _Création de la note automatiquement :_
 
 ### Installer le plugin
 
-Pour l'instant, le module n'est pas encore disponible sur l'application elle-même. Vous devez télécharger le dossier ici pour l'installer dans Obsidian (dossier : /.obsidian/plugins/obsidian-legifrance-integration). Pensez à autoriser l'utilisation de module tiers.
+Pour l'instant, le module n'est pas encore disponible sur l'application elle-même. Vous devez télécharger le dossier ici pour l'installer dans Obsidian (dossier : /.obsidian/plugins/legifrance-integration). Pensez à autoriser l'utilisation de module tiers.
 
 Une fois le module validé par l'équipe d'Obsidian, il sera disponible directement depuis l'application.
 
