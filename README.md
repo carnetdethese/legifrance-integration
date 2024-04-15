@@ -68,7 +68,9 @@ Voilà les variables accessibles :
 
 ### Installer le plugin
 
-Pour l'instant, le module n'est pas encore disponible sur l'application elle-même. Vous devez télécharger le dossier ici pour l'installer dans Obsidian (dossier : /.obsidian/plugins/legifrance-integration). Pensez à autoriser l'utilisation de module tiers.
+Pour l'instant, le module n'est pas encore disponible sur l'application elle-même.
+
+Il suffit de télécharger les trois fichiers (`main.js`, `manifest.json`, `style.css`) disponibles sur la dernière version du module ([ici](https://github.com/carnetdethese/legifrance-integration/releases)) et les déplacer dans le dossier : `/.obsidian/plugins/legifrance-integration`. Pensez à autoriser l'utilisation de module tiers dans les paramètres.
 
 Une fois le module validé par l'équipe d'Obsidian, il sera disponible directement depuis l'application.
 
