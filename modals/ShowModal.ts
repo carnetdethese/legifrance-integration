@@ -3,13 +3,26 @@ import { App, SuggestModal, Notice } from "obsidian";
 import { Decision, findLink, getDecisionInfo } from "abstracts/decisions" ;
 import { LegifranceIntegrationSettings } from "main";
 
+
+export interface dataRequest {
+	results: {
+		text: string,
+		origin:string
+	}
+}
+
+interface itemResult {
+	title:string,
+	id:string
+}
+
 export class MontrerResultatsModal extends SuggestModal<Decision> {
     results:object;
 	settings:LegifranceIntegrationSettings;
 	valeurRecherche:string;
 	ALL_DECISIONS:Decision[];
 
-	constructor(app: App, settings:LegifranceIntegrationSettings, content:object, valeurRecherche:string) {
+	constructor(app: App, settings:LegifranceIntegrationSettings, content:dataRequest, valeurRecherche:string) {
 		super(app);
         this.results = content;
 		this.settings = settings;
@@ -19,7 +32,7 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 
 	// fonction qui construit une liste d'objet Decision permettant d'être rendu par la fonction de rendu plus bas. 
 
-    getResults(data:object) {
+    getResults(data:dataRequest) {
 		const resultsDic:Decision[] = [];
 		let contenuTexte:string;
 		let origine:string;
@@ -29,7 +42,7 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 				// Process each search result here
 				contenuTexte = result.text;
 				origine = result.origin;
-				result.titles.forEach(entree => {
+				result.titles.forEach((entree: itemResult) => {
 						resultsDic.push({
 							titre: entree.title.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**"), // je n'ai pas encore trouvé de solution pour afficher les éléments avec le tag <mark> de manière jolie. Visiblement, les chaines de caratères demeurent au format brut dans le Modal.
 							id: entree.id,
@@ -60,9 +73,11 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 	
 	// Perform action on the selected suggestion.
 	async onChooseSuggestion(decision: Decision, evt: MouseEvent | KeyboardEvent) {
-		let selectedDecision:Decision = this.ALL_DECISIONS.find(elt => elt.id == decision.id);
-		selectedDecision = await getDecisionInfo(selectedDecision, this.valeurRecherche);
-		new newNote(this.app, this.settings.template, this.settings.fileTitle, selectedDecision).createNote();
-		new Notice(`Selected ${decision.id}`);
+		if (this.ALL_DECISIONS.find(elt => elt.id == decision.id) !== undefined) {
+			let selectedDecision:Decision = this.ALL_DECISIONS.find(elt => elt.id == decision.id) as Decision; 
+			selectedDecision = await getDecisionInfo(selectedDecision, this.valeurRecherche);
+			new newNote(this.app, this.settings.template, this.settings.fileTitle, selectedDecision).createNote();
+			new Notice(`Selected ${decision.id}`);
+		}
 	}
 }

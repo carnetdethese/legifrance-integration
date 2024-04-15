@@ -36,19 +36,21 @@ export class newNote {
         console.log(filePath);
         const noteContent = Mustache.render(this.template, this.data);
 
-        if (this.app.vault.getFolderByPath("Décisions/" + this.data.juridiction) == null) {
+        if (this.app.vault.getFolderByPath("Décisions/" + this.data.juridiction) === null) {
             console.log("Dossier inexistant.");
             this.app.vault.createFolder("Décisions/" + this.data.juridiction);
         }
 
-        if (this.app.vault.getFileByPath(filePath + ".md") != null) {
+        if (this.app.vault.getFileByPath(filePath + ".md") !== null) {
             filePath + Date.now();
         }
 
         filePath += ".md";
         await this.app.vault.create(filePath, noteContent);
         const abstractFile = this.app.vault.getFileByPath(filePath);
-        await this.app.workspace.getLeaf().openFile(abstractFile);
+        if (abstractFile !== null) {
+            await this.app.workspace.getLeaf().openFile(abstractFile);
+        }
     }
     
 }

@@ -1,6 +1,10 @@
 import { fetchText } from "api/utilities";
 import { htmlToMarkdown } from "obsidian";
 
+interface resumeDecision {
+	resumePrincipal:string;
+}
+
 export interface Decision {
 	titre: string;
 	id: string;
@@ -81,10 +85,9 @@ export async function getDecisionInfo(decision:Decision, valeurRecherche:string)
 	// La solution 
 	infoDecision.solution = response.text.solution;
 
-	// Tentative d'implantation des sommaires
 	infoDecision.sommaires = [];
 
-	response.text.sommaire.forEach(elt => {
+	response.text.sommaire.forEach((elt: resumeDecision) => {
 	if (elt.resumePrincipal) {
 		const content = elt.resumePrincipal;
 		infoDecision.sommaires.push({

@@ -1,4 +1,4 @@
-import { App, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
 
@@ -60,8 +60,9 @@ export default class LegifranceIntegrationPlugin extends Plugin {
 			// Called when the user clicks the icon.
 			const untitledFile = this.app.vault.getAbstractFileByPath("Untitled.md");
 			const wsLeaf = this.app.workspace.getLeaf();
-			console.log(untitledFile);
-			wsLeaf.openFile(untitledFile);
+			if (untitledFile instanceof TFile) {
+				wsLeaf.openFile(untitledFile);
+			}
 		});
 
 		// Perform additional things with the ribbon

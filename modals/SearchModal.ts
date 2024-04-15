@@ -1,8 +1,9 @@
 import { App, Modal, Setting } from "obsidian";
-import { MontrerResultatsModal } from "./ShowModal";
+import { MontrerResultatsModal, dataRequest } from "./ShowModal";
 import { searchText } from "api/utilities";
 import { LegifranceIntegrationSettings } from "main";
 import { codeFond } from "abstracts/decisions";
+
 
 export class SearchCaseModal extends Modal {
 	onSubmit: (result: string) => void;
@@ -10,7 +11,7 @@ export class SearchCaseModal extends Modal {
 	fond: string;
 	settings: LegifranceIntegrationSettings;
 
-	dicRecherche:object;
+	dicRecherche:dataRequest;
 
 	constructor(app: App, settings:LegifranceIntegrationSettings) {
 		super(app);
