@@ -65,3 +65,9 @@ Une fois le module validé par l'équipe d'Obsidian, il sera disponible directem
 -   [ ] Visualisation des documents dans Obsidian dans une fenêtre, sans insertion dans une note.
 -   [ ] Recherche dans tous les fonds disponibles.
 -   [ ] Recherche complexe : intégration des opérateurs booléens.
+
+## Soutien
+
+Si vous souhaitez soutenir le projet, vous le pouvez via ce lien :
+
+<script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script><script type='text/javascript'>kofiwidget2.init('Support Me on Ko-fi', '#29abe0', 'O5O7WXMAR');kofiwidget2.draw();</script>
