@@ -20,9 +20,9 @@ _Recherche simple :_
 
 <img src="./docs/images/recherche-simple.png" width=50% height=50%>
 
-_Affichage des résultats :_
+_Affichage des résultats (mot recherché dans l'exemple : Constitution) :_
 
-<img src="./docs/images/affichage-résultats.png" width=50% height=50%>
+<img src="./docs/images/affichage-resultats.png" width=50% height=50%>
 
 _Création de la note automatiquement :_
 
