@@ -1,11 +1,11 @@
 {
-	"id": "legifrance-integration",
+	"id": "obisidian-legifrance-integration",
 	"name": "Légifrance Intégration",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "Module d'intégration de l'API Légifrance dans l'environnement de travail Obsidian.",
+	"author": "hurj",
+	"authorUrl": "https://carnetdethese.amimms.fr/",
+	"fundingUrl": "https://ko-fi.com/hurj268746",
 	"isDesktopOnly": false
 }
