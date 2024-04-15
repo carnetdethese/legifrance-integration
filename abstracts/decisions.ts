@@ -61,6 +61,7 @@ export async function getDecisionInfo(decision:Decision, valeurRecherche:string,
 	// Variable qui contient la réponse de la requête 
 	const response = await apiClient.fetchText(decision.id, valeurRecherche); // requête à l'API
 
+	infoDecision.titre = htmlToMarkdown(decision.titre);
 	// Texte intégral au format markdown
 	infoDecision.texteIntegral = htmlToMarkdown(response.text.texteHtml);
 

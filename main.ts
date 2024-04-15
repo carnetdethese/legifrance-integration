@@ -17,30 +17,30 @@ export interface LegifranceIntegrationSettings {
 const DEFAULT_SETTINGS: LegifranceIntegrationSettings = {
 	clientId: '',
 	clientSecret: '',
-	apiHost: '',
-	tokenHost: '',
+	apiHost: 'https://api.piste.gouv.fr/dila/legifrance/lf-engine-app',
+	tokenHost: 'https://oauth.piste.gouv.fr/',
 	template: `---
-	date: {{date}}
-	juridiction: {{juridiction}}
-	formation: {{formation}}
-	nom: {{titre}}
-	apport: 
-	numero: {{numero}} 
-	citation: {{citation}}
-	lien: {{lien}}
-	tags: 
-	---
-	
-	## Fiche et commentaire
-	
-	### Fiche d'arrêt 
-	
-	### Commentaire
-	
-	## Décision 
-	
-	{{decision}}`,
-	fileTitle: '{{annee}}',
+date: {{date}}
+juridiction: {{juridiction}}
+formation: {{formation}}
+nom: {{titre}}
+apport: 
+numero: {{numero}} 
+citation: {{citation}}
+lien: {{lien}}
+tags: 
+---
+
+## Fiche et commentaire
+
+### Fiche d'arrêt 
+
+### Commentaire
+
+## Décision 
+
+{{texteIntegral}}`,
+	fileTitle: '{{id}}',
 	maxResults: 20
 }
 
