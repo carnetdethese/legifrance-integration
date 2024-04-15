@@ -75,11 +75,11 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 	// 	el.createEl("small", { text: decision.texte });
 	// }
 
-	renderSuggestion(decision: Decision, el: HTMLElement) {
-		const titleDiv = replaceMark(decision.titre, document.createElement('div'));
+	async renderSuggestion(decision: Decision, el: HTMLElement) {
+		const titleDiv = await replaceMark(decision.titre, document.createElement('div'));
 		el.appendChild(titleDiv);
 
-		const smallEl = replaceMark(decision.texte, document.createElement('small'));
+		const smallEl = await replaceMark(decision.texte, document.createElement('small'));
 		el.appendChild(smallEl);
 	}
 	
