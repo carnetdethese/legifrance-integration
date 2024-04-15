@@ -21,7 +21,7 @@ export class agentSearch {
                   "typeChamp": "ALL",
                   "criteres": [
                       {
-                          "typeRecherche": "EXACTE",
+                          "typeRecherche": "UN_DES_MOTS",
                           "valeur": valeur,
                           "operateur": "ET"
                       }

@@ -3,6 +3,7 @@ import { MontrerResultatsModal, dataRequest } from "./ShowModal";
 import { agentSearch } from "api/utilities";
 import { LegifranceIntegrationSettings } from "main";
 import { codeFond } from "abstracts/decisions";
+import { operateursRecherche, typeRecherche } from "api/constants";
 
 export class SearchCaseModal extends Modal {
 	onSubmit: (result: string) => void;
@@ -24,21 +25,31 @@ export class SearchCaseModal extends Modal {
 		contentEl.createEl("h1", { text: "Recherche sur Légifrance" });
 
 		new Setting(contentEl)
+		.setName("Fond :")
+		.addDropdown((fondSelected) => {
+			codeFond.forEach((value, key) => {
+				fondSelected.addOption(key, value)
+			});
+			fondSelected.onChange(() => {
+				this.fond = fondSelected.getValue();
+			})
+		})
+
+		new Setting(contentEl)
 			.setName("Recherche :")
 			.addText((text) =>
 				text.onChange((value) => {
 					this.valeurRecherche = value;
-				}));
-
-		new Setting(contentEl)
-			.setName("Fond :")
-			.addDropdown((fondSelected) => {
-				codeFond.forEach((value, key) => {
-					fondSelected.addOption(key, value)
-				});
-				fondSelected.onChange(() => {
-					this.fond = fondSelected.getValue();
+				}))
+			.addDropdown((typeRechercheChamp) => {
+				typeRecherche.forEach((value, key) => {
+					typeRechercheChamp.addOption(key, value)
+				});			
 				})
+			.addDropdown((operateur) => {
+				operateursRecherche.forEach((value, key) => {
+					operateur.addOption(key, value)
+				});
 			})
 
 		new Setting(contentEl)
