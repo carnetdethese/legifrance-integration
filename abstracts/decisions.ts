@@ -1,4 +1,5 @@
 import { agentSearch } from "api/utilities";
+import { removeTags } from "lib/tools";
 import { htmlToMarkdown } from "obsidian";
 
 interface resumeDecision {
@@ -61,7 +62,7 @@ export async function getDecisionInfo(decision:Decision, valeurRecherche:string,
 	// Variable qui contient la réponse de la requête 
 	const response = await apiClient.fetchText(decision.id, valeurRecherche); // requête à l'API
 
-	infoDecision.titre = htmlToMarkdown(decision.titre);
+	infoDecision.titre = removeTags(decision.titre);
 	// Texte intégral au format markdown
 	infoDecision.texteIntegral = htmlToMarkdown(response.text.texteHtml);
 
@@ -96,11 +97,11 @@ export async function getDecisionInfo(decision:Decision, valeurRecherche:string,
 
 	// Numéro de la décision. Si c'est le Conseil constitutionnel - on affiche "numéro natureContrôle".
 	if (decision.origin == "CONSTIT") {
-		infoDecision.numero = `${response.text.num} ${response.text.nature}`;
+		infoDecision.numero = `${removeTags(response.text.num)} ${response.text.nature}`;
 		infoDecision.urlCC = response.text.urlCC;
 	}
 	else {
-		infoDecision.numero = response.text.num;
+		infoDecision.numero = removeTags(response.text.num);
 	}
 
 	return infoDecision
