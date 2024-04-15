@@ -1,4 +1,6 @@
-import { App, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
+import { agentSearch } from 'api/utilities';
+import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { SearchCaseModal } from 'modals/SearchModal';
 
 // Remember to rename these classes and interfaces!
 
@@ -42,23 +44,18 @@ const DEFAULT_SETTINGS: LegifranceIntegrationSettings = {
 	maxResults: 20
 }
 
+
 export default class LegifranceIntegrationPlugin extends Plugin {
 	settings: LegifranceIntegrationSettings;
 
 	async onload() {
 		await this.loadSettings();
-		process.env.OAUTH_CLIENT_ID = this.settings.clientId;
-		process.env.OAUTH_CLIENT_SECRET = this.settings.clientSecret;
-		process.env.API_HOST = this.settings.apiHost;
-		process.env.TOKEN_HOST = this.settings.tokenHost;
-
-		const { searchText } = await import('api/utilities');
-		const { SearchCaseModal } = await import('modals/SearchModal');
+		const instanceApiClient:agentSearch = new agentSearch(this.settings);
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('scale', 'Légifrance intégration', (evt: MouseEvent) => {
+		const ribbonIconEl = this.addRibbonIcon('scale', 'Légifrance intégration', async (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
-			searchText("constitution", "CETAT", this.settings.maxResults);
+			new SearchCaseModal(this.app, this.settings, instanceApiClient).open();
 		});
 
 		// Perform additional things with the ribbon
@@ -69,15 +66,12 @@ export default class LegifranceIntegrationPlugin extends Plugin {
 			id: 'create-note-legi',
 			name: 'Créer une nouvelle fiche juridique.',
 			callback: () => {
-				new SearchCaseModal(this.app, this.settings).open();
+				new SearchCaseModal(this.app, this.settings, instanceApiClient).open();
 			}
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new LegifranceSettingTab(this.app, this));
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
 	}
 
 	onunload() {

@@ -1,6 +1,6 @@
 import { App, Modal, Setting } from "obsidian";
 import { MontrerResultatsModal, dataRequest } from "./ShowModal";
-import { searchText } from "api/utilities";
+import { agentSearch } from "api/utilities";
 import { LegifranceIntegrationSettings } from "main";
 import { codeFond } from "abstracts/decisions";
 
@@ -10,12 +10,14 @@ export class SearchCaseModal extends Modal {
 	valeurRecherche: string;
 	fond: string;
 	settings: LegifranceIntegrationSettings;
+	agentChercheur:agentSearch;
 
 	dicRecherche:dataRequest;
 
-	constructor(app: App, settings:LegifranceIntegrationSettings) {
+	constructor(app: App, settings:LegifranceIntegrationSettings, apiClient:agentSearch) {
 		super(app);
 		this.settings = settings;
+		this.agentChercheur = apiClient;
 	}
 
 	onOpen() {
@@ -47,8 +49,8 @@ export class SearchCaseModal extends Modal {
 					.setCta()
 					.onClick(async () => {
 						this.close();
-                        this.dicRecherche = await searchText(this.valeurRecherche, this.fond, this.settings.maxResults);
-                        new MontrerResultatsModal(this.app, this.settings, this.dicRecherche, this.valeurRecherche).open();
+                        this.dicRecherche = await this.agentChercheur.searchText(this.valeurRecherche, this.fond, this.settings.maxResults);
+                        new MontrerResultatsModal(this.app, this.settings, this.dicRecherche, this.valeurRecherche, this.agentChercheur).open();
 					}));
 	}
 

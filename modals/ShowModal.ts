@@ -3,6 +3,7 @@ import { App, SuggestModal, Notice } from "obsidian";
 import { Decision, findLink, getDecisionInfo } from "abstracts/decisions" ;
 import { LegifranceIntegrationSettings } from "main";
 import { replaceMark } from "lib/tools";
+import { agentSearch } from "api/utilities";
 
 
 export interface dataRequest {
@@ -22,13 +23,15 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 	settings:LegifranceIntegrationSettings;
 	valeurRecherche:string;
 	ALL_DECISIONS:Decision[];
+	agentChercheur:agentSearch;
 
-	constructor(app: App, settings:LegifranceIntegrationSettings, content:dataRequest, valeurRecherche:string) {
+	constructor(app: App, settings:LegifranceIntegrationSettings, content:dataRequest, valeurRecherche:string, apiClient:agentSearch) {
 		super(app);
         this.results = content;
 		this.settings = settings;
 		this.ALL_DECISIONS = this.getResults(content);
 		this.valeurRecherche = valeurRecherche || "";
+		this.agentChercheur = apiClient;
 	}
 
 	// fonction qui construit une liste d'objet Decision permettant d'être rendu par la fonction de rendu plus bas. 
@@ -85,7 +88,7 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 	async onChooseSuggestion(decision: Decision, evt: MouseEvent | KeyboardEvent) {
 		if (this.ALL_DECISIONS.find(elt => elt.id == decision.id) !== undefined) {
 			let selectedDecision:Decision = this.ALL_DECISIONS.find(elt => elt.id == decision.id) as Decision; 
-			selectedDecision = await getDecisionInfo(selectedDecision, this.valeurRecherche);
+			selectedDecision = await getDecisionInfo(selectedDecision, this.valeurRecherche, this.agentChercheur);
 			new newNote(this.app, this.settings.template, this.settings.fileTitle, selectedDecision).createNote();
 			new Notice(`Selected ${decision.id}`);
 		}

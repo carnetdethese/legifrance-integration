@@ -1,4 +1,4 @@
-import { fetchText } from "api/utilities";
+import { agentSearch } from "api/utilities";
 import { htmlToMarkdown } from "obsidian";
 
 interface resumeDecision {
@@ -54,12 +54,12 @@ export function findLink(origine:string, id:string) {
 	return baseUrl + urlFond.get(origine) + id	
 }
 
-export async function getDecisionInfo(decision:Decision, valeurRecherche:string) {
+export async function getDecisionInfo(decision:Decision, valeurRecherche:string, apiClient:agentSearch) {
 	// objet Decision qui récupère une copie de l'objet passé en argument
 	const infoDecision:Decision = decision;
 
 	// Variable qui contient la réponse de la requête 
-	const response = await fetchText(decision.id, valeurRecherche); // requête à l'API
+	const response = await apiClient.fetchText(decision.id, valeurRecherche); // requête à l'API
 
 	// Texte intégral au format markdown
 	infoDecision.texteIntegral = htmlToMarkdown(response.text.texteHtml);
@@ -73,13 +73,11 @@ export async function getDecisionInfo(decision:Decision, valeurRecherche:string)
 	// Juridiction - je passe par une variable Map parce que certaines juridiction ne sont pas formattées comme je le veux !
 	if (response.text.natureJuridiction != null) {
 		infoDecision.juridiction = codeJuridiction.get(response.text.natureJuridiction);
-		console.log(infoDecision.juridiction);
 	}
 
 	// La formation de la juridiction
 	if (response.text.formation != null) {
 		infoDecision.formation = response.text.formation;
-		console.log(infoDecision.formation);
 	}
 
 	// La solution 

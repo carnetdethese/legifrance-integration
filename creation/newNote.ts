@@ -33,11 +33,10 @@ export class newNote {
 
     async createNote() {
         let filePath:string = this.folder + this.renderFileTitle();
-        console.log(filePath);
         const noteContent = Mustache.render(this.template, this.data);
 
         if (this.app.vault.getFolderByPath("Décisions/" + this.data.juridiction) === null) {
-            console.log("Dossier inexistant.");
+            console.log("Dossier inexistant alors dossier créé.");
             this.app.vault.createFolder("Décisions/" + this.data.juridiction);
         }
 
