@@ -4,7 +4,6 @@ import { agentSearch } from "api/utilities";
 import { LegifranceIntegrationSettings } from "main";
 import { codeFond } from "abstracts/decisions";
 
-
 export class SearchCaseModal extends Modal {
 	onSubmit: (result: string) => void;
 	valeurRecherche: string;
