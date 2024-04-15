@@ -33,6 +33,7 @@ export async function searchText(search:string, fond:string, maxResults:number) 
     method: "POST",
     params: rechercheSimple(search, fond, maxResults)
   }
+  console.log(requestOptions);
   return await dilaApi.fetch(requestOptions)
 }
 

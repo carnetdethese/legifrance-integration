@@ -58,11 +58,7 @@ export default class LegifranceIntegrationPlugin extends Plugin {
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('scale', 'Légifrance intégration', (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
-			const untitledFile = this.app.vault.getAbstractFileByPath("Untitled.md");
-			const wsLeaf = this.app.workspace.getLeaf();
-			if (untitledFile instanceof TFile) {
-				wsLeaf.openFile(untitledFile);
-			}
+			searchText("constitution", "CETAT", this.settings.maxResults);
 		});
 
 		// Perform additional things with the ribbon

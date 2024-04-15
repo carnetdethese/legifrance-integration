@@ -2,6 +2,7 @@ import { newNote } from "creation/newNote";
 import { App, SuggestModal, Notice } from "obsidian";
 import { Decision, findLink, getDecisionInfo } from "abstracts/decisions" ;
 import { LegifranceIntegrationSettings } from "main";
+import { replaceMark } from "lib/tools";
 
 
 export interface dataRequest {
@@ -44,7 +45,7 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 				origine = result.origin;
 				result.titles.forEach((entree: itemResult) => {
 						resultsDic.push({
-							titre: entree.title.replace(/<mark>/g, "**").replace(/<\/mark>/g, "**"), // je n'ai pas encore trouvé de solution pour afficher les éléments avec le tag <mark> de manière jolie. Visiblement, les chaines de caratères demeurent au format brut dans le Modal.
+							titre: entree.title,
 							id: entree.id,
 							texte: contenuTexte,
 							lien: findLink(origine, entree.id),
@@ -66,10 +67,19 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 	}
 	
 	// Renders each suggestion item.
+	// renderSuggestion(decision: Decision, el: HTMLElement) {
+	// 	el.createEl("div", { text: decision.titre  });
+	// 	el.createEl("small", { text: decision.texte });
+	// }
+
 	renderSuggestion(decision: Decision, el: HTMLElement) {
-		el.createEl("div", { text: decision.titre  });
-		el.createEl("small", { text: decision.texte });
+		const titleDiv = replaceMark(decision.titre, document.createElement('div'));
+		el.appendChild(titleDiv);
+
+		const smallEl = replaceMark(decision.texte, document.createElement('small'));
+		el.appendChild(smallEl);
 	}
+	
 	
 	// Perform action on the selected suggestion.
 	async onChooseSuggestion(decision: Decision, evt: MouseEvent | KeyboardEvent) {
