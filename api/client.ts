@@ -46,7 +46,7 @@ export class DilaApiClient {
         }
         return this.globalToken;
     }
-    async fetch({ path, method = "POST", params, }) {
+    async fetch({ path, method = "POST", params, }: { path: string; method?: string; params?: any }) {
         const [routeName] = path.split("/").slice(-1);
         const body = JSON.stringify(params);
         debug(`fetching route ${routeName} with ${body}...`);
@@ -59,7 +59,7 @@ export class DilaApiClient {
                 "content-type": "application/json",
             },
             method,
-        }).then((r) => {
+        }).then((r:any)=> {
             if (r.status === 401 && this.globalToken) {
                 this.globalToken = undefined;
                 return this.fetch({ path, method, params });
