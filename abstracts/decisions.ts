@@ -22,7 +22,7 @@ export interface Decision {
 	sommaires?: Sommaire[];
 }
 
-interface Sommaire {
+export interface Sommaire {
 	resume:string;
 }
 
@@ -85,15 +85,15 @@ export async function getDecisionInfo(decision:Decision, valeurRecherche:string)
 	// La solution 
 	infoDecision.solution = response.text.solution;
 
-	infoDecision.sommaires = [];
-
-	response.text.sommaire.forEach((elt: resumeDecision) => {
-	if (elt.resumePrincipal) {
-		const content = elt.resumePrincipal;
-		infoDecision.sommaires.push({
-			resume: content
-		});
-	}});
+	if (infoDecision.sommaires !== undefined) {
+		if (response.text.sommaire !== undefined) {
+			response.text.sommaire.forEach((elt: resumeDecision) => {
+				if (elt.resumePrincipal) {
+					const content = elt.resumePrincipal;
+					infoDecision.sommaires?.push({ resume: content });
+				}});
+			}
+	}
 
 	// Numéro de la décision. Si c'est le Conseil constitutionnel - on affiche "numéro natureContrôle".
 	if (decision.origin == "CONSTIT") {
