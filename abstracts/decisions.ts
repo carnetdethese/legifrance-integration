@@ -22,7 +22,16 @@ interface Sommaire {
 	resume:string;
 }
 
-const codeFond = new Map<string, string>([
+export const codeFond = new Map<string, string>([
+	["", ""],
+	["ALL", "Tous les fonds"],
+	["CETAT", "Juridictions administratives"],
+	["CONSTIT", "Conseil constitutionnel"],
+	["JURI", "Juridictions judiciaires"],
+	["LEGI", "Législation"]
+]);
+
+const urlFond = new Map<string, string>([
 	["CETAT", "/ceta/id/"],
 	["CONSTIT", "/cons/id/"],
 	["JURI", "/juri/id/"]
@@ -38,7 +47,7 @@ const codeJuridiction = new Map<string, string>([
 const baseUrl = "https://www.legifrance.gouv.fr"
 
 export function findLink(origine:string, id:string) {
-	return baseUrl + codeFond.get(origine) + id	
+	return baseUrl + urlFond.get(origine) + id	
 }
 
 export async function getDecisionInfo(decision:Decision, valeurRecherche:string) {

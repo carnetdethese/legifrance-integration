@@ -2,6 +2,7 @@ import { App, Modal, Setting } from "obsidian";
 import { MontrerResultatsModal } from "./ShowModal";
 import { searchText } from "api/utilities";
 import { LegifranceIntegrationSettings } from "main";
+import { codeFond } from "abstracts/decisions";
 
 export class SearchCaseModal extends Modal {
 	onSubmit: (result: string) => void;
@@ -30,10 +31,9 @@ export class SearchCaseModal extends Modal {
 		new Setting(contentEl)
 			.setName("Fond :")
 			.addDropdown((fondSelected) => {
-				fondSelected.addOption("", "");
-				fondSelected.addOption("CETAT", "Conseil d'Etat");
-				fondSelected.addOption("CONSTIT", "Conseil constitutionnel");
-				fondSelected.addOption("JURI", "Cour de cassation");
+				codeFond.forEach((value, key) => {
+					fondSelected.addOption(key, value)
+				});
 				fondSelected.onChange(() => {
 					this.fond = fondSelected.getValue();
 				})
