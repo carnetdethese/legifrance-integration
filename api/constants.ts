@@ -1,5 +1,4 @@
 export const typeRecherche = new Map<string, string>([
-	["", ""],
 	["UN_DES_MOTS", "Un de ces mots"],
 	["EXACTE", "Exacte"],
 	["TOUS_LES_MOTS_DANS_UN_CHAMP", "Tous les mots"],
@@ -13,7 +12,6 @@ export const operateursRecherche = new Map<string, string>([
 ]);
 
 export const codeFond = new Map<string, string>([
-	["", ""],
 	["ALL", "Tous les fonds"],
 	["CETAT", "Juridictions administratives"],
 	["CONSTIT", "Conseil constitutionnel"],
