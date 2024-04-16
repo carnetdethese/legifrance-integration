@@ -1,6 +1,7 @@
 import { agentSearch } from 'api/utilities';
-import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
 import { SearchCaseModal } from 'modals/SearchModal';
+import { LEGAL_TEXT_VIEW, LegalTextView } from 'view/viewText';
 
 // Remember to rename these classes and interfaces!
 
@@ -51,15 +52,17 @@ export default class LegifranceIntegrationPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		const instanceApiClient:agentSearch = new agentSearch(this.settings);
+		this.registerView(
+			LEGAL_TEXT_VIEW,
+			(leaf) => new LegalTextView(leaf)
+		);
 
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('scale', 'Légifrance intégration', async (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
-			new SearchCaseModal(this.app, this.settings, instanceApiClient).open();
+			// new SearchCaseModal(this.app, this.settings, instanceApiClient).open();
+			this.activateView();
 		});
-
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
@@ -83,6 +86,24 @@ export default class LegifranceIntegrationPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	async activateView() {
+		const { workspace } = this.app;
+	
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(LEGAL_TEXT_VIEW);
+	
+		if (leaves.length > 0) {
+			// A leaf with our view already exists, use that
+			leaf = leaves[0];
+		} else {
+			// Our view could not be found in the workspace, create a new leaf
+			// in the right sidebar for it
+			leaf = workspace.getRightLeaf(false);
+			await leaf.setViewState({ type: LEGAL_TEXT_VIEW, active: true });
+		}
+		workspace.revealLeaf(leaf);
 	}
 }
 

@@ -12,3 +12,11 @@ export const operateursRecherche = new Map<string, string>([
     ["OU", "ou"]
 ]);
 
+export const codeFond = new Map<string, string>([
+	["", ""],
+	["ALL", "Tous les fonds"],
+	["CETAT", "Juridictions administratives"],
+	["CONSTIT", "Conseil constitutionnel"],
+	["JURI", "Juridictions judiciaires"],
+	["LEGI", "Législation"]
+]);

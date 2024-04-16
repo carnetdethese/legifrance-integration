@@ -2,8 +2,7 @@ import { App, Modal, Setting } from "obsidian";
 import { MontrerResultatsModal, dataRequest } from "./ShowModal";
 import { agentSearch } from "api/utilities";
 import { LegifranceIntegrationSettings } from "main";
-import { codeFond } from "abstracts/decisions";
-import { operateursRecherche, typeRecherche } from "api/constants";
+import { codeFond, operateursRecherche, typeRecherche } from "api/constants";
 
 export class SearchCaseModal extends Modal {
 	onSubmit: (result: string) => void;

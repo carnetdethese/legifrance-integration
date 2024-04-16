@@ -27,14 +27,7 @@ export interface Sommaire {
 	resume:string;
 }
 
-export const codeFond = new Map<string, string>([
-	["", ""],
-	["ALL", "Tous les fonds"],
-	["CETAT", "Juridictions administratives"],
-	["CONSTIT", "Conseil constitutionnel"],
-	["JURI", "Juridictions judiciaires"],
-	["LEGI", "Législation"]
-]);
+
 
 const urlFond = new Map<string, string>([
 	["CETAT", "/ceta/id/"],

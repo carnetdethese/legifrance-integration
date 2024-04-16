@@ -11,3 +11,8 @@ mark {
     background-color: beige;
     padding: 1px;
 }
+
+.showLine {
+    border: 1px;
+    border-color: black;
+}
