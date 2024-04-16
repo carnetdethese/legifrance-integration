@@ -58,7 +58,7 @@ export default class LegifranceIntegrationPlugin extends Plugin {
 		);
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('scale', 'Légifrance intégration', async (evt: MouseEvent) => {
+		this.addRibbonIcon('scale', 'Légifrance intégration', async (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
 			// new SearchCaseModal(this.app, this.settings, instanceApiClient).open();
 			this.activateView();
