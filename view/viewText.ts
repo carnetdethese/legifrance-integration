@@ -90,10 +90,9 @@ export class LegalTextView extends ItemView {
       });
   }
 
-  async onOpen() {
+  searchEngine(container:Element) {
+
     this.recherche.fond = codeFond.keys().next().value;
-    const container = this.containerEl.children[1];
-    container.empty();
     container.createEl("h4", { text: "Légifrance Intégration" });
 
     const fond = container.createEl("div");
@@ -118,7 +117,7 @@ export class LegalTextView extends ItemView {
       this.recherche.expressionRecherche.push({valeur:"", type:typeRecherche.keys().next().value, operateur:operateursRecherche.keys().next().value})
       this.newExpression(valuesRecherche, i);
     }
-    
+
 		new Setting(valuesRecherche)
 			.addButton((btn) =>
 				btn
@@ -129,6 +128,13 @@ export class LegalTextView extends ItemView {
             // new MontrerResultatsModal(this.app, this.settings, this.dicRecherche, this.valeurRecherche, // this.agentChercheur).open();
             new Notice(this.recherche.fond + " " + this.recherche.expressionRecherche[1].operateur);
 					}));
+  }
+
+  async onOpen() {
+    const container = this.containerEl.children[1];
+    container.empty();
+
+    this.searchEngine(container);
 
   }
 
