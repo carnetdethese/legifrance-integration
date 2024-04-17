@@ -6,7 +6,7 @@ import { replaceMark } from "lib/tools";
 import { agentSearch } from "api/utilities";
 
 
-export interface dataRequest {
+export interface resultsRequest {
 	results: {
 		text: string,
 		origin:string
@@ -25,7 +25,7 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 	ALL_DECISIONS:Decision[];
 	agentChercheur:agentSearch;
 
-	constructor(app: App, settings:LegifranceSettings, content:dataRequest, valeurRecherche:string, apiClient:agentSearch) {
+	constructor(app: App, settings:LegifranceSettings, content:resultsRequest, valeurRecherche:string, apiClient:agentSearch) {
 		super(app);
         this.results = content;
 		this.settings = settings;
@@ -36,7 +36,7 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 
 	// fonction qui construit une liste d'objet Decision permettant d'être rendu par la fonction de rendu plus bas. 
 
-    getResults(data:dataRequest) {
+    getResults(data:resultsRequest) {
 		const resultsDic:Decision[] = [];
 		let contenuTexte:string;
 		let origine:string;

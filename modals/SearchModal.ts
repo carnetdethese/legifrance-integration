@@ -1,17 +1,17 @@
 import { App, Modal, Setting } from "obsidian";
-import { MontrerResultatsModal, dataRequest } from "./ShowModal";
+import { MontrerResultatsModal, resultsRequest } from "./ShowModal";
 import { agentSearch } from "api/utilities";
 import { LegifranceSettings } from "main";
 import { codeFond, operateursRecherche, typeRecherche } from "api/constants";
 
 export class SearchCaseModal extends Modal {
 	onSubmit: (result: string) => void;
-	valeurRecherche:string;
+	valeurRecherche:string; // valeur du champ de recherche
 	fond: string;
-	settings: LegifranceSettings;
-	agentChercheur:agentSearch;
+	settings: LegifranceSettings; // Paramètres du plugin
+	agentChercheur:agentSearch; // Client qui effectue la recherche et les requêtes
 
-	dicRecherche:dataRequest;
+	dicRecherche:resultsRequest; // Résultat de la recherche
 
 	constructor(app: App, settings:LegifranceSettings, apiClient:agentSearch) {
 		super(app);

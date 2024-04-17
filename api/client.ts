@@ -50,7 +50,7 @@ export class DilaApiClient {
         return this.globalToken;
     }
 
-    async fetch({ path, method = "POST", params, }: { path: string; method?: string; params?: any }) {
+    async fetch({ path, method = "POST", params, }: { path: string; method?: string; params?: any }):Promise<object> {
         const [routeName] = path.split("/").slice(-1);
         const token = await this.getAccessToken();
         const url = `${this.apiHost}/${path}`;
@@ -75,8 +75,7 @@ export class DilaApiClient {
         if (data.error) {
             throw new Error(`Error on API fetch: ${JSON.stringify(data)}`);
         }
-        console.log(data);
-        return data;
+        return JSON.parse(data);
     }
 }
 

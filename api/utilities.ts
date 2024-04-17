@@ -88,6 +88,7 @@ export class agentSearch {
       method: "POST",
       params: this.rechercheSimple(search, fond, maxResults)
     }
+
     return await this.dilaApi.fetch(requestOptions);
   }
 
@@ -99,8 +100,7 @@ export class agentSearch {
         "textId": id,
         "searchedString": valeurRecherche
       }};
-      
-    return await this.dilaApi.fetch(requestOptions);
+      return await this.dilaApi.fetch(requestOptions);se
   }
 
 }
