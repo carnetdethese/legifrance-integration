@@ -3,8 +3,6 @@ import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian'
 import { SearchCaseModal } from 'modals/SearchModal';
 import { LEGAL_TEXT_VIEW, LegalTextView } from 'view/viewText';
 
-// Remember to rename these classes and interfaces!
-
 export interface LegifranceSettings {
 	clientId: string;
 	clientSecret: string;
