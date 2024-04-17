@@ -1,7 +1,7 @@
 import { newNote } from "creation/newNote";
 import { App, SuggestModal, Notice } from "obsidian";
 import { Decision, findLink, getDecisionInfo } from "abstracts/decisions" ;
-import { LegifranceIntegrationSettings } from "main";
+import { LegifranceSettings } from "main";
 import { replaceMark } from "lib/tools";
 import { agentSearch } from "api/utilities";
 
@@ -20,12 +20,12 @@ interface itemResult {
 
 export class MontrerResultatsModal extends SuggestModal<Decision> {
     results:object;
-	settings:LegifranceIntegrationSettings;
+	settings:LegifranceSettings;
 	valeurRecherche:string;
 	ALL_DECISIONS:Decision[];
 	agentChercheur:agentSearch;
 
-	constructor(app: App, settings:LegifranceIntegrationSettings, content:dataRequest, valeurRecherche:string, apiClient:agentSearch) {
+	constructor(app: App, settings:LegifranceSettings, content:dataRequest, valeurRecherche:string, apiClient:agentSearch) {
 		super(app);
         this.results = content;
 		this.settings = settings;

@@ -1,32 +1,26 @@
 import { ItemView, WorkspaceLeaf, Setting, Notice } from "obsidian";
 import { codeFond, typeRecherche, operateursRecherche } from "api/constants";
+import { agentSearch, expressionRechercheForm, RechercheForm } from "api/utilities";
 
 export const LEGAL_TEXT_VIEW = "legal-text-view";
 
-interface expressionRecherche {
-  valeur?:string;
-  type?:string;
-  operateur?:string;
-}
-
-interface Recherche {
-  expressionRecherche: expressionRecherche[];
-  fond:string;
-}
-
 export class LegalTextView extends ItemView {
-  recherche:Recherche;
-  valeursRecherche:expressionRecherche[];
+  recherche:RechercheForm;
+  valeursRecherche:expressionRechercheForm[];
   compteur:number;
   nbChamps:number;
+  agentChercheur:agentSearch;
+  searchResult:object;
 
-  constructor(leaf: WorkspaceLeaf) {
+  constructor(leaf: WorkspaceLeaf, agentChercheur:agentSearch) {
     super(leaf);
     this.compteur = 1;
     this.recherche = {
-      expressionRecherche: [],
-      fond: ""
+      expressionRechercheForm: [],
+      fond: "",
+      operateurGeneral: operateursRecherche.keys().next().value
     }
+    this.agentChercheur = agentChercheur;
   }
 
   getViewType() {
@@ -34,7 +28,7 @@ export class LegalTextView extends ItemView {
   }
 
   getDisplayText() {
-    return "Légifrance Intégration";
+    return "Légifrance";
   }
 
   newExpression(container:HTMLElement, id:number) {
@@ -49,9 +43,9 @@ export class LegalTextView extends ItemView {
       .setName("Champ " + id)
       .addText((text) =>
         text.onChange((value) => {
-        this.recherche.expressionRecherche[instanceCount].valeur = value
+        this.recherche.expressionRechercheForm[instanceCount].valeur = value
           })
-        .setValue(this.recherche.expressionRecherche[instanceCount].valeur || ""))
+        .setValue(this.recherche.expressionRechercheForm[instanceCount].valeur || ""))
       .addButton(cb => cb
         .setIcon("plus")
         .onClick(() => {
@@ -64,8 +58,8 @@ export class LegalTextView extends ItemView {
         .setIcon("minus")
         .onClick(() => {
           if (this.compteur > 1) {
-            this.recherche.expressionRecherche[this.compteur - 1] = {valeur:undefined, type:undefined, operateur:undefined};
-            this.recherche.expressionRecherche.pop();
+            this.recherche.expressionRechercheForm[this.compteur - 1] = {valeur:undefined, type:undefined, operateur:undefined};
+            this.recherche.expressionRechercheForm.pop();
             this.compteur -= 1;
             this.onOpen();
           }
@@ -77,14 +71,14 @@ export class LegalTextView extends ItemView {
         typeRecherche.forEach((value, key) => {
         typeRechercheChamp.addOption(key, value)
         typeRechercheChamp.onChange((value) =>
-          this.recherche.expressionRecherche[instanceCount].type = value
+          this.recherche.expressionRechercheForm[instanceCount].type = value
         )});
         })
       .addDropdown((operateur) => {
         operateursRecherche.forEach((value, key) => {
           operateur.addOption(key, value)
           operateur.onChange((value) =>
-            this.recherche.expressionRecherche[instanceCount].operateur = value
+            this.recherche.expressionRechercheForm[instanceCount].operateur = value
           )
         })
       });
@@ -93,7 +87,7 @@ export class LegalTextView extends ItemView {
   searchEngine(container:Element) {
 
     this.recherche.fond = codeFond.keys().next().value;
-    container.createEl("h4", { text: "Légifrance Intégration" });
+    container.createEl("h4", { text: "Légifrance" });
 
     const fond = container.createEl("div");
 
@@ -108,13 +102,22 @@ export class LegalTextView extends ItemView {
           this.recherche.fond = fondSelected.getValue();
         })
       })
+      .addDropdown((opeGen) => {
+        operateursRecherche.forEach((value, key) => {
+          opeGen.addOption(key, value)
+        })
+        opeGen.onChange(() => {
+          this.recherche.operateurGeneral = opeGen.getValue();
+        })
+        opeGen.setValue(this.recherche.operateurGeneral)
+      })
 
 
     const valuesRecherche = container.createEl("div");
     valuesRecherche.createEl("br");
 
     for (let i = 1 ; i <= this.compteur ; i++){
-      this.recherche.expressionRecherche.push({valeur:"", type:typeRecherche.keys().next().value, operateur:operateursRecherche.keys().next().value})
+      this.recherche.expressionRechercheForm.push({valeur:"", type:typeRecherche.keys().next().value, operateur:operateursRecherche.keys().next().value})
       this.newExpression(valuesRecherche, i);
     }
 
@@ -124,9 +127,9 @@ export class LegalTextView extends ItemView {
 					.setButtonText("Valider")
 					.setCta()
 					.onClick(async () => {
-            // this.dicRecherche = await this.agentChercheur.searchText(this.valeurRecherche, this.fond, this.settings.maxResults);
+            // this.searchResult = await this.agentChercheur.searchText(this.valeursRecherche, this.fond, this.settings.maxResults);
             // new MontrerResultatsModal(this.app, this.settings, this.dicRecherche, this.valeurRecherche, // this.agentChercheur).open();
-            new Notice(this.recherche.fond + " " + this.recherche.expressionRecherche[1].operateur);
+            new Notice(this.recherche.fond + " " + this.recherche.expressionRechercheForm[1].operateur);
 					}));
   }
 

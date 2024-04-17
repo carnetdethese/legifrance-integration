@@ -1,11 +1,7 @@
 import { Decision } from "abstracts/decisions";
 import { App } from "obsidian";
+import * as Mustache from 'mustache';
 
-const Mustache = require('mustache');
-
-Mustache.escape = function(text:string) {
-    return text;
-}
 
 export class newNote {
     app:App;

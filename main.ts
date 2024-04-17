@@ -5,7 +5,7 @@ import { LEGAL_TEXT_VIEW, LegalTextView } from 'view/viewText';
 
 // Remember to rename these classes and interfaces!
 
-export interface LegifranceIntegrationSettings {
+export interface LegifranceSettings {
 	clientId: string;
 	clientSecret: string;
 	apiHost: string;
@@ -15,11 +15,11 @@ export interface LegifranceIntegrationSettings {
 	maxResults:number;
 }
 
-const DEFAULT_SETTINGS: LegifranceIntegrationSettings = {
+const DEFAULT_SETTINGS: LegifranceSettings = {
 	clientId: '',
 	clientSecret: '',
 	apiHost: 'https://api.piste.gouv.fr/dila/legifrance/lf-engine-app',
-	tokenHost: 'https://oauth.piste.gouv.fr/',
+	tokenHost: 'https://oauth.piste.gouv.fr',
 	template: `---
 date: {{date}}
 juridiction: {{juridiction}}
@@ -46,19 +46,19 @@ tags:
 }
 
 
-export default class LegifranceIntegrationPlugin extends Plugin {
-	settings: LegifranceIntegrationSettings;
+export default class LegifrancePlugin extends Plugin {
+	settings: LegifranceSettings;
 
 	async onload() {
 		await this.loadSettings();
 		const instanceApiClient:agentSearch = new agentSearch(this.settings);
 		this.registerView(
 			LEGAL_TEXT_VIEW,
-			(leaf) => new LegalTextView(leaf)
+			(leaf) => new LegalTextView(leaf, instanceApiClient)
 		);
 
 		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('scale', 'Légifrance intégration', async (evt: MouseEvent) => {
+		this.addRibbonIcon('scale', 'Légifrance', async (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
 			// new SearchCaseModal(this.app, this.settings, instanceApiClient).open();
 			this.activateView();
@@ -108,9 +108,9 @@ export default class LegifranceIntegrationPlugin extends Plugin {
 }
 
 class LegifranceSettingTab extends PluginSettingTab {
-	plugin: LegifranceIntegrationPlugin;
+	plugin: LegifrancePlugin;
 
-	constructor(app: App, plugin: LegifranceIntegrationPlugin) {
+	constructor(app: App, plugin: LegifrancePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -206,6 +206,12 @@ class LegifranceSettingTab extends PluginSettingTab {
 				.setDynamicTooltip()
 
 			);
+
+		containerEl.createEl("h2", {text: "Dossiers"});
+
+		new Setting(containerEl)
+			.setName("Décisions")
+			.addSearch(cb => cb)
 	}
 }
 

@@ -1,6 +1,9 @@
 import { ModuleOptions, ClientCredentials } from "simple-oauth2"
-const node_fetch_1 = require("node-fetch");
 import { debug } from "console";
+import { requestUrl } from "obsidian";
+
+// Credit goes to https://github.com/SocialGouv/dila-api-client - I have adapted the code so it can use
+// obsidian settings. 
 
 export class DilaApiClient {
     tokenHost:string;
@@ -46,29 +49,33 @@ export class DilaApiClient {
         }
         return this.globalToken;
     }
+
     async fetch({ path, method = "POST", params, }: { path: string; method?: string; params?: any }) {
         const [routeName] = path.split("/").slice(-1);
-        const body = JSON.stringify(params);
-        debug(`fetching route ${routeName} with ${body}...`);
         const token = await this.getAccessToken();
         const url = `${this.apiHost}/${path}`;
-        const data = await node_fetch_1.default(url, {
-            body,
+        const RequestUrlParams = {
+            url: url,
+            body: JSON.stringify(params),
             headers: {
                 Authorization: `Bearer ${token}`,
                 "content-type": "application/json",
             },
-            method,
-        }).then((r:any)=> {
+            method:method
+        }
+        debug(`fetching route ${routeName} with ${RequestUrlParams.body}...`);
+
+        const data = await requestUrl(RequestUrlParams).then((r:any)=> {
             if (r.status === 401 && this.globalToken) {
                 this.globalToken = undefined;
                 return this.fetch({ path, method, params });
             }
-            return r.json();
+            return r.text;
         });
         if (data.error) {
             throw new Error(`Error on API fetch: ${JSON.stringify(data)}`);
         }
+        console.log(data);
         return data;
     }
 }
