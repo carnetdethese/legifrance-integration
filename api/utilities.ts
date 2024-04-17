@@ -1,6 +1,8 @@
 import { DilaApiClient } from 'api/client'
 import { LegifranceSettings } from 'main';
 
+// Création des interfaces pour construire une recherche avancée.
+
 export interface expressionRechercheForm {
   valeur?:string;
   type?:string;
