@@ -4,8 +4,6 @@ import { SearchCaseModal } from 'modals/SearchModal';
 import { RESEARCH_TEXT_VIEW, LegalTextView } from 'views/researchText';
 import { critereTri } from 'api/constants';
 
-// Remember to rename these classes and interfaces!
-
 export interface LegifranceSettings {
 	clientId: string;
 	clientSecret: string;
