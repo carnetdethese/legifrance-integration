@@ -51,9 +51,12 @@ export function findLink(origine:string, id:string) {
 export async function getDecisionInfo(decision:Decision, valeurRecherche:string, apiClient:agentSearch) {
 	// objet Decision qui récupère une copie de l'objet passé en argument
 	const infoDecision:Decision = decision;
+	console.log(infoDecision);
 
 	// Variable qui contient la réponse de la requête 
 	const response = await apiClient.fetchText(decision.id, valeurRecherche); // requête à l'API
+
+	console.log(response);
 
 	infoDecision.titre = removeTags(decision.titre);
 	// Texte intégral au format markdown

@@ -21,17 +21,17 @@ export interface rechercheAvStructure { // Base
 }
 
 export interface champsRechercheAvancees { // Interface pour le champ : recherche
-  operateur:string,
+  operateur?:string,
   pageSize:number,
   sort:string,
   typePagination:string,
   pageNumber:number,
-  champs:Champs
+  champs:Champs[]
 }
 
 export interface Champs { // Interface pour le champ : Champs
-  operateur:string,
-  criteres:Criteres,
+  operateur?:string,
+  criteres:Criteres[],
   typeChamp:string
 }
 
@@ -42,8 +42,6 @@ export interface Criteres { // interface pour le champ : criteres. Peut y en avo
   proximite:number,
   typeRecherche:string
 }
-
-
 
 export class agentSearch {
   settings:LegifranceSettings;
@@ -65,6 +63,7 @@ export class agentSearch {
           "pageSize":nbResultat,
           "sort": "PERTINENCE",
           "pageNumber": 1,
+          "typePagination": "DEFAUT",
           "champs": [
               {
                   "typeChamp": "ALL",
@@ -77,8 +76,7 @@ export class agentSearch {
                   ],
                   "operateur": "ET"
               }
-          ],
-          "typePagination": "DEFAUT"
+          ]
       },
     "fond": fond
     }
@@ -92,6 +90,18 @@ export class agentSearch {
     }
 
     return await this.dilaApi.fetch(requestOptions);
+  }
+
+  async advanceSearchText(search:rechercheAvStructure) {
+    const requestOptions = {
+      path: "/search",
+      method: "POST",
+      params: search
+    }
+
+    const result = await this.dilaApi.fetch(requestOptions);
+    console.log(result);
+    return result;
   }
 
   async fetchText(id:string, valeurRecherche:string) {

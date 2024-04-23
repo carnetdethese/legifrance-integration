@@ -3,6 +3,8 @@ import { MontrerResultatsModal, resultsRequest } from "./ShowModal";
 import { agentSearch } from "api/utilities";
 import { LegifranceSettings } from "main";
 import { codeFond, operateursRecherche, typeRecherche } from "api/constants";
+import { fondField } from "lib/utils";
+
 
 export class SearchCaseModal extends Modal {
 	onSubmit: (result: string) => void;
@@ -24,16 +26,7 @@ export class SearchCaseModal extends Modal {
 		const {contentEl} = this;
 		contentEl.createEl("h1", { text: "Recherche sur Légifrance" });
 
-		new Setting(contentEl)
-		.setName("Fond :")
-		.addDropdown((fondSelected) => {
-			codeFond.forEach((value, key) => {
-				fondSelected.addOption(key, value)
-			});
-			fondSelected.onChange(() => {
-				this.fond = fondSelected.getValue();
-			})
-		})
+		fondField(this, contentEl);
 
 		new Setting(contentEl)
 			.setName("Recherche :")

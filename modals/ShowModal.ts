@@ -3,8 +3,7 @@ import { App, SuggestModal, Notice } from "obsidian";
 import { Decision, findLink, getDecisionInfo } from "abstracts/decisions" ;
 import { LegifranceSettings } from "main";
 import { replaceMark } from "lib/tools";
-import { agentSearch } from "api/utilities";
-
+import { agentSearch, rechercheAvStructure } from "api/utilities";
 
 export interface resultsRequest {
 	results: {
@@ -82,7 +81,6 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 		const smallEl = await replaceMark(decision.texte, document.createElement('small'));
 		el.appendChild(smallEl);
 	}
-	
 	
 	// Perform action on the selected suggestion.
 	async onChooseSuggestion(decision: Decision, evt: MouseEvent | KeyboardEvent) {

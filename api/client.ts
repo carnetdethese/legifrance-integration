@@ -65,11 +65,14 @@ export class DilaApiClient {
         }
         debug(`fetching route ${routeName} with ${RequestUrlParams.body}...`);
 
+        console.log(`fetching route ${routeName} with ${RequestUrlParams.body}`);
+
         const data = await requestUrl(RequestUrlParams).then((r:any)=> {
             if (r.status === 401 && this.globalToken) {
                 this.globalToken = undefined;
                 return this.fetch({ path, method, params });
             }
+            console.log(r.status);
             return r.text;
         });
         if (data.error) {

@@ -1,7 +1,8 @@
 import { agentSearch } from 'api/utilities';
 import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
 import { SearchCaseModal } from 'modals/SearchModal';
-import { LEGAL_TEXT_VIEW, LegalTextView } from 'view/viewText';
+import { RESEARCH_TEXT_VIEW, LegalTextView } from 'views/researchText';
+import { critereTri } from 'api/constants';
 
 // Remember to rename these classes and interfaces!
 
@@ -53,15 +54,15 @@ export default class LegifrancePlugin extends Plugin {
 		await this.loadSettings();
 		const instanceApiClient:agentSearch = new agentSearch(this.settings);
 		this.registerView(
-			LEGAL_TEXT_VIEW,
-			(leaf) => new LegalTextView(leaf, instanceApiClient)
+			RESEARCH_TEXT_VIEW,
+			(leaf) => new LegalTextView(leaf, this.settings, instanceApiClient)
 		);
 
 		// This creates an icon in the left ribbon.
 		this.addRibbonIcon('scale', 'Légifrance', async (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
 			// new SearchCaseModal(this.app, this.settings, instanceApiClient).open();
-			this.activateView();
+			this.activateResearchTextView();
 		});
 
 		// This adds a simple command that can be triggered anywhere
@@ -88,11 +89,11 @@ export default class LegifrancePlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	async activateView() {
+	async activateResearchTextView() {
 		const { workspace } = this.app;
 	
 		let leaf: WorkspaceLeaf | null = null;
-		const leaves = workspace.getLeavesOfType(LEGAL_TEXT_VIEW);
+		const leaves = workspace.getLeavesOfType(RESEARCH_TEXT_VIEW);
 	
 		if (leaves.length > 0) {
 			// A leaf with our view already exists, use that
@@ -101,7 +102,7 @@ export default class LegifrancePlugin extends Plugin {
 			// Our view could not be found in the workspace, create a new leaf
 			// in the right sidebar for it
 			leaf = workspace.getRightLeaf(false);
-			await leaf.setViewState({ type: LEGAL_TEXT_VIEW, active: true });
+			await leaf.setViewState({ type: RESEARCH_TEXT_VIEW, active: true });
 		}
 		workspace.revealLeaf(leaf);
 	}
@@ -204,8 +205,16 @@ class LegifranceSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 				.setDynamicTooltip()
-
 			);
+
+		new Setting(containerEl)
+			.setName('Tri des résults')
+			.addDropdown((triResultats) => {
+				critereTri.forEach((value, key) => {
+					triResultats.addOption(key, value)
+				});
+			});
+
 
 		containerEl.createEl("h2", {text: "Dossiers"});
 
