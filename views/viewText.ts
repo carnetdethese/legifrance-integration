@@ -1,24 +1,24 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 
-export const VIEW_TYPE_EXAMPLE = "example-view";
+export const TEXT_READER_VIEW = "text-reader-view";
 
-export class ExampleView extends ItemView {
+export class textReaderView extends ItemView {
   constructor(leaf: WorkspaceLeaf) {
     super(leaf);
   }
 
   getViewType() {
-    return VIEW_TYPE_EXAMPLE;
+    return TEXT_READER_VIEW;
   }
 
   getDisplayText() {
-    return "Example view";
+    return "Résultat recherche";
   }
 
   async onOpen() {
     const container = this.containerEl.children[1];
     container.empty();
-    container.createEl("h4", { text: "Example view" });
+    container.createEl("h4", { text: "Résultat recherche" });
   }
 
   async onClose() {

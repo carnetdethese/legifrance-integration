@@ -3,6 +3,7 @@ import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian'
 import { SearchCaseModal } from 'modals/SearchModal';
 import { RESEARCH_TEXT_VIEW, LegalTextView } from 'views/researchText';
 import { critereTri } from 'api/constants';
+import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
 
 export interface LegifranceSettings {
 	clientId: string;
@@ -56,14 +57,25 @@ export default class LegifrancePlugin extends Plugin {
 			(leaf) => new LegalTextView(leaf, this.settings, instanceApiClient)
 		);
 
-		// This creates an icon in the left ribbon.
+		this.registerView(
+			TEXT_READER_VIEW,
+			(leaf) => new textReaderView(leaf)
+		);
+
+
 		this.addRibbonIcon('scale', 'Légifrance', async (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			// new SearchCaseModal(this.app, this.settings, instanceApiClient).open();
 			this.activateResearchTextView();
 		});
 
-		// This adds a simple command that can be triggered anywhere
+		this.addCommand({
+			id: 'lire-texte',
+			name: 'Lire texte',
+			callback: () => {
+				this.activateTextReaderView();
+			}
+		});
+
+
 		this.addCommand({
 			id: 'create-note-legi',
 			name: 'Créer une nouvelle fiche juridique.',
@@ -100,9 +112,27 @@ export default class LegifrancePlugin extends Plugin {
 			// Our view could not be found in the workspace, create a new leaf
 			// in the right sidebar for it
 			leaf = workspace.getRightLeaf(false);
-			await leaf.setViewState({ type: RESEARCH_TEXT_VIEW, active: true });
+			if (leaf) { await leaf.setViewState({ type: RESEARCH_TEXT_VIEW, active: true });  }
 		}
-		workspace.revealLeaf(leaf);
+		if (leaf) { workspace.revealLeaf(leaf); }
+	}
+
+	async activateTextReaderView() {
+		const { workspace } = this.app;
+	
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(TEXT_READER_VIEW);
+	
+		if (leaves.length > 0) {
+			// A leaf with our view already exists, use that
+			leaf = leaves[0];
+		} else {
+			// Our view could not be found in the workspace, create a new leaf
+			// in the right sidebar for it
+			leaf = workspace.getLeaf(true);
+			if (leaf) { await leaf.setViewState({ type: TEXT_READER_VIEW, active: true });  }
+		}
+		if (leaf) { workspace.revealLeaf(leaf); }
 	}
 }
 

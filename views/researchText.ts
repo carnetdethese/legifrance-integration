@@ -1,6 +1,6 @@
-import { ItemView, WorkspaceLeaf, Setting, Notice } from "obsidian";
+import { ItemView, WorkspaceLeaf, Setting } from "obsidian";
 import { codeFond, typeRecherche, operateursRecherche, critereTri } from "api/constants";
-import { agentSearch, expressionRechercheForm, rechercheAvStructure, RechercheForm } from "api/utilities";
+import { agentSearch, expressionRechercheForm, rechercheAvStructure } from "api/utilities";
 import { fondField } from "lib/utils";
 import { MontrerResultatsModal, resultsRequest } from "modals/ShowModal";
 import { LegifranceSettings } from "main";
@@ -214,7 +214,7 @@ export class LegalTextView extends ItemView {
     this.searchResult = await this.agentChercheur.advanceSearchText(this.recherche);
     console.log(this.searchResult);
 
-    for (let elt of this.recherche.recherche.champs[0].criteres){
+    for (const elt of this.recherche.recherche.champs[0].criteres){
       this.valeurRecherche += elt.valeur;
     }
 

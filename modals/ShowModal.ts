@@ -3,7 +3,7 @@ import { App, SuggestModal, Notice } from "obsidian";
 import { Decision, findLink, getDecisionInfo } from "abstracts/decisions" ;
 import { LegifranceSettings } from "main";
 import { replaceMark } from "lib/tools";
-import { agentSearch, rechercheAvStructure } from "api/utilities";
+import { agentSearch } from "api/utilities";
 
 export interface resultsRequest {
 	results: {

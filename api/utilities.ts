@@ -112,7 +112,7 @@ export class agentSearch {
         "textId": id,
         "searchedString": valeurRecherche
       }};
-      return await this.dilaApi.fetch(requestOptions);se
+      return await this.dilaApi.fetch(requestOptions);
   }
 
 }
