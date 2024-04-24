@@ -1,6 +1,12 @@
 import { Decision } from "abstracts/decisions";
 import { App } from "obsidian";
-import * as Mustache from 'mustache';
+import Mustache from 'mustache';
+import { ficheArretChamp } from "api/utilities";
+
+Mustache.escape = function(value)
+{
+    return value;
+};
 
 
 export class newNote {
@@ -9,6 +15,7 @@ export class newNote {
     titreTemplate:string;
     data:Decision;
     folder:string;
+    champFiche:ficheArretChamp;
 
     constructor(app:App, template:string, templateTitre:string, data:Decision) {
         this.app = app;
@@ -16,6 +23,13 @@ export class newNote {
         this.data = data;
         this.folder = this.folderSetting("Décisions/");
         this.titreTemplate = templateTitre;
+        this.champFiche = {
+            fait: "",
+            procedure: "",
+            moyens: "",
+            question: "",
+            solution: ""       
+         }
     }
 
     folderSetting(chosenFolder:string) {
@@ -23,13 +37,13 @@ export class newNote {
         return filePath
     }
 
-    renderFileTitle() {
-        return Mustache.render(this.titreTemplate, this.data);
+    async renderFileTitle () {
+        return await Mustache.render(this.titreTemplate, this.data)
     }
-
+ 
     async createNote() {
-        let filePath:string = this.folder + this.renderFileTitle();
-        const noteContent = Mustache.render(this.template, this.data);
+        let filePath:string = this.folder + await this.renderFileTitle();
+        const noteContent = await Mustache.render(this.template, this.data);
 
         if (this.app.vault.getFolderByPath("Décisions/" + this.data.juridiction) === null) {
             console.log("Dossier inexistant alors dossier créé.");

@@ -39,6 +39,7 @@ export class LegalTextView extends ItemView {
   }
 
   async onOpen() { // initializing the view 
+
     const container = this.containerEl.children[1];
     container.empty(); // making sure nothing the view is refreshed everytime the function is called.
 

@@ -1,5 +1,8 @@
-import { Setting } from "obsidian";
+import { ItemView, Setting } from "obsidian";
 import { codeFond, operateursRecherche } from "api/constants";
+import { ficheArretChamp } from "api/utilities";
+import { newNote } from "creation/newNote";
+import { textReaderView } from "views/viewText";
 
 export function fondField(view:any, fond:HTMLElement) {
 
@@ -26,3 +29,94 @@ export function fondField(view:any, fond:HTMLElement) {
         opeGen.setValue(view.recherche.recherche.champs[0].operateur)
       })
   }
+
+
+
+function ajoutBouton(view:textReaderView, element:HTMLElement) {
+  const ficheArretChamp = view.nouvelleNote.champFiche;
+  // Loop through each property of FicheArretChamp interface
+  for (const property in ficheArretChamp) {
+      if (Object.prototype.hasOwnProperty.call(ficheArretChamp, property)) {
+          const value = ficheArretChamp[property];
+          const newField = new Setting(element).setName(property[0].toUpperCase() + property.slice(1))
+
+          if (!value) {
+                      // Dynamically add fields for each property
+            newField.addExtraButton(cb => cb
+              .setIcon('plus') // Set initial value
+              .onClick(async () => {
+                // Update the property value when the field changes
+                ficheArretChamp[property] = " ";
+                await view.onOpen();
+            }));
+          }
+          else {
+            newField
+              .addTextArea(cb => cb
+                .setValue(ficheArretChamp[property])
+                .onChange(value => {
+                  ficheArretChamp[property] = value;
+                })
+              )
+              .addExtraButton(cb => cb
+                .setIcon('minus')
+                .onClick(async () => {
+                  ficheArretChamp[property] = "";
+                  await view.onOpen();
+                })
+            )
+          }
+      }
+  }
+
+  // if (ficheArretChamp == "") {
+  //   element.addExtraButton(cb => cb
+  //     .setIcon("plus")
+  //     .onClick(async () => {
+  //       champ = "Fait";
+  //       await view.onOpen();
+  //     }))
+  // }
+  // else {
+  //   element
+  //     .addTextArea(cb => cb
+  //       .setPlaceholder(champ || "")
+  //     )
+  //     .addExtraButton(cb => cb
+  //       .setIcon('minus')
+  //       .onClick(async () => {
+  //         champ = "";
+  //         await view.onOpen();
+  //       })
+  //     );
+  // }
+}
+
+export function creerUneNouvelleNote(view:textReaderView, header:HTMLElement) {
+  const champFicheString = view.nouvelleNote.champFiche;
+  console.log(champFicheString);
+  
+  header.createEl("h4", { text: "Créer une note de jurisprudence"})
+    
+  new Setting(header)
+    .setName("Titre")
+    .addText(cb => cb
+      .setPlaceholder(view.decision.id))
+
+  new Setting(header)
+    .setName("Contribution")
+    .addTextArea(cb => cb)
+
+
+  ajoutBouton(view, header);
+
+  new Setting(header)
+    .addButton(cb => cb
+      .setCta()
+      .setButtonText("Créer la note")
+      .onClick(async (evt: MouseEvent) => {
+        console.log(await view.nouvelleNote.createNote())
+        // await view.nouvelleNote.createNote();
+      })
+    )
+}

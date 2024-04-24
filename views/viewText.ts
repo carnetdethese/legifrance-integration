@@ -1,18 +1,23 @@
 import LegifrancePlugin from "main";
 import { Decision } from "abstracts/decisions";
-import { ItemView, Setting, WorkspaceLeaf } from "obsidian";
-import { info } from "console";
-import { replaceMark } from "lib/tools";
+import { ItemView, WorkspaceLeaf } from "obsidian";
+import { creerUneNouvelleNote } from "lib/utils";
+import { newNote } from "creation/newNote";
+
 
 export const TEXT_READER_VIEW = "text-reader-view";
 
 export class textReaderView extends ItemView {
   decision:Decision;
+  plugin:LegifrancePlugin;
+  nouvelleNote:newNote;
 
 
   constructor(plugin:LegifrancePlugin, leaf: WorkspaceLeaf) {
     super(leaf);
+    this.plugin = plugin;
     this.decision = plugin.decision;
+    this.nouvelleNote = new newNote(this.plugin.app, this.plugin.settings.template, this.plugin.settings.fileTitle, this.decision);
   }
 
   getViewType() {
@@ -22,7 +27,6 @@ export class textReaderView extends ItemView {
   getDisplayText() {
     return this.decision.id;
   }
-
   async onOpen() {
     const container = this.containerEl.children[1];
     container.empty();
@@ -31,15 +35,7 @@ export class textReaderView extends ItemView {
 
     const header = container.createDiv();
 
-
-    new Setting(header)
-      .setName("Créer une note")
-      .addText(cb => cb
-        .setPlaceholder("Titre"))
-      .addButton(cb => cb
-        .setCta()
-        .setButtonText("Créer la note")
-      )
+    creerUneNouvelleNote(this, header);
 
     const infoBox = container.createEl("div", { cls: "showline"})
     infoBox.createEl("h5", {text: "Informations" })

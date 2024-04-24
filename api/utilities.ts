@@ -43,6 +43,16 @@ export interface Criteres { // interface pour le champ : criteres. Peut y en avo
   typeRecherche:string
 }
 
+
+export interface ficheArretChamp {
+  [key:string]:string,
+  fait:string,
+  procedure:string,
+  moyens:string,
+  question:string,
+  solution:string
+}
+
 export class agentSearch {
   settings:LegifranceSettings;
   dilaApi:DilaApiClient;
