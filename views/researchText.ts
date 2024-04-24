@@ -3,7 +3,7 @@ import { codeFond, typeRecherche, operateursRecherche, critereTri } from "api/co
 import { agentSearch, expressionRechercheForm, rechercheAvStructure } from "api/utilities";
 import { fondField } from "lib/utils";
 import { MontrerResultatsModal, resultsRequest } from "modals/ShowModal";
-import { LegifranceSettings } from "main";
+import LegifrancePlugin from "main";
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
@@ -17,15 +17,16 @@ export class LegalTextView extends ItemView {
   activeResearchType:string;
   headerDiv:HTMLElement;
   rechercheDiv:HTMLElement;
-  settings:LegifranceSettings;
   valeurRecherche:string;
+  plugin:LegifrancePlugin;
+  maxResults:number;
 
 
-  constructor(leaf: WorkspaceLeaf, settings:LegifranceSettings, agentChercheur:agentSearch) {
+  constructor(plugin:LegifrancePlugin, leaf: WorkspaceLeaf, agentChercheur:agentSearch) {
     super(leaf);
     this.compteur = 0;
     this.agentChercheur = agentChercheur;
-    this.settings = settings;
+    this.plugin = plugin;
     this.initSearch();
   }
 
@@ -218,7 +219,7 @@ export class LegalTextView extends ItemView {
       this.valeurRecherche += elt.valeur;
     }
 
-    new MontrerResultatsModal(this.app, this.settings, this.searchResult, this.valeurRecherche, this.agentChercheur).open();
+    new MontrerResultatsModal(this.app, this.plugin, this.searchResult, this.valeurRecherche, this.agentChercheur, false).open();
 
     console.log(this.recherche);
   }
@@ -226,7 +227,7 @@ export class LegalTextView extends ItemView {
   initSearch() {
     this.recherche = {
       recherche: {
-        pageSize: this.settings.maxResults,
+        pageSize: this.plugin.settings.maxResults,
         sort: critereTri.keys().next().value,
         // operateur: operateursRecherche.keys().next().value,
         typePagination: "DEFAUT",

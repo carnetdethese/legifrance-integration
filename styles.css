@@ -16,3 +16,13 @@ mark {
     border: 1px;
     border-color: black;
 }
+
+.break {
+    color: grey;
+    position: relative;
+    text-align: center;
+}
+
+.infoDecision {
+    font-weight: bold;
+}

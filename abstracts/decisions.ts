@@ -60,8 +60,8 @@ export async function getDecisionInfo(decision:Decision, valeurRecherche:string,
 
 	infoDecision.titre = removeTags(decision.titre);
 	// Texte intégral au format markdown
-	infoDecision.texteIntegral = htmlToMarkdown(response.text.texteHtml);
 
+	infoDecision.texteIntegral = htmlToMarkdown(response.text.texteHtml);
 	// Date au format YYYY-MM-DD
 	const dateDec = new Date(response.text.dateTexte)
 	const formattedDate = dateDec.toISOString().split('T')[0];

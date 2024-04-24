@@ -4,6 +4,8 @@ import { SearchCaseModal } from 'modals/SearchModal';
 import { RESEARCH_TEXT_VIEW, LegalTextView } from 'views/researchText';
 import { critereTri } from 'api/constants';
 import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
+import { resultsRequest } from 'modals/ShowModal';
+import { Decision } from 'abstracts/decisions';
 
 export interface LegifranceSettings {
 	clientId: string;
@@ -48,20 +50,20 @@ tags:
 
 export default class LegifrancePlugin extends Plugin {
 	settings: LegifranceSettings;
+	decision:Decision;
 
 	async onload() {
 		await this.loadSettings();
 		const instanceApiClient:agentSearch = new agentSearch(this.settings);
+
 		this.registerView(
 			RESEARCH_TEXT_VIEW,
-			(leaf) => new LegalTextView(leaf, this.settings, instanceApiClient)
+			(leaf) => new LegalTextView(this, leaf, instanceApiClient)
 		);
-
 		this.registerView(
 			TEXT_READER_VIEW,
-			(leaf) => new textReaderView(leaf)
+			(leaf) => new textReaderView(this, leaf)
 		);
-
 
 		this.addRibbonIcon('scale', 'Légifrance', async (evt: MouseEvent) => {
 			this.activateResearchTextView();
@@ -121,18 +123,13 @@ export default class LegifrancePlugin extends Plugin {
 		const { workspace } = this.app;
 	
 		let leaf: WorkspaceLeaf | null = null;
-		const leaves = workspace.getLeavesOfType(TEXT_READER_VIEW);
 	
-		if (leaves.length > 0) {
-			// A leaf with our view already exists, use that
-			leaf = leaves[0];
-		} else {
-			// Our view could not be found in the workspace, create a new leaf
-			// in the right sidebar for it
-			leaf = workspace.getLeaf(true);
-			if (leaf) { await leaf.setViewState({ type: TEXT_READER_VIEW, active: true });  }
-		}
+		// Our view could not be found in the workspace, create a new leaf
+		// in the right sidebar for it
+		leaf = workspace.getLeaf(true);
+		if (leaf) { await leaf.setViewState({ type: TEXT_READER_VIEW, active: true });  }
 		if (leaf) { workspace.revealLeaf(leaf); }
+		
 	}
 }
 

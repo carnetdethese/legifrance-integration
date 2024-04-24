@@ -1,7 +1,7 @@
 import { newNote } from "creation/newNote";
 import { App, SuggestModal, Notice } from "obsidian";
 import { Decision, findLink, getDecisionInfo } from "abstracts/decisions" ;
-import { LegifranceSettings } from "main";
+import LegifrancePlugin  from "main";
 import { replaceMark } from "lib/tools";
 import { agentSearch } from "api/utilities";
 
@@ -19,18 +19,20 @@ interface itemResult {
 
 export class MontrerResultatsModal extends SuggestModal<Decision> {
     results:object;
-	settings:LegifranceSettings;
+	plugin:LegifrancePlugin
 	valeurRecherche:string;
 	ALL_DECISIONS:Decision[];
 	agentChercheur:agentSearch;
+	createNote:boolean;
 
-	constructor(app: App, settings:LegifranceSettings, content:resultsRequest, valeurRecherche:string, apiClient:agentSearch) {
+	constructor(app: App, plugin:LegifrancePlugin, content:resultsRequest, valeurRecherche:string, apiClient:agentSearch, createNote:boolean) {
 		super(app);
         this.results = content;
-		this.settings = settings;
+		this.plugin = plugin;
 		this.ALL_DECISIONS = this.getResults(content);
 		this.valeurRecherche = valeurRecherche || "";
 		this.agentChercheur = apiClient;
+		this.createNote = createNote;
 	}
 
 	// fonction qui construit une liste d'objet Decision permettant d'être rendu par la fonction de rendu plus bas. 
@@ -87,8 +89,15 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 		if (this.ALL_DECISIONS.find(elt => elt.id == decision.id) !== undefined) {
 			let selectedDecision:Decision = this.ALL_DECISIONS.find(elt => elt.id == decision.id) as Decision; 
 			selectedDecision = await getDecisionInfo(selectedDecision, this.valeurRecherche, this.agentChercheur);
-			new newNote(this.app, this.settings.template, this.settings.fileTitle, selectedDecision).createNote();
-			new Notice(`Selected ${decision.id}`);
+
+			if (this.createNote) {
+				new newNote(this.app, this.plugin.settings.template, this.plugin.settings.fileTitle, selectedDecision).createNote();
+				new Notice(`Selected ${decision.id}`);
+			}
+			else {
+				this.plugin.decision = selectedDecision;
+				this.plugin.activateTextReaderView();
+			}
 		}
 	}
 }

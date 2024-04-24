@@ -14,7 +14,6 @@ export async function replaceMark(texte:string, container:HTMLElement) {
             }
         });
     }
-
     return container
 }
 
