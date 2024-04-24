@@ -24,3 +24,6 @@ data.json
 
 # Exclude environnement variables 
 .env
+
+# Exclude help-dev files
+help-dev

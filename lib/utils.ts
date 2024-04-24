@@ -1,7 +1,5 @@
-import { ItemView, Setting } from "obsidian";
 import { codeFond, operateursRecherche } from "api/constants";
-import { ficheArretChamp } from "api/utilities";
-import { newNote } from "creation/newNote";
+import { Setting } from "obsidian";
 import { textReaderView } from "views/viewText";
 
 export function fondField(view:any, fond:HTMLElement) {

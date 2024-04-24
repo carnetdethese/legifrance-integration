@@ -220,6 +220,8 @@ export class LegalTextView extends ItemView {
       this.valeurRecherche += elt.valeur;
     }
 
+    console.log(this.searchResult);
+
     new MontrerResultatsModal(this.app, this.plugin, this.searchResult, this.valeurRecherche, this.agentChercheur, false).open();
 
     console.log(this.recherche);

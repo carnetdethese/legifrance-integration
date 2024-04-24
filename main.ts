@@ -4,7 +4,6 @@ import { SearchCaseModal } from 'modals/SearchModal';
 import { RESEARCH_TEXT_VIEW, LegalTextView } from 'views/researchText';
 import { critereTri } from 'api/constants';
 import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
-import { resultsRequest } from 'modals/ShowModal';
 import { Decision } from 'abstracts/decisions';
 
 export interface LegifranceSettings {
@@ -54,6 +53,13 @@ export default class LegifrancePlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+		const decision = {
+			titre: " ",
+			id: " ",
+			texte: " ",
+			lien: " ",
+			origin: " "
+		}
 		const instanceApiClient:agentSearch = new agentSearch(this.settings);
 
 		this.registerView(

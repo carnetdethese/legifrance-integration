@@ -29,15 +29,41 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 		super(app);
         this.results = content;
 		this.plugin = plugin;
-		this.ALL_DECISIONS = this.getResults(content);
+		this.ALL_DECISIONS = this.getResultsDecision(content);
 		this.valeurRecherche = valeurRecherche || "";
 		this.agentChercheur = apiClient;
 		this.createNote = createNote;
 	}
 
+	// getResultsResearch(data:resultsRequest) {
+	// 	const resultsDic:Decision[] = [];
+	// 	let contenuTexte:string;
+	// 	let origine:string;
+
+    //     if (data && data.results && Array.isArray(data.results)) {
+	// 		data.results.forEach(result => {
+	// 			// Process each search result here
+	// 			contenuTexte = result.text;
+	// 			origine = result.origin;
+	// 			result.titles.forEach((entree: itemResult) => {
+	// 					resultsDic.push({
+	// 						titre: entree.title,
+	// 						id: entree.id,
+	// 						texte: contenuTexte,
+	// 						lien: findLink(origine, entree.id),
+	// 						origin: origine
+	// 					});
+	// 				});
+	// 		});
+	// 	} else {
+	// 		console.error('Réponse invalide ou manquante à la requête.');
+	// 	}
+	// 	return resultsDic
+	// }
+
 	// fonction qui construit une liste d'objet Decision permettant d'être rendu par la fonction de rendu plus bas. 
 
-    getResults(data:resultsRequest) {
+    getResultsDecision(data:resultsRequest) {
 		const resultsDic:Decision[] = [];
 		let contenuTexte:string;
 		let origine:string;
@@ -88,6 +114,7 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 	async onChooseSuggestion(decision: Decision, evt: MouseEvent | KeyboardEvent) {
 		if (this.ALL_DECISIONS.find(elt => elt.id == decision.id) !== undefined) {
 			let selectedDecision:Decision = this.ALL_DECISIONS.find(elt => elt.id == decision.id) as Decision; 
+
 			selectedDecision = await getDecisionInfo(selectedDecision, this.valeurRecherche, this.agentChercheur);
 
 			if (this.createNote) {
