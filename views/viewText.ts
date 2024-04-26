@@ -1,7 +1,6 @@
 import LegifrancePlugin from "main";
 import { Decision } from "abstracts/decisions";
-import { ItemView, Setting, WorkspaceLeaf } from "obsidian";
-import { creerUneNouvelleNote } from "lib/utils";
+import { ItemView, WorkspaceLeaf } from "obsidian";
 import { newNote } from "creation/newNote";
 import { ResearchTextView, RESEARCH_TEXT_VIEW } from "./researchText";
 import { replaceMark } from "lib/tools";
@@ -40,8 +39,6 @@ export class textReaderView extends ItemView {
 
     container.createEl("h4", { text: this.decision.id });
 
-    const header = container.createDiv();
-
     const infoBox = container.createEl("div", { cls: "showline"})
     infoBox.createEl("h5", {text: "Informations" })
 
@@ -49,7 +46,7 @@ export class textReaderView extends ItemView {
     infoBox.createEl("p", { text: `Date : ${this.decision.date}`, cls:"infoDecision" } );
     infoBox.createEl("p", { text: `Numéro : ${this.decision.numero}`, cls:"infoDecision" } );
     if (this.decision.formation) { infoBox.createEl("p", { text: `Formation : ${this.decision.formation}`, cls:"infoDecision" } ); } 
-    if (this.decision.solution) {infoBox.createEl("p", { text: `Solution : ${this.decision.solution}`, cls:"infoDecision" } );}
+    if (this.decision.abstract) {infoBox.createEl("p", { text: `Solution : ${this.decision.abstract}`, cls:"infoDecision" } );}
 
     infoBox.createEl("p", {text: "–––––––––––––––––", cls:"break"});
 

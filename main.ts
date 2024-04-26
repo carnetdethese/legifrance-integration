@@ -1,5 +1,5 @@
 import { agentSearch } from 'api/utilities';
-import { App, ItemView, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
 import { SearchCaseModal } from 'modals/SearchModal';
 import { RESEARCH_TEXT_VIEW, ResearchTextView } from 'views/researchText';
 import { critereTri } from 'api/constants';

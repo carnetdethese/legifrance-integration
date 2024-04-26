@@ -1,12 +1,14 @@
+import * as Mustache from 'mustache';
 import { Decision } from "abstracts/decisions";
 import { App } from "obsidian";
-import Mustache from 'mustache';
 import { dataFiche, ficheArretChamp } from "api/utilities";
 
-Mustache.escape = function(value)
-{
-    return value;
-};
+// Mustache.escape = function(value:string)
+// {
+//     return value;
+// };
+
+
 
 
 export class newNote {
@@ -40,7 +42,7 @@ export class newNote {
     }
 
     async renderFileTitle () {
-        return await Mustache.render(this.titreTemplate, this.data)
+        return Mustache.render(this.titreTemplate, this.data)
     }
  
     async createNote() {

@@ -1,8 +1,9 @@
 import { codeFond, operateursRecherche } from "api/constants";
 import { Setting } from "obsidian";
+import { ResearchTextView } from "views/researchText";
 import { textReaderView } from "views/viewText";
 
-export function fondField(view:any, fond:HTMLElement) {
+export function fondField(view:ResearchTextView, fond:HTMLElement) {
 
     new Setting(fond)
       .setName("Fond : ")
@@ -24,7 +25,7 @@ export function fondField(view:any, fond:HTMLElement) {
         opeGen.onChange(() => {
           view.recherche.recherche.operateur = opeGen.getValue();
         })
-        opeGen.setValue(view.recherche.recherche.champs[0].operateur)
+        opeGen.setValue(view.recherche.recherche.champs[0].operateur as string)
       })
   }
 
@@ -51,7 +52,7 @@ export function ajoutBouton(view:textReaderView, element:HTMLElement) {
           else {
             newField
               .addTextArea(cb => cb
-                .setValue(ficheArretChamp[property])
+                .setValue(ficheArretChamp[property] as string)
                 .onChange(value => {
                   ficheArretChamp[property] = value;
                 })

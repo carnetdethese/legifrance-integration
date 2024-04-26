@@ -6,6 +6,12 @@ import { replaceMark } from "lib/tools";
 import { agentSearch } from "api/utilities";
 import { resultatsRecherche } from "abstracts/resultatRecherche";
 
+interface entreeDecision {
+    title:string,
+    id:string
+}
+
+
 export class MontrerResultatsModal extends SuggestModal<Decision> {
     results:object;
 	plugin:LegifrancePlugin
@@ -61,8 +67,8 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 				// Process each search result here
 				contenuTexte = result.text;
 				origine = result.origin;
-				if (result.date) { date = result.date };
-				result.titles.forEach((entree) => {
+				if (result.date) { date = result.date }
+				result.titles.forEach((entree:entreeDecision) => {
 						resultsDic.push({
 							titre: entree.title,
 							id: entree.id,

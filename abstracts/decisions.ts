@@ -1,8 +1,9 @@
 import { agentSearch } from "api/utilities";
 import { removeTags } from "lib/tools";
 import { htmlToMarkdown } from "obsidian";
+import { reponseDocument } from "./resultatRecherche";
 
-interface resumeDecision {
+export interface resumeDecision {
 	resumePrincipal:string;
 }
 
@@ -21,15 +22,15 @@ export interface Decision {
 	formation?: string;
 	urlCC?: string; // Lien vers le site du Conseil constitutionnel
 	sommaires?: Sommaire[];
+	abstract?:string;
 	titreNote?:string;
 	contributionNote?:string;
+
 }
 
 export interface Sommaire {
 	resume:string;
 }
-
-
 
 const urlFond = new Map<string, string>([
 	["CETAT", "/ceta/id/"],
@@ -55,8 +56,10 @@ export async function getDecisionInfo(decision:Decision, valeurRecherche:string,
 	const infoDecision:Decision = decision;
 
 	// Variable qui contient la réponse de la requête 
-	const response = await apiClient.fetchText(decision, valeurRecherche); // requête à l'API
+	const response:reponseDocument = await apiClient.fetchText(decision, valeurRecherche) as reponseDocument; // requête à l'API
 
+	console.log(response);
+		
 	infoDecision.titre = removeTags(decision.titre);
 	// Texte intégral au format markdown
 

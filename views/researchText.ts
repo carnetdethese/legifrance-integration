@@ -5,6 +5,7 @@ import { creerUneNouvelleNote, fondField } from "lib/utils";
 import { MontrerResultatsModal } from "modals/ShowModal";
 import LegifrancePlugin from "main";
 import { textReaderView } from "./viewText";
+import { resultatsRecherche } from "abstracts/resultatRecherche";
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
@@ -14,7 +15,7 @@ export class ResearchTextView extends ItemView {
   compteur:number;
   nbChamps:number;
   agentChercheur:agentSearch;
-  searchResult:object;
+  searchResult:resultatsRecherche;
   activeResearchType:string;
   headerDiv:HTMLElement;
   listResults:HTMLElement;
@@ -233,7 +234,7 @@ export class ResearchTextView extends ItemView {
   }
 
   async launchSearch() {
-    this.searchResult = await this.agentChercheur.advanceSearchText(this.recherche);
+    this.searchResult = await this.agentChercheur.advanceSearchText(this.recherche) as resultatsRecherche;
 
     for (const elt of this.recherche.recherche.champs[0].criteres){
       this.valeurRecherche += elt.valeur;
