@@ -90,6 +90,7 @@ Une fois le module validé par l'équipe d'Obsidian, il sera disponible directem
 -   [x] Visualisation des documents dans Obsidian dans une fenêtre, sans insertion dans une note.
 -   [ ] Recherche dans tous les fonds disponibles.
 -   [x] Recherche complexe : intégration des opérateurs booléens.
+-   [ ] S'assurer que les _views_ persistent après redémarrage.
 
 ## Soutien
 
