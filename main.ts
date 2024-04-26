@@ -102,7 +102,7 @@ export default class LegifrancePlugin extends Plugin {
 			id: 'create-note-legi',
 			name: 'Créer une nouvelle fiche juridique.',
 			callback: () => {
-				new SearchCaseModal(this.app, this.settings, instanceApiClient).open();
+				new SearchCaseModal(this.app, this, instanceApiClient).open();
 			}
 		});
 

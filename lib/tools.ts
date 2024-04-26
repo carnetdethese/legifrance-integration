@@ -17,9 +17,10 @@ export async function replaceMark(texte:string, container:HTMLElement) {
     return container
 }
 
-export function removeTags(str) {
+export function removeTags(str:string) {
+
     if ((str === null) || (str === ''))
-        return false;
+        return '';
     else
         str = str.toString();
  

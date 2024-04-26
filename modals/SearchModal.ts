@@ -1,9 +1,10 @@
 import { App, Modal, Setting } from "obsidian";
-import { MontrerResultatsModal, resultsRequest } from "./ShowModal";
+import { MontrerResultatsModal } from "./ShowModal";
 import { agentSearch } from "api/utilities";
-import { LegifranceSettings } from "main";
+import LegifrancePlugin, { LegifranceSettings } from "main";
 import { codeFond, operateursRecherche, typeRecherche } from "api/constants";
-import { fondField } from "lib/utils";
+import { resultatsRecherche } from "abstracts/resultatRecherche";
+
 
 
 export class SearchCaseModal extends Modal {
@@ -12,12 +13,14 @@ export class SearchCaseModal extends Modal {
 	fond: string;
 	settings: LegifranceSettings; // Paramètres du plugin
 	agentChercheur:agentSearch; // Client qui effectue la recherche et les requêtes
+	plugin:LegifrancePlugin;
 
-	dicRecherche:resultsRequest; // Résultat de la recherche
+	dicRecherche:resultatsRecherche; // Résultat de la recherche
 
-	constructor(app: App, settings:LegifranceSettings, apiClient:agentSearch) {
+	constructor(app: App, plugin:LegifrancePlugin, apiClient:agentSearch) {
 		super(app);
-		this.settings = settings;
+		this.settings = plugin.settings;
+		this.plugin = plugin;
 		this.agentChercheur = apiClient;
 		this.fond = codeFond.keys().next().value;
 	}
@@ -25,8 +28,6 @@ export class SearchCaseModal extends Modal {
 	onOpen() {
 		const {contentEl} = this;
 		contentEl.createEl("h1", { text: "Recherche sur Légifrance" });
-
-		fondField(this, contentEl);
 
 		new Setting(contentEl)
 			.setName("Recherche :")
@@ -52,8 +53,8 @@ export class SearchCaseModal extends Modal {
 					.setCta()
 					.onClick(async () => {
 						this.close();
-                        this.dicRecherche = await this.agentChercheur.searchText(this.valeurRecherche, this.fond, this.settings.maxResults);
-                        new MontrerResultatsModal(this.app, this.settings, this.dicRecherche, this.valeurRecherche, this.agentChercheur).open();
+                        this.dicRecherche = await this.agentChercheur.searchText(this.valeurRecherche, this.fond, this.settings.maxResults) as resultatsRecherche;
+                        new MontrerResultatsModal(this.app, this.plugin, this.dicRecherche, this.valeurRecherche, this.agentChercheur, false).open();
 					}));
 	}
 

@@ -11,7 +11,6 @@ interface entreeDecision {
     id:string
 }
 
-
 export class MontrerResultatsModal extends SuggestModal<Decision> {
     results:object;
 	plugin:LegifrancePlugin

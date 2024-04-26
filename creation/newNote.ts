@@ -1,12 +1,12 @@
-import mustache from 'mustache';
+import * as mustache from 'mustache';
 import { Decision } from "abstracts/decisions";
 import { App } from "obsidian";
 import { dataFiche, ficheArretChamp } from "api/utilities";
 
-mustache.escape = function(value:string)
-{
-    return value;
-};
+// mustache.escape = function(value:string)
+// {
+//     return value;
+// };
 
 export class newNote {
     app:App;
