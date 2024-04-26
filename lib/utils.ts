@@ -90,24 +90,29 @@ export function ajoutBouton(view:textReaderView, element:HTMLElement) {
   // }
 }
 
-export async function creerUneNouvelleNote(view:textReaderView, header:HTMLElement) {
-  const champFicheString = view.nouvelleNote.champFiche;
-    
-  header.createEl("h4", { text: "Créer une note de jurisprudence"})
+export async function creerUneNouvelleNote(view:textReaderView, header:HTMLElement) {    
+  header.createEl("h4", { text: "Créer une note de jurisprudence"});
+  header.createEl("p", {text: view.decision.titre});
       
   new Setting(header)
     .setName("Titre")
-    .addText(cb => cb
-      .setPlaceholder(view.decision.id)
-      .onChange((value) => {
+    .addText(cb => {
+      cb.setPlaceholder(view.decision.id)
+
+      if (view.decision.titreNote) {
+        cb.setPlaceholder(view.decision.titreNote)
+      }
+
+      cb.onChange((value) => {
         view.decision.titreNote = value;
-      })
+      })}
     )
     
   
   new Setting(header)
     .setName("Contribution")
     .addTextArea(cb => cb
+      .setValue(view.decision.contributionNote || "")
       .onChange((value) => {
         view.decision.contributionNote = value;
       })
