@@ -123,17 +123,13 @@ export default class LegifrancePlugin extends Plugin {
 
 		if (leaves.length > 0) {
 			searchTab = leaves[0].view as ResearchTextView;
-			// console.log(this.searchTab);
 		}
 
 		const activeLeaf = this.app.workspace.getActiveViewOfType(textReaderView);
 
 		if (activeLeaf){
 			if (searchTab){
-				// console.log(this.searchTab)
-				console.log(searchTab.setActiveViewText(activeLeaf));
-				// console.log(activeLeaf);
-				// this.searchTab.setActiveViewText;
+				searchTab.setActiveViewText(activeLeaf);
 				searchTab?.onOpen();
 			}
 		}

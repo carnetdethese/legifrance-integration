@@ -48,7 +48,6 @@ export class newNote {
             ...this.data,
             ...this.champFiche
         }
-        console.log(this.dataNote);
 
         let fileTitle;
 

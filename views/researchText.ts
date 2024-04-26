@@ -49,13 +49,6 @@ export class ResearchTextView extends ItemView {
     this.headerDiv = container.createDiv(); // creating header part
     this.rechercheDiv = container.createDiv(); // search div - alternating between simple or complex search
 
-    new Setting(this.headerDiv)
-      .addButton(cb => cb
-        .setButtonText("Refresh")
-        .onClick(() => {
-          this.onOpen();
-        })
-      )
     // Header setting, always shown.
     new Setting(this.headerDiv) 
       .addButton(cb => cb 
@@ -77,10 +70,16 @@ export class ResearchTextView extends ItemView {
         })
       )
 
+      if (this.activeResearchType == "simple") {
+        this.simpleSearchEngine();
+      }
+      else if (this.activeResearchType == "advance") {
+        this.advancedSearchEngine();
+      }
+
       this.listResults = container.createDiv();
 
       if (this.activeViewLeaf) {
-        this.activeResearchType = "";
         creerUneNouvelleNote(this.activeViewLeaf, this.listResults);
       }  
   }
@@ -188,6 +187,7 @@ export class ResearchTextView extends ItemView {
     this.rechercheDiv.empty();
     this.activeResearchType = "simple";
     this.initSearch();
+    this.compteur = 0;
 
     fondField(this, this.rechercheDiv);
       

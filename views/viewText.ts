@@ -4,6 +4,7 @@ import { ItemView, Setting, WorkspaceLeaf } from "obsidian";
 import { creerUneNouvelleNote } from "lib/utils";
 import { newNote } from "creation/newNote";
 import { ResearchTextView, RESEARCH_TEXT_VIEW } from "./researchText";
+import { replaceMark } from "lib/tools";
 
 
 export const TEXT_READER_VIEW = "text-reader-view";
@@ -56,11 +57,15 @@ export class textReaderView extends ItemView {
 
     content.createEl("h5", {text: "Texte intégral"});
 
-    const texteArray = this.decision.texteIntegral?.split("\n");
+    if (this.decision.texteIntegralHTML) {
+      const texteArray = this.decision.texteIntegralHTML.split("<br/>");
 
-    texteArray?.forEach(elt => {
-      content.createEl("p", { text: elt });
-    })
+      texteArray?.forEach(elt => {
+        const para = content.createEl("p");
+        replaceMark(elt, para);
+        //content.createEl("p", { text: elt });
+      })
+    }
 
     if (this.decision.sommaires) {
       content.createEl("h4", {text: "Sommaires" })

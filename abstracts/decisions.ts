@@ -13,6 +13,7 @@ export interface Decision {
 	lien: string;
 	origin: string;
 	texteIntegral?: string;
+	texteIntegralHTML?:string;
 	numero?: string;
 	date?: string;
 	annee?:number;
@@ -56,12 +57,13 @@ export async function getDecisionInfo(decision:Decision, valeurRecherche:string,
 	// Variable qui contient la réponse de la requête 
 	const response = await apiClient.fetchText(decision, valeurRecherche); // requête à l'API
 
-	console.log(response);
-
 	infoDecision.titre = removeTags(decision.titre);
 	// Texte intégral au format markdown
 
 	infoDecision.texteIntegral = htmlToMarkdown(response.text.texteHtml);
+	infoDecision.texteIntegralHTML = response.text.texteHtml;
+
+
 	// Date au format YYYY-MM-DD
 	const dateDec = new Date(response.text.dateTexte)
 	const formattedDate = dateDec.toISOString().split('T')[0];

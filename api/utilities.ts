@@ -120,7 +120,6 @@ export class agentSearch {
   async fetchText(texte:Decision, valeurRecherche:string) {
     let parametres;
     const path = getPathID(texte.id);
-    console.log(path);
 
     if (texte.id.startsWith("LEGI")) {
       parametres = {

@@ -86,9 +86,10 @@ Une fois le module validé par l'équipe d'Obsidian, il sera disponible directem
 
 ## TO-DO
 
--   [ ] Visualisation des documents dans Obsidian dans une fenêtre, sans insertion dans une note.
+-   [x] Intégration d'un éditeur de fiche d'arrêt.
+-   [x] Visualisation des documents dans Obsidian dans une fenêtre, sans insertion dans une note.
 -   [ ] Recherche dans tous les fonds disponibles.
--   [ ] Recherche complexe : intégration des opérateurs booléens.
+-   [x] Recherche complexe : intégration des opérateurs booléens.
 
 ## Soutien
 
