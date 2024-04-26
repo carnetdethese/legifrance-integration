@@ -1,12 +1,7 @@
-import mustache from 'mustache';
+import * as Handlebars from "handlebars";
 import { Decision } from "abstracts/decisions";
 import { App } from "obsidian";
 import { dataFiche, ficheArretChamp } from "api/utilities";
-
-// mustache.escape = function(value:string)
-// {
-//     return value;
-// };
 
 export class newNote {
     app:App;
@@ -39,7 +34,8 @@ export class newNote {
     }
 
     async renderFileTitle () {
-        return mustache.render(this.titreTemplate, this.data)
+        const titreTemplateCompiled = Handlebars.compile(this.titreTemplate, {noEscape: true});
+        return titreTemplateCompiled(this.dataNote);
     }
  
     async createNote() {
@@ -58,7 +54,8 @@ export class newNote {
         }
 
         let filePath:string = this.folder + fileTitle;
-        const noteContent = await mustache.render(this.template, this.dataNote);
+        const templateContenuCompile = Handlebars.compile(this.template, {noEscape: true});
+        const noteContent = templateContenuCompile(this.dataNote);
 
         if (this.app.vault.getFolderByPath("Décisions/" + this.data.juridiction) === null) {
             console.log("Dossier inexistant alors dossier créé.");
