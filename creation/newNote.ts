@@ -1,7 +1,7 @@
 import { Decision } from "abstracts/decisions";
 import { App } from "obsidian";
 import Mustache from 'mustache';
-import { ficheArretChamp } from "api/utilities";
+import { dataFiche, ficheArretChamp } from "api/utilities";
 
 Mustache.escape = function(value)
 {
@@ -16,13 +16,12 @@ export class newNote {
     data:Decision;
     folder:string;
     champFiche:ficheArretChamp;
+    dataNote:dataFiche;
+
 
     constructor(app:App, template:string, templateTitre:string, data:Decision) {
         this.app = app;
         this.template = template;
-        this.data = data;
-        this.folder = this.folderSetting("Décisions/");
-        this.titreTemplate = templateTitre;
         this.champFiche = {
             fait: "",
             procedure: "",
@@ -30,6 +29,9 @@ export class newNote {
             question: "",
             solution: ""       
          }
+        this.data = data;
+        this.folder = this.folderSetting("Décisions/");
+        this.titreTemplate = templateTitre;
     }
 
     folderSetting(chosenFolder:string) {
@@ -42,8 +44,23 @@ export class newNote {
     }
  
     async createNote() {
-        let filePath:string = this.folder + await this.renderFileTitle();
-        const noteContent = await Mustache.render(this.template, this.data);
+        this.dataNote = {
+            ...this.data,
+            ...this.champFiche
+        }
+        console.log(this.dataNote);
+
+        let fileTitle;
+
+        if (this.dataNote.titreNote) {
+            fileTitle = this.dataNote.titreNote;
+        }
+        else {
+            fileTitle = await this.renderFileTitle()
+        }
+
+        let filePath:string = this.folder + fileTitle;
+        const noteContent = await Mustache.render(this.template, this.dataNote);
 
         if (this.app.vault.getFolderByPath("Décisions/" + this.data.juridiction) === null) {
             console.log("Dossier inexistant alors dossier créé.");

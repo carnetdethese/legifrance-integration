@@ -1,7 +1,7 @@
 import { agentSearch } from 'api/utilities';
-import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
+import { App, ItemView, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
 import { SearchCaseModal } from 'modals/SearchModal';
-import { RESEARCH_TEXT_VIEW, LegalTextView } from 'views/researchText';
+import { RESEARCH_TEXT_VIEW, ResearchTextView } from 'views/researchText';
 import { critereTri } from 'api/constants';
 import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
 import { Decision } from 'abstracts/decisions';
@@ -30,12 +30,23 @@ apport:
 numero: {{numero}} 
 citation: {{citation}}
 lien: {{lien}}
+contribution: {{contribution}}
 tags: 
 ---
 
 ## Fiche et commentaire
 
 ### Fiche d'arrêt 
+
+{{ fait }}
+
+{{ procedures }}
+
+{{ moyens }}
+
+{{ question }}
+
+{{ solution }}
 
 ### Commentaire
 
@@ -50,22 +61,25 @@ tags:
 export default class LegifrancePlugin extends Plugin {
 	settings: LegifranceSettings;
 	decision:Decision;
+	searchTab:ResearchTextView|null = null;
 
 	async onload() {
 		await this.loadSettings();
-		const decision = {
-			titre: " ",
-			id: " ",
-			texte: " ",
-			lien: " ",
-			origin: " "
+		this.decision = {
+			titre: "string",
+			id: "string",
+			texte: "string",
+			lien: "string",
+			origin: "string",
+			juridiction: "string"
 		}
 		const instanceApiClient:agentSearch = new agentSearch(this.settings);
 
 		this.registerView(
 			RESEARCH_TEXT_VIEW,
-			(leaf) => new LegalTextView(this, leaf, instanceApiClient)
+			(leaf) => new ResearchTextView(this, leaf, instanceApiClient)
 		);
+
 		this.registerView(
 			TEXT_READER_VIEW,
 			(leaf) => new textReaderView(this, leaf)
@@ -94,9 +108,36 @@ export default class LegifrancePlugin extends Plugin {
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new LegifranceSettingTab(this.app, this));
+
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', this.onActiveLeafChange.bind(this))
+		);
 	}
 
 	onunload() {
+	}
+
+	onActiveLeafChange() {
+		const leaves = this.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW);
+		let searchTab:ResearchTextView|null = null;
+
+		if (leaves.length > 0) {
+			searchTab = leaves[0].view as ResearchTextView;
+			// console.log(this.searchTab);
+		}
+
+		const activeLeaf = this.app.workspace.getActiveViewOfType(textReaderView);
+
+		if (activeLeaf){
+			if (searchTab){
+				// console.log(this.searchTab)
+				console.log(searchTab.setActiveViewText(activeLeaf));
+				// console.log(activeLeaf);
+				// this.searchTab.setActiveViewText;
+				searchTab?.onOpen();
+			}
+		}
+
 	}
 
 	async loadSettings() {
@@ -135,7 +176,6 @@ export default class LegifrancePlugin extends Plugin {
 		leaf = workspace.getLeaf(true);
 		if (leaf) { await leaf.setViewState({ type: TEXT_READER_VIEW, active: true });  }
 		if (leaf) { workspace.revealLeaf(leaf); }
-		
 	}
 }
 

@@ -1,25 +1,28 @@
 import { ItemView, WorkspaceLeaf, Setting } from "obsidian";
 import { codeFond, typeRecherche, operateursRecherche, critereTri } from "api/constants";
 import { agentSearch, expressionRechercheForm, rechercheAvStructure } from "api/utilities";
-import { fondField } from "lib/utils";
-import { MontrerResultatsModal, resultsRequest } from "modals/ShowModal";
+import { creerUneNouvelleNote, fondField } from "lib/utils";
+import { MontrerResultatsModal } from "modals/ShowModal";
 import LegifrancePlugin from "main";
+import { textReaderView } from "./viewText";
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
-export class LegalTextView extends ItemView {
+export class ResearchTextView extends ItemView {
   recherche:rechercheAvStructure;
   valeursRecherche:expressionRechercheForm[];
   compteur:number;
   nbChamps:number;
   agentChercheur:agentSearch;
-  searchResult:resultsRequest;
+  searchResult:object;
   activeResearchType:string;
   headerDiv:HTMLElement;
+  listResults:HTMLElement;
   rechercheDiv:HTMLElement;
   valeurRecherche:string;
   plugin:LegifrancePlugin;
   maxResults:number;
+  activeViewLeaf:textReaderView;
 
 
   constructor(plugin:LegifrancePlugin, leaf: WorkspaceLeaf, agentChercheur:agentSearch) {
@@ -38,28 +41,28 @@ export class LegalTextView extends ItemView {
     return "Légifrance";
   }
 
-  async onOpen() { // initializing the view 
-
+  async onOpen() { // initializing the view
+    
     const container = this.containerEl.children[1];
     container.empty(); // making sure nothing the view is refreshed everytime the function is called.
 
     this.headerDiv = container.createDiv(); // creating header part
     this.rechercheDiv = container.createDiv(); // search div - alternating between simple or complex search
 
-    if (this.activeResearchType == "advance") { // if user has already clicked on advance, making sure it is still shown after a reclick.
-      this.advancedSearchEngine();
-    }
-    else if (this.activeResearchType == "simple") { // idem, with simple
-      this.simpleSearchEngine();
-    }
-
-
+    new Setting(this.headerDiv)
+      .addButton(cb => cb
+        .setButtonText("Refresh")
+        .onClick(() => {
+          this.onOpen();
+        })
+      )
     // Header setting, always shown.
     new Setting(this.headerDiv) 
       .addButton(cb => cb 
         .setButtonText("Recherche simple")
         .onClick(() => {
           if (this.activeResearchType != 'simple') {
+            this.onOpen();
             this.simpleSearchEngine();
           }
         })
@@ -68,15 +71,31 @@ export class LegalTextView extends ItemView {
         .setButtonText("Recherche avancée")
         .onClick(() => {
           if (this.activeResearchType != "advance") {
+            this.onOpen();
             this.advancedSearchEngine();
           }
         })
       )
-  
+
+      this.listResults = container.createDiv();
+
+      if (this.activeViewLeaf) {
+        this.activeResearchType = "";
+        creerUneNouvelleNote(this.activeViewLeaf, this.listResults);
+      }  
   }
 
   async onClose() {
     // Nothing to clean up.
+  }
+
+  showActiveViewTextInfo() {
+    console.log(this.activeViewLeaf);
+  }
+
+  setActiveViewText(view:textReaderView) {
+    this.activeViewLeaf = view;
+    return this.activeViewLeaf;
   }
 
   // When user clicks on the "plus" or "minus" button, show or delete a field of search.
@@ -165,7 +184,7 @@ export class LegalTextView extends ItemView {
 
   }
 
-  simpleSearchEngine() { 
+  simpleSearchEngine() {
     this.rechercheDiv.empty();
     this.activeResearchType = "simple";
     this.initSearch();
@@ -208,24 +227,21 @@ export class LegalTextView extends ItemView {
             .setCta()
             .onClick(async () => {
               await this.launchSearch();
+              this.onOpen();
             }));
+      
   }
 
   async launchSearch() {
-    console.log(this.recherche);
     this.searchResult = await this.agentChercheur.advanceSearchText(this.recherche);
-    console.log(this.searchResult);
 
     for (const elt of this.recherche.recherche.champs[0].criteres){
       this.valeurRecherche += elt.valeur;
     }
-
-    console.log(this.searchResult);
-
     new MontrerResultatsModal(this.app, this.plugin, this.searchResult, this.valeurRecherche, this.agentChercheur, false).open();
-
-    console.log(this.recherche);
   }
+
+  
 
   initSearch() {
     this.recherche = {
@@ -251,5 +267,6 @@ export class LegalTextView extends ItemView {
       
   }
 
+  
 
 }

@@ -1,5 +1,7 @@
 import { DilaApiClient } from 'api/client'
 import { LegifranceSettings } from 'main';
+import { listRouteConsult } from './constants';
+import { Decision, Sommaire } from 'abstracts/decisions';
 
 // Création des interfaces pour construire une recherche avancée.
 
@@ -43,15 +45,16 @@ export interface Criteres { // interface pour le champ : criteres. Peut y en avo
   typeRecherche:string
 }
 
-
 export interface ficheArretChamp {
-  [key:string]:string,
+  [key:string]:string | undefined | number | Sommaire[], 
   fait:string,
   procedure:string,
   moyens:string,
   question:string,
   solution:string
 }
+
+export interface dataFiche extends ficheArretChamp, Decision {}
 
 export class agentSearch {
   settings:LegifranceSettings;
@@ -110,19 +113,37 @@ export class agentSearch {
     }
 
     const result = await this.dilaApi.fetch(requestOptions);
-    console.log(result);
+
     return result;
   }
 
-  async fetchText(id:string, valeurRecherche:string) {
-    const requestOptions = {
-      path: "/consult/juri",
-      method: "POST",
-      params: {
-        "textId": id,
+  async fetchText(texte:Decision, valeurRecherche:string) {
+    let parametres;
+    const path = getPathID(texte.id);
+    console.log(path);
+
+    if (texte.id.startsWith("LEGI")) {
+      parametres = {
+        "textId": texte.id,
+        "searchedString": valeurRecherche,
+        "date": texte.date
+      }}
+    else {
+      parametres = {
+        "textId": texte.id,
         "searchedString": valeurRecherche
-      }};
+      }}
+
+    const requestOptions = {
+      path: path,
+      method: "POST",
+      params: parametres
+    }
       return await this.dilaApi.fetch(requestOptions);
   }
+}
 
+function getPathID(id:string) {
+  const path = listRouteConsult.get(id.substring(0,4));
+  return path;
 }

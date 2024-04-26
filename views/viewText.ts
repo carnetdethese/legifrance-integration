@@ -1,8 +1,9 @@
 import LegifrancePlugin from "main";
 import { Decision } from "abstracts/decisions";
-import { ItemView, WorkspaceLeaf } from "obsidian";
+import { ItemView, Setting, WorkspaceLeaf } from "obsidian";
 import { creerUneNouvelleNote } from "lib/utils";
 import { newNote } from "creation/newNote";
+import { ResearchTextView, RESEARCH_TEXT_VIEW } from "./researchText";
 
 
 export const TEXT_READER_VIEW = "text-reader-view";
@@ -11,6 +12,7 @@ export class textReaderView extends ItemView {
   decision:Decision;
   plugin:LegifrancePlugin;
   nouvelleNote:newNote;
+  researchTab:ResearchTextView;
 
 
   constructor(plugin:LegifrancePlugin, leaf: WorkspaceLeaf) {
@@ -18,6 +20,10 @@ export class textReaderView extends ItemView {
     this.plugin = plugin;
     this.decision = plugin.decision;
     this.nouvelleNote = new newNote(this.plugin.app, this.plugin.settings.template, this.plugin.settings.fileTitle, this.decision);
+    
+    if (this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW).length > 0){
+      this.researchTab = this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW)[0].view as ResearchTextView;
+    }
   }
 
   getViewType() {
@@ -34,8 +40,6 @@ export class textReaderView extends ItemView {
     container.createEl("h4", { text: this.decision.id });
 
     const header = container.createDiv();
-
-    creerUneNouvelleNote(this, header);
 
     const infoBox = container.createEl("div", { cls: "showline"})
     infoBox.createEl("h5", {text: "Informations" })
@@ -66,15 +70,15 @@ export class textReaderView extends ItemView {
 
     }
 
-
-
-    
-
-
-
+    if (this.researchTab){
+      await this.researchTab.onOpen();
+    }
   }
 
   async onClose() {
     // Nothing to clean up.
+    if (this.researchTab){
+      await this.researchTab.onOpen();
+    }
   }
 }

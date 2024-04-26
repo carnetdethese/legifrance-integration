@@ -30,7 +30,7 @@ export function fondField(view:any, fond:HTMLElement) {
 
 
 
-function ajoutBouton(view:textReaderView, element:HTMLElement) {
+export function ajoutBouton(view:textReaderView, element:HTMLElement) {
   const ficheArretChamp = view.nouvelleNote.champFiche;
   // Loop through each property of FicheArretChamp interface
   for (const property in ficheArretChamp) {
@@ -90,31 +90,38 @@ function ajoutBouton(view:textReaderView, element:HTMLElement) {
   // }
 }
 
-export function creerUneNouvelleNote(view:textReaderView, header:HTMLElement) {
+export async function creerUneNouvelleNote(view:textReaderView, header:HTMLElement) {
   const champFicheString = view.nouvelleNote.champFiche;
-  console.log(champFicheString);
-  
-  header.createEl("h4", { text: "Créer une note de jurisprudence"})
     
+  header.createEl("h4", { text: "Créer une note de jurisprudence"})
+      
   new Setting(header)
     .setName("Titre")
     .addText(cb => cb
-      .setPlaceholder(view.decision.id))
-
+      .setPlaceholder(view.decision.id)
+      .onChange((value) => {
+        view.decision.titreNote = value;
+      })
+    )
+    
+  
   new Setting(header)
     .setName("Contribution")
-    .addTextArea(cb => cb)
-
-
+    .addTextArea(cb => cb
+      .onChange((value) => {
+        view.decision.contributionNote = value;
+      })
+    )
+  
   ajoutBouton(view, header);
-
+  
   new Setting(header)
     .addButton(cb => cb
       .setCta()
       .setButtonText("Créer la note")
       .onClick(async (evt: MouseEvent) => {
-        console.log(await view.nouvelleNote.createNote())
-        // await view.nouvelleNote.createNote();
+        await view.nouvelleNote.createNote();
       })
     )
-}
+    
+  }

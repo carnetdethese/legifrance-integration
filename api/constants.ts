@@ -12,7 +12,7 @@ export const operateursRecherche = new Map<string, string>([ // Opérateur de ce
 ]);
 
 export const codeFond = new Map<string, string>([ // Fond dans lequel la recherche sera effectuée
-	["ALL", "Tous les fonds"],
+	//["ALL", "Tous les fonds"],
 	["CETAT", "Juridictions administratives"],
 	["CONSTIT", "Conseil constitutionnel"],
 	["JURI", "Juridictions judiciaires"],
@@ -58,3 +58,15 @@ export const champRecherche = new Map<string, string>([ // Type du champ dans le
 export const critereTri = new Map<string, string>([ // Fond dans lequel la recherche sera effectuée
 	["PERTINENCE", "Pertinence"]
 ]);
+
+
+export const listRouteConsult = new Map<string, string>([
+	["CODE", "/consult/code"],
+	["CNIL", "/consult/cnil"],
+	["LEGI", "/consult/legiPart"],
+	["JURI", "/consult/juri"],
+	["CETA", "/consult/juri"],
+	["CONS", "/consult/juri"],
+	["JORF", "/consult/jorf"],
+	["KALI", "/consult/kaliText"]
+])

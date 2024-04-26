@@ -18,9 +18,10 @@ export interface Decision {
 	annee?:number;
 	juridiction?:string;
 	formation?: string;
-	solution?: string; // solution de la décision
 	urlCC?: string; // Lien vers le site du Conseil constitutionnel
 	sommaires?: Sommaire[];
+	titreNote?:string;
+	contributionNote?:string;
 }
 
 export interface Sommaire {
@@ -51,10 +52,9 @@ export function findLink(origine:string, id:string) {
 export async function getDecisionInfo(decision:Decision, valeurRecherche:string, apiClient:agentSearch) {
 	// objet Decision qui récupère une copie de l'objet passé en argument
 	const infoDecision:Decision = decision;
-	console.log(infoDecision);
 
 	// Variable qui contient la réponse de la requête 
-	const response = await apiClient.fetchText(decision.id, valeurRecherche); // requête à l'API
+	const response = await apiClient.fetchText(decision, valeurRecherche); // requête à l'API
 
 	console.log(response);
 
@@ -77,9 +77,6 @@ export async function getDecisionInfo(decision:Decision, valeurRecherche:string,
 	if (response.text.formation != null) {
 		infoDecision.formation = response.text.formation;
 	}
-
-	// La solution 
-	infoDecision.solution = response.text.solution;
 
 	if (infoDecision.sommaires !== undefined) {
 		if (response.text.sommaire !== undefined) {

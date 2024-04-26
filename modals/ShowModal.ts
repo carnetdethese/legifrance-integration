@@ -4,18 +4,7 @@ import { Decision, findLink, getDecisionInfo } from "abstracts/decisions" ;
 import LegifrancePlugin  from "main";
 import { replaceMark } from "lib/tools";
 import { agentSearch } from "api/utilities";
-
-export interface resultsRequest {
-	results: {
-		text: string,
-		origin:string
-	}
-}
-
-interface itemResult {
-	title:string,
-	id:string
-}
+import { resultatsRecherche } from "abstracts/resultatRecherche";
 
 export class MontrerResultatsModal extends SuggestModal<Decision> {
     results:object;
@@ -25,7 +14,7 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 	agentChercheur:agentSearch;
 	createNote:boolean;
 
-	constructor(app: App, plugin:LegifrancePlugin, content:resultsRequest, valeurRecherche:string, apiClient:agentSearch, createNote:boolean) {
+	constructor(app: App, plugin:LegifrancePlugin, content:resultatsRecherche, valeurRecherche:string, apiClient:agentSearch, createNote:boolean) {
 		super(app);
         this.results = content;
 		this.plugin = plugin;
@@ -35,7 +24,7 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 		this.createNote = createNote;
 	}
 
-	// getResultsResearch(data:resultsRequest) {
+	// getResultsResearch(data:resultatsRecherche) {
 	// 	const resultsDic:Decision[] = [];
 	// 	let contenuTexte:string;
 	// 	let origine:string;
@@ -63,23 +52,24 @@ export class MontrerResultatsModal extends SuggestModal<Decision> {
 
 	// fonction qui construit une liste d'objet Decision permettant d'être rendu par la fonction de rendu plus bas. 
 
-    getResultsDecision(data:resultsRequest) {
+    getResultsDecision(data:resultatsRecherche) {
 		const resultsDic:Decision[] = [];
-		let contenuTexte:string;
-		let origine:string;
+		let contenuTexte:string, origine:string, date:string;
 
         if (data && data.results && Array.isArray(data.results)) {
 			data.results.forEach(result => {
 				// Process each search result here
 				contenuTexte = result.text;
 				origine = result.origin;
-				result.titles.forEach((entree: itemResult) => {
+				if (result.date) { date = result.date };
+				result.titles.forEach((entree) => {
 						resultsDic.push({
 							titre: entree.title,
 							id: entree.id,
 							texte: contenuTexte,
 							lien: findLink(origine, entree.id),
-							origin: origine
+							origin: origine,
+							date:date
 						});
 					});
 			});
