@@ -1,4 +1,4 @@
-import * as mustache from 'mustache';
+import mustache from 'mustache';
 import { Decision } from "abstracts/decisions";
 import { App } from "obsidian";
 import { dataFiche, ficheArretChamp } from "api/utilities";
