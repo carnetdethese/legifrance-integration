@@ -93,7 +93,7 @@ export default class LegifrancePlugin extends Plugin {
 			id: 'lire-texte',
 			name: 'Nouvelle recherche',
 			callback: () => {
-				this.activateTextReaderView();
+				this.activateResearchTextView();
 			}
 		});
 
