@@ -63,9 +63,11 @@ export default class LegifrancePlugin extends Plugin {
 	settings: LegifranceSettings;
 	decision:Decision;
 	searchTab:ResearchTextView|null = null;
+	instanceApiClient:agentSearch;
 
 	async onload() {
 		await this.loadSettings();
+
 		this.decision = {
 			titre: "string",
 			id: "string",
@@ -74,11 +76,12 @@ export default class LegifrancePlugin extends Plugin {
 			origin: "string",
 			juridiction: "string"
 		}
-		const instanceApiClient:agentSearch = new agentSearch(this.settings);
+
+		this.instanceApiClient = new agentSearch(this.settings);
 
 		this.registerView(
 			RESEARCH_TEXT_VIEW,
-			(leaf) => new ResearchTextView(this, leaf, instanceApiClient)
+			(leaf) => new ResearchTextView(this, leaf, this.instanceApiClient)
 		);
 
 		this.registerView(
@@ -138,10 +141,21 @@ export default class LegifrancePlugin extends Plugin {
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		if (this.instanceApiClient) {
+			this.updateApiAgent(this.settings);
+		}
+	}
+
+	updateApiAgent(settings:LegifranceSettings) {
+		this.instanceApiClient.settings = settings;
+		this.instanceApiClient.dilaApi.updateConfig(settings);
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		if (this.instanceApiClient) {
+			this.updateApiAgent(this.settings);
+		}
 	}
 
 	async activateResearchTextView() {
@@ -189,10 +203,10 @@ class LegifranceSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Client ID')
+			.setName('Identifiant client (Client ID)')
 			.setDesc('Client ID - créez un compte PISTE.')
 			.addText(text => text
-				.setPlaceholder('Enter your secret')
+				.setPlaceholder('Entrez votre identifiant PISTE.')
 				.setValue(this.plugin.settings.clientId)
 				.onChange(async (value) => {
 					this.plugin.settings.clientId = value;
@@ -201,10 +215,10 @@ class LegifranceSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Client Secret')
-			.setDesc('Client Secret.')
+			.setName('Clef secrète (Client secret)')
+			.setDesc('Clef secrète (Client secret)')
 			.addText(text => text
-				.setPlaceholder('Enter your secret')
+				.setPlaceholder('Entrez votre clef secrète PISTE.')
 				.setValue(this.plugin.settings.clientSecret)
 				.onChange(async (value) => {
 					this.plugin.settings.clientSecret = value;
@@ -214,8 +228,8 @@ class LegifranceSettingTab extends PluginSettingTab {
 		
 			
 		new Setting(containerEl)
-			.setName('API Host')
-			.setDesc('API Host')
+			.setName('Hôte API (API Host)')
+			.setDesc('Hôte API (API Host)')
 			.addText(text => text
 				.setPlaceholder("Set API Host")
 				.setValue(this.plugin.settings.apiHost)
@@ -226,8 +240,8 @@ class LegifranceSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Token Host')
-			.setDesc('Token Host')
+			.setName('Hôte Token (Token Host)')
+			.setDesc('Hôte Token (Token Host)')
 			.addText(text => text
 				.setPlaceholder("Set Token Host")
 				.setValue(this.plugin.settings.tokenHost)
@@ -240,10 +254,10 @@ class LegifranceSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Personnalisation").setHeading();
 
 		new Setting(containerEl)
-			.setName('Template')
-			.setDesc('Template')
+			.setName('Modèle')
+			.setDesc('Modèle')
 			.addTextArea(text => text
-				.setPlaceholder("Set template here.")
+				.setPlaceholder("Définissez le modèle de fiches ici.")
 				.setValue(this.plugin.settings.template)
 				.onChange(async (value) => {
 					this.plugin.settings.template = value;
@@ -275,7 +289,7 @@ class LegifranceSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('Tri des résults')
+			.setName('Tri des résultats')
 			.addDropdown((triResultats) => {
 				critereTri.forEach((value, key) => {
 					triResultats.addOption(key, value)

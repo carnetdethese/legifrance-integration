@@ -47,7 +47,7 @@ export interface Criteres { // interface pour le champ : criteres. Peut y en avo
 
 export interface ficheArretChamp {
   [key:string]:string | undefined | number | Sommaire[], 
-  fait:string,
+  faits:string,
   procedure:string,
   moyens:string,
   question:string,
@@ -142,6 +142,8 @@ export class agentSearch {
     }
       return await this.dilaApi.fetch(requestOptions);
   }
+
+
 }
 
 function getPathID(id:string) {

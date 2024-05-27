@@ -17,7 +17,7 @@ export class newNote {
         this.app = app;
         this.template = template;
         this.champFiche = {
-            fait: "",
+            faits: "",
             procedure: "",
             moyens: "",
             question: "",

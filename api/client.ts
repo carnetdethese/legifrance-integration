@@ -1,6 +1,7 @@
 import { ModuleOptions, ClientCredentials } from "simple-oauth2"
 import { debug } from "console";
 import { Notice, requestUrl } from "obsidian";
+import { LegifranceSettings } from "main";
 
 // Credit goes to https://github.com/SocialGouv/dila-api-client - I have adapted the code so it can use
 // obsidian settings. 
@@ -27,6 +28,24 @@ export class DilaApiClient {
         };
         this.tokenHost = tokenHost;
         this.apiHost = apiHost;
+    }
+
+    updateConfig(settings:LegifranceSettings) {
+        this.config = {
+            auth: {
+                tokenHost: settings.tokenHost,
+                tokenPath: "/api/oauth/token",
+            },
+            client: {
+                id: settings.clientId,
+                secret: settings.clientSecret,
+            },
+            options: {
+                authorizationMethod: "body",
+            },
+        };
+        this.tokenHost = settings.tokenHost;
+        this.apiHost = settings.apiHost;
     }
 
     async getAccessToken() {
