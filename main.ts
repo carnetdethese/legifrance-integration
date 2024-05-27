@@ -91,18 +91,9 @@ export default class LegifrancePlugin extends Plugin {
 
 		this.addCommand({
 			id: 'lire-texte',
-			name: 'Lire texte',
+			name: 'Nouvelle recherche',
 			callback: () => {
 				this.activateTextReaderView();
-			}
-		});
-
-
-		this.addCommand({
-			id: 'create-note-legi',
-			name: 'Créer une nouvelle fiche juridique.',
-			callback: () => {
-				new SearchCaseModal(this.app, this, instanceApiClient).open();
 			}
 		});
 
