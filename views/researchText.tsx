@@ -6,6 +6,9 @@ import { MontrerResultatsModal } from "modals/ShowModal";
 import LegifrancePlugin from "main";
 import { textReaderView } from "./viewText";
 import { resultatsRecherche } from "abstracts/resultatRecherche";
+import MyDatePicker from "lib/datePicker";
+import { StrictMode } from "react";
+import { Root, createRoot } from 'react-dom/client'
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
@@ -24,6 +27,7 @@ export class ResearchTextView extends ItemView {
   plugin:LegifrancePlugin;
   maxResults:number;
   activeViewLeaf:textReaderView;
+  root:Root;
 
 
   constructor(plugin:LegifrancePlugin, leaf: WorkspaceLeaf, agentChercheur:agentSearch) {
@@ -87,6 +91,7 @@ export class ResearchTextView extends ItemView {
 
   async onClose() {
     // Nothing to clean up.
+    this.root?.unmount();
   }
 
   showActiveViewTextInfo() {
@@ -191,7 +196,7 @@ export class ResearchTextView extends ItemView {
     this.compteur = 0;
 
     fondField(this, this.rechercheDiv);
-      
+
     if (this.recherche.recherche.champs.length <= 0) {
       this.recherche.recherche.champs[0].criteres.push({
         valeur: "", 
@@ -268,6 +273,18 @@ export class ResearchTextView extends ItemView {
       
   }
 
-  
+  // champDate(container:HTMLElement) {
 
-}
+  //   new Setting(container)
+  //     .setNam("Date de début")
+  //     .addButton(cb => cb 
+  //       .onClick(() => {
+
+  //       })
+  //     )
+    // this.root = createRoot(this.containerEl.children[1]);
+    // this.root.render(
+    //   <StrictMode>
+    //     <MyDatePicker />
+    //   </StrictMode>);
+  }  
