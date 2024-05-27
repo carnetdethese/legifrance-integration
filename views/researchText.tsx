@@ -257,10 +257,7 @@ export class ResearchTextView extends ItemView {
     } finally {
         waitingModal.close();
     }
-
 }
-
-  
 
   initSearch() {
     this.recherche = {
