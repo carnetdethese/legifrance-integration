@@ -5,6 +5,7 @@ import { RESEARCH_TEXT_VIEW, ResearchTextView } from 'views/researchText';
 import { critereTri } from 'api/constants';
 import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
 import { Decision } from 'abstracts/decisions';
+import { WaitModal } from 'modals/WaitModal';
 
 export interface LegifranceSettings {
 	clientId: string;
@@ -94,6 +95,14 @@ export default class LegifrancePlugin extends Plugin {
 			name: 'Nouvelle recherche',
 			callback: () => {
 				this.activateResearchTextView();
+			}
+		});
+
+		this.addCommand({
+			id: 'wait',
+			name: 'Attente',
+			callback: () => {
+				new WaitModal(this.app).open();
 			}
 		});
 

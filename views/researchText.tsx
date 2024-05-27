@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Setting } from "obsidian";
+import { ItemView, WorkspaceLeaf, Setting, Notice } from "obsidian";
 import { codeFond, typeRecherche, operateursRecherche, critereTri } from "api/constants";
 import { agentSearch, expressionRechercheForm, rechercheAvStructure } from "api/utilities";
 import { creerUneNouvelleNote, fondField } from "lib/utils";
@@ -9,6 +9,7 @@ import { resultatsRecherche } from "abstracts/resultatRecherche";
 import MyDatePicker from "lib/datePicker";
 import { StrictMode } from "react";
 import { Root, createRoot } from 'react-dom/client'
+import { WaitModal } from "modals/WaitModal";
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
@@ -239,13 +240,25 @@ export class ResearchTextView extends ItemView {
   }
 
   async launchSearch() {
-    this.searchResult = await this.agentChercheur.advanceSearchText(this.recherche) as resultatsRecherche;
+    const waitingModal = new WaitModal(this.app);
+    waitingModal.open();
 
-    for (const elt of this.recherche.recherche.champs[0].criteres){
-      this.valeurRecherche += elt.valeur;
+    try {
+      this.searchResult = await this.agentChercheur.advanceSearchText(this.recherche) as resultatsRecherche;
+
+      for (const elt of this.recherche.recherche.champs[0].criteres){
+          this.valeurRecherche += elt.valeur;
+      }
+
+      new MontrerResultatsModal(this.app, this.plugin, this.searchResult, this.valeurRecherche, this.agentChercheur, false).open();
+    } catch (error) {
+        console.error('Error performing search:', error);
+        new Notice('Une erreur est survenue durant la requête. Veuillez vérifier vos identifiants et réessayer.');
+    } finally {
+        waitingModal.close();
     }
-    new MontrerResultatsModal(this.app, this.plugin, this.searchResult, this.valeurRecherche, this.agentChercheur, false).open();
-  }
+
+}
 
   
 
