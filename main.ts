@@ -101,14 +101,6 @@ export default class LegifrancePlugin extends Plugin {
 			}
 		});
 
-		this.addCommand({
-			id: 'wait',
-			name: 'Attente',
-			callback: () => {
-				new WaitModal(this.app).open();
-			}
-		});
-
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new LegifranceSettingTab(this.app, this));
 
