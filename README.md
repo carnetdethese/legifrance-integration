@@ -6,6 +6,12 @@ Grâce à vos identifiants PISTE (obtenus gratuitement via la [plateforme en lig
 
 Très simple d'utilisation, ce module vous permet de rechercher parmi les différents fonds de données de la plateforme afin de consulter les textes directement dans Obsidian. Vous pourrez ainsi créer une note contenant les informations principales des décisions (encore en développement pour la législation et les autres documents) directement dans votre _coffre_ Obsidian.
 
+## Comment le lancer ?
+
+Deux solutions pour le lancer : 
+- cliquer sur l'icône "⚖️" dans la barre latérale gauche ;
+- lancer la palette de commande (`Cmd+P` / `CTRL+P`) et chercher "Légifrance Intégration". 
+
 ## Options
 
 -   Recherche simple parmi les fonds principaux de jurisprudence (administrative, judiciaire, constitutionnelle) ;
