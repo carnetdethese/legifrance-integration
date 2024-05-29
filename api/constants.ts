@@ -70,3 +70,41 @@ export const listRouteConsult = new Map<string, string>([
 	["JORF", "/consult/jorf"],
 	["KALI", "/consult/kaliText"]
 ])
+
+export const dateJour = new Map<string, string>();
+
+for (let i = 0; i <= 31; i++) {
+	if (i == 0) {
+		dateJour.set("", "");
+	}
+	else {
+		dateJour.set(i.toString(),  i.toString());
+	}
+}
+
+export const dateMois = new Map<string, string>([
+	["", ""],
+	["1", "Janvier"],
+	["2", "Février"],
+	["3", "Mars"],
+	["4", "Avril"],
+	["5", "Mai"],
+	["6", "Juin"],
+	["7", "Juillet"],
+	["8", "Août"],
+	["9", "Septembre"],
+	["10", "Octobre"],
+	["11", "Novembre"],
+	["12", "Décembre"]
+]);
+
+export const dateAnnee = new Map<string, string>();
+
+for (let i = 1899; i <= 2014; i++) {
+	if (i == 1899) {
+		dateAnnee.set("", "");
+	}
+	else {
+		dateAnnee.set(i.toString(),  i.toString());
+	}
+}

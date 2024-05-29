@@ -39,9 +39,9 @@ tags:
 
 ### Fiche d'arrêt 
 
-{{ fait }}
+{{ faits }}
 
-{{ procedures }}
+{{ procedure }}
 
 {{ moyens }}
 

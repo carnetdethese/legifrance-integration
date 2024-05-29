@@ -4,7 +4,6 @@ import { ResearchTextView } from "views/researchText";
 import { textReaderView } from "views/viewText";
 
 export function fondField(view:ResearchTextView, fond:HTMLElement) {
-
     new Setting(fond)
       .setName("Fond : ")
       .addDropdown((fondSelected) => {
@@ -30,9 +29,9 @@ export function fondField(view:ResearchTextView, fond:HTMLElement) {
   }
 
 
-
 export function ajoutBouton(view:textReaderView, element:HTMLElement) {
   const ficheArretChamp = view.nouvelleNote.champFiche;
+
   // Loop through each property of FicheArretChamp interface
   for (const property in ficheArretChamp) {
       if (Object.prototype.hasOwnProperty.call(ficheArretChamp, property)) {
@@ -68,27 +67,6 @@ export function ajoutBouton(view:textReaderView, element:HTMLElement) {
       }
   }
 
-  // if (ficheArretChamp == "") {
-  //   element.addExtraButton(cb => cb
-  //     .setIcon("plus")
-  //     .onClick(async () => {
-  //       champ = "Fait";
-  //       await view.onOpen();
-  //     }))
-  // }
-  // else {
-  //   element
-  //     .addTextArea(cb => cb
-  //       .setPlaceholder(champ || "")
-  //     )
-  //     .addExtraButton(cb => cb
-  //       .setIcon('minus')
-  //       .onClick(async () => {
-  //         champ = "";
-  //         await view.onOpen();
-  //       })
-  //     );
-  // }
 }
 
 export async function creerUneNouvelleNote(view:textReaderView, header:HTMLElement) {    

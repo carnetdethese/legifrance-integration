@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Setting, Notice } from "obsidian";
+import { ItemView, WorkspaceLeaf, Setting, Notice, Modal } from "obsidian";
 import { codeFond, typeRecherche, operateursRecherche, critereTri } from "api/constants";
 import { agentSearch, expressionRechercheForm, rechercheAvStructure } from "api/utilities";
 import { creerUneNouvelleNote, fondField } from "lib/utils";
@@ -6,10 +6,10 @@ import { MontrerResultatsModal } from "modals/ShowModal";
 import LegifrancePlugin from "main";
 import { textReaderView } from "./viewText";
 import { resultatsRecherche } from "abstracts/resultatRecherche";
-import MyDatePicker from "lib/datePicker";
-import { StrictMode } from "react";
-import { Root, createRoot } from 'react-dom/client'
+import { Root } from 'react-dom/client'
 import { WaitModal } from "modals/WaitModal";
+import { dateHandler } from "lib/dateHandler";
+import { PopUpModal } from "modals/popUp";
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
@@ -29,6 +29,7 @@ export class ResearchTextView extends ItemView {
   maxResults:number;
   activeViewLeaf:textReaderView;
   root:Root;
+  dateRecherche: dateHandler;
 
 
   constructor(plugin:LegifrancePlugin, leaf: WorkspaceLeaf, agentChercheur:agentSearch) {
@@ -48,7 +49,6 @@ export class ResearchTextView extends ItemView {
   }
 
   async onOpen() { // initializing the view
-    
     const container = this.containerEl.children[1];
     container.empty(); // making sure nothing the view is refreshed everytime the function is called.
 
@@ -106,7 +106,6 @@ export class ResearchTextView extends ItemView {
 
   // When user clicks on the "plus" or "minus" button, show or delete a field of search.
   newExpression(container:HTMLElement, id:number) {
-
     // incrementing number of fields and keeping count.
     const instanceCount = id + 1;
     if (this.compteur > 5 || this.compteur < 0) {
@@ -172,6 +171,8 @@ export class ResearchTextView extends ItemView {
 
     const fond = this.rechercheDiv.createEl("div");  
     fondField(this, fond);
+
+    // this.champDate(this.rechercheDiv);
   
     const valuesRecherche = this.rechercheDiv.createEl("div");
 
@@ -207,6 +208,12 @@ export class ResearchTextView extends ItemView {
       });
     }
 
+    const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
+    this.dateRecherche.champDate(dateDebut, "start");
+
+    const dateFin = new Setting(this.rechercheDiv).setName("Date de fin");
+    this.dateRecherche.champDate(dateFin, "end");
+
     new Setting(this.rechercheDiv)
       .setName("Recherche")
       .addText((text) =>
@@ -237,9 +244,32 @@ export class ResearchTextView extends ItemView {
               this.onOpen();
             }));
       
+
+      new Setting(this.rechercheDiv)
+        .addButton((btn) =>
+          btn
+            .setButtonText("Montrer dates")
+            .setCta()
+            .onClick(async () => {
+              console.log(this.recherche.recherche.filtres.dates)
+            }));
   }
 
   async launchSearch() {
+    const padZero = (num: number, pad: number) => num.toString().padStart(pad, '0');
+    let date = new Date();
+    let today = date.getFullYear() + "-" + padZero((date.getMonth() + 1), 2) + "-" + padZero(date.getDate(), 2);
+    if (!this.recherche.recherche.filtres.dates.end) this.recherche.recherche.filtres.dates.end = today;
+
+    
+    if (this.recherche.recherche.filtres.dates.start == "") {
+      const popup = new PopUpModal(this.app, "Veuillez insérer une année de début.");
+      popup.open();
+      return;
+    }
+
+    console.log(this.recherche);
+
     const waitingModal = new WaitModal(this.app);
     waitingModal.open();
 
@@ -260,8 +290,16 @@ export class ResearchTextView extends ItemView {
 }
 
   initSearch() {
+    this.dateRecherche = new dateHandler(this);
+
     this.recherche = {
       recherche: {
+        filtres: {
+          dates: {
+            start: this.dateRecherche.start,
+            end: this.dateRecherche.end
+          }
+        },
         pageSize: this.plugin.settings.maxResults,
         sort: critereTri.keys().next().value,
         // operateur: operateursRecherche.keys().next().value,
@@ -283,18 +321,4 @@ export class ResearchTextView extends ItemView {
       
   }
 
-  // champDate(container:HTMLElement) {
-
-  //   new Setting(container)
-  //     .setNam("Date de début")
-  //     .addButton(cb => cb 
-  //       .onClick(() => {
-
-  //       })
-  //     )
-    // this.root = createRoot(this.containerEl.children[1]);
-    // this.root.render(
-    //   <StrictMode>
-    //     <MyDatePicker />
-    //   </StrictMode>);
-  }  
+}  
