@@ -109,3 +109,17 @@ export async function creerUneNouvelleNote(view:textReaderView, header:HTMLEleme
     )
     
   }
+
+
+export function startDateBeforeEndDate(start:string, end:string) {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  if (startDate < endDate) {
+      return true;  
+  } else if (startDate > endDate) {
+      return false;
+  } else {
+      return true;
+  }
+}

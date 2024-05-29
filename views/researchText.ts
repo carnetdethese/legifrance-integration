@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf, Setting, Notice, Modal } from "obsidian";
 import { codeFond, typeRecherche, operateursRecherche, critereTri } from "api/constants";
 import { agentSearch, expressionRechercheForm, rechercheAvStructure } from "api/utilities";
-import { creerUneNouvelleNote, fondField } from "lib/utils";
+import { creerUneNouvelleNote, fondField, startDateBeforeEndDate } from "lib/utils";
 import { MontrerResultatsModal } from "modals/ShowModal";
 import LegifrancePlugin from "main";
 import { textReaderView } from "./viewText";
@@ -247,7 +247,6 @@ export class ResearchTextView extends ItemView {
               await this.launchSearch();
               this.onOpen();
             }));
-    
   }
 
   initSearch() {
@@ -288,15 +287,12 @@ export class ResearchTextView extends ItemView {
     let date = new Date();
     let today = date.getFullYear() + "-" + padZero((date.getMonth() + 1), 2) + "-" + padZero(date.getDate(), 2);
     if (!this.recherche.recherche.filtres[0].dates.end) this.recherche.recherche.filtres[0].dates.end = today;
+    if (!this.recherche.recherche.filtres[0].dates.start) this.recherche.recherche.filtres[0].dates.start = "1800-01-01";
 
-    
-    if (this.recherche.recherche.filtres[0].dates.start == "") {
-      const popup = new PopUpModal(this.app, "Veuillez insérer une année de début.");
-      popup.open();
-      return;
+    if (!startDateBeforeEndDate(this.recherche.recherche.filtres[0].dates.start, this.recherche.recherche.filtres[0].dates.end)) {
+      new PopUpModal(this.app, "Vous devez entrer une date de début antérieure à la date de fin !").open();
+      return
     }
-
-    console.log(this.recherche);
 
     const waitingModal = new WaitModal(this.app);
     waitingModal.open();

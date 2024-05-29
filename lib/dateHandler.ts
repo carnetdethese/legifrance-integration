@@ -1,50 +1,73 @@
 import { dateJour, dateMois, dateAnnee } from "api/constants";
+import { champDate } from "api/utilities";
+import { PopUpModal } from "modals/popUp";
 import { Setting, Notice, DropdownComponent } from "obsidian";
 import { ResearchTextView } from "views/researchText";
+
+class dateFormat {
+    annee:string;
+    mois:string;
+    jour:string;
+
+    constructor() {
+        this.annee = dateAnnee.keys().next().value || "",
+        this.mois = dateMois.keys().next().value || "",
+        this.jour = dateJour.keys().next().value || ""
+    }
+
+    toString():string {
+        return `${this.annee}-${this.mois.padStart(2, '0')}-${this.jour.padStart(2, '0')}`
+    }
+}
 
 // Classe qui permet d'assurer la manipulation de la date. 
 
 export class dateHandler {
     // Définitions des variables permettant de stocker la valeur de la date selectionnée.
-    selectedDay: string;
-    selectedMonth: string;
-    selectedYear: string;
-    start: string;
-    end: string;
+    start: dateFormat;
+    end: dateFormat;
     researchViewMod:ResearchTextView; // Référence à la vue de recherche pour accéder à la valeur de la date et la mettre à jour.
     dropdownRef: Map<string, DropdownComponent>;
 
     constructor(researchView:ResearchTextView) {
         this.researchViewMod = researchView;
-        this.selectedDay = dateJour.keys().next().value;
-        this.selectedMonth = dateMois.keys().next().value;
-        this.selectedYear = dateAnnee.keys().next().value;
-        this.start = "";
-        this.end = "";
+        this.start = new dateFormat();
+        this.end = new dateFormat();
         this.dropdownRef = new Map();
     }
 
-    handleDateChange(valeur:string, champ:string, type:string) {
-        let formattedDate;
+    updateDate(dateObj: dateFormat, champ:string, valeur:string, type:string) {
+        let field = champ.toLowerCase() as keyof dateFormat;
+        dateObj[field] = valeur;
 
-        if (champ === "jour") {
-            this.selectedDay = valeur;
-        } else if (champ === "mois") {
-            this.selectedMonth = valeur;
-        } else if (champ === "annee") {
-            this.selectedYear = valeur;
-            if (!this.selectedDay) this.selectedDay = "01";
-            if (!this.selectedMonth) this.selectedMonth = "01";
+        if (!dateObj.annee && champ != "annee") new Notice("Veuillez définir une année de début.");
+
+        if (champ == "annee" && (!dateObj.mois || !dateObj.jour)) {
+            if (!dateObj.jour) {
+                dateObj.jour = "1"; this.dropdownRef.get(`${type}jour`)?.setValue("1");
+            }
+            if (!dateObj.mois) {
+                dateObj.mois = "1"; this.dropdownRef.get(`${type}mois`)?.setValue("1");
+            }
         }
 
-        formattedDate = `${this.selectedYear}-${this.selectedMonth.padStart(2, '0')}-${this.selectedDay.padStart(2, '0')}`;
+        if (!dateObj.annee && champ == "annee") {
+            dateObj.jour = "";
+            dateObj.mois = "";
+            this.dropdownRef.get(`${type}jour`)?.setValue("");
+            this.dropdownRef.get(`${type}mois`)?.setValue("");
+        };
 
-        if (type === "start") {
-            this.researchViewMod.recherche.recherche.filtres[0].dates.start = formattedDate;
-            if (!this.selectedYear) this.researchViewMod.recherche.recherche.filtres[0].dates.start = "";
-        } else if (type === "end") {
-            this.researchViewMod.recherche.recherche.filtres[0].dates.end = formattedDate;
-            if (!this.selectedYear) this.researchViewMod.recherche.recherche.filtres[0].dates.end = "";
+        this.researchViewMod.recherche.recherche.filtres[0].dates[type as keyof champDate] = dateObj.toString();
+    }
+
+
+    handleDateChange(valeur:string, champ:string, type:string) {
+        if (type == "start") {
+            this.updateDate(this.start, champ, valeur, type)
+        }
+        else if (type == "end") {
+            this.updateDate(this.end, champ, valeur, type)
         }
     }
 
@@ -60,18 +83,15 @@ export class dateHandler {
     }
 
     champDate(setting:Setting, type:string) {
-        this.createDropdown(setting, dateJour, `${type}Jour`, (value: string) => {
-        this.selectedDay = value;
+        this.createDropdown(setting, dateJour, `${type}jour`, (value: string) => {
         this.handleDateChange(value, "jour", type);
         });
 
-        this.createDropdown(setting, dateMois, `${type}Mois`, (value: string) => {
-        this.selectedMonth = value;
+        this.createDropdown(setting, dateMois, `${type}mois`, (value: string) => {
         this.handleDateChange(value, "mois", type);
         });
 
-        this.createDropdown(setting, dateAnnee, `${type}Annee`, (value: string) => {
-        this.selectedYear = value;
+        this.createDropdown(setting, dateAnnee, `${type}annee`, (value: string) => {
         this.handleDateChange(value, "annee", type);
         });
 

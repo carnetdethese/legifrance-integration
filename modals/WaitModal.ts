@@ -1,7 +1,8 @@
-import { Modal, ProgressBarComponent, Setting } from "obsidian";
+import { Modal } from "obsidian";
 
 export class WaitModal extends Modal {
     onOpen() {
+
         const {contentEl} = this;
 		contentEl.createEl("h1", { text: "Recherche..." });
 
