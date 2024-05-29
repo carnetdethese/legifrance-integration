@@ -38,7 +38,7 @@ export class dateHandler {
 
     updateDate(dateObj: dateFormat, champ:string, valeur:string, type:string) {
         let field = champ.toLowerCase() as keyof dateFormat;
-        dateObj[field] = valeur;
+       (dateObj[field] as string) = valeur;
 
         if (!dateObj.annee && champ != "annee") new Notice("Veuillez définir une année de début.");
 
