@@ -84,9 +84,11 @@ export class DilaApiClient {
             },
             method:method
         }
+        console.log(`fetching route ${routeName} with ${RequestUrlParams.body}...`)
         debug(`fetching route ${routeName} with ${RequestUrlParams.body}...`);
 
         const data = await requestUrl(RequestUrlParams).then((r:any)=> {
+            console.log(r);
             if (!r.ok) {
                 if (r.status === 401 && this.globalToken) {
                     this.globalToken = undefined;

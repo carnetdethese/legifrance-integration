@@ -40,11 +40,11 @@ export class dateHandler {
         formattedDate = `${this.selectedYear}-${this.selectedMonth.padStart(2, '0')}-${this.selectedDay.padStart(2, '0')}`;
 
         if (type === "start") {
-            this.researchViewMod.recherche.recherche.filtres.dates.start = formattedDate;
-            if (!this.selectedYear) this.researchViewMod.recherche.recherche.filtres.dates.start = "";
+            this.researchViewMod.recherche.recherche.filtres[0].dates.start = formattedDate;
+            if (!this.selectedYear) this.researchViewMod.recherche.recherche.filtres[0].dates.start = "";
         } else if (type === "end") {
-            this.researchViewMod.recherche.recherche.filtres.dates.end = formattedDate;
-            if (!this.selectedYear) this.researchViewMod.recherche.recherche.filtres.dates.end = "";
+            this.researchViewMod.recherche.recherche.filtres[0].dates.end = formattedDate;
+            if (!this.selectedYear) this.researchViewMod.recherche.recherche.filtres[0].dates.end = "";
         }
     }
 

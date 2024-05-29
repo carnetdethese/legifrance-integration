@@ -56,7 +56,9 @@ export const champRecherche = new Map<string, string>([ // Type du champ dans le
 
 
 export const critereTri = new Map<string, string>([ // Fond dans lequel la recherche sera effectuée
-	["PERTINENCE", "Pertinence"]
+	["PERTINENCE", "Pertinence"],
+	["DATE_DESC", "Date descendante"],
+	["DATE_ASC", "Date ascendante"]
 ]);
 
 

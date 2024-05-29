@@ -172,8 +172,12 @@ export class ResearchTextView extends ItemView {
     const fond = this.rechercheDiv.createEl("div");  
     fondField(this, fond);
 
-    // this.champDate(this.rechercheDiv);
-  
+    const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
+    this.dateRecherche.champDate(dateDebut, "start");
+
+    const dateFin = new Setting(this.rechercheDiv).setName("Date de fin");
+    this.dateRecherche.champDate(dateFin, "end");
+
     const valuesRecherche = this.rechercheDiv.createEl("div");
 
     for (let i = 0 ; i <= this.compteur ; i++){
@@ -243,26 +247,50 @@ export class ResearchTextView extends ItemView {
               await this.launchSearch();
               this.onOpen();
             }));
-      
+    
+  }
 
-      new Setting(this.rechercheDiv)
-        .addButton((btn) =>
-          btn
-            .setButtonText("Montrer dates")
-            .setCta()
-            .onClick(async () => {
-              console.log(this.recherche.recherche.filtres.dates)
-            }));
+  initSearch() {
+    this.dateRecherche = new dateHandler(this);
+
+    this.recherche = {
+      recherche: {
+        filtres: [{
+          facette: "DATE_DECISION",
+          dates: {
+            start: "",
+            end: ""
+          }
+        }],
+        pageSize: this.plugin.settings.maxResults,
+        sort: this.plugin.settings.critereTriSetting,
+        // operateur: operateursRecherche.keys().next().value,
+        typePagination: "DEFAUT",
+        pageNumber: 1,
+        champs: [{
+          typeChamp: "ALL",
+          operateur: operateursRecherche.keys().next().value,
+          criteres: [{
+            valeur: "", 
+            typeRecherche:typeRecherche.keys().next().value, 
+            proximite: 2,
+            operateur:operateursRecherche.keys().next().value
+          }],
+        }]
+      },
+      fond: codeFond.keys().next().value,
+    }
+      
   }
 
   async launchSearch() {
     const padZero = (num: number, pad: number) => num.toString().padStart(pad, '0');
     let date = new Date();
     let today = date.getFullYear() + "-" + padZero((date.getMonth() + 1), 2) + "-" + padZero(date.getDate(), 2);
-    if (!this.recherche.recherche.filtres.dates.end) this.recherche.recherche.filtres.dates.end = today;
+    if (!this.recherche.recherche.filtres[0].dates.end) this.recherche.recherche.filtres[0].dates.end = today;
 
     
-    if (this.recherche.recherche.filtres.dates.start == "") {
+    if (this.recherche.recherche.filtres[0].dates.start == "") {
       const popup = new PopUpModal(this.app, "Veuillez insérer une année de début.");
       popup.open();
       return;
@@ -289,36 +317,6 @@ export class ResearchTextView extends ItemView {
     }
 }
 
-  initSearch() {
-    this.dateRecherche = new dateHandler(this);
 
-    this.recherche = {
-      recherche: {
-        filtres: {
-          dates: {
-            start: this.dateRecherche.start,
-            end: this.dateRecherche.end
-          }
-        },
-        pageSize: this.plugin.settings.maxResults,
-        sort: critereTri.keys().next().value,
-        // operateur: operateursRecherche.keys().next().value,
-        typePagination: "DEFAUT",
-        pageNumber: 1,
-        champs: [{
-          typeChamp: "ALL",
-          operateur: operateursRecherche.keys().next().value,
-          criteres: [{
-            valeur: "", 
-            typeRecherche:typeRecherche.keys().next().value, 
-            proximite: 2,
-            operateur:operateursRecherche.keys().next().value
-          }],
-        }]
-      },
-      fond: codeFond.keys().next().value,
-    }
-      
-  }
 
 }  

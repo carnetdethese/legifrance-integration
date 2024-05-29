@@ -29,10 +29,11 @@ export interface champsRechercheAvancees { // Interface pour le champ : recherch
   typePagination:string,
   pageNumber:number,
   champs:Champs[],
-  filtres: Filtres
+  filtres: Filtres[]
 }
 
 export interface Filtres {
+  facette:string,
   dates: champDate
 }
 
@@ -128,7 +129,7 @@ export class agentSearch {
       params: search
     }
 
-    const result = await this.dilaApi.fetch(requestOptions);  
+    const result = await this.dilaApi.fetch(requestOptions);
 
     return result;
   }

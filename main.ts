@@ -15,6 +15,7 @@ export interface LegifranceSettings {
 	template: string;
 	fileTitle:string;
 	maxResults:number;
+	critereTriSetting:string;
 }
 
 const DEFAULT_SETTINGS: LegifranceSettings = {
@@ -55,7 +56,8 @@ tags:
 
 {{texteIntegral}}`,
 	fileTitle: '{{id}}',
-	maxResults: 20
+	maxResults: 20,
+	critereTriSetting: critereTri.keys().next().value
 }
 
 
@@ -286,6 +288,12 @@ class LegifranceSettingTab extends PluginSettingTab {
 				critereTri.forEach((value, key) => {
 					triResultats.addOption(key, value)
 				});
+				triResultats
+					.onChange(async (valeur) => {
+					this.plugin.settings.critereTriSetting = valeur;
+					await this.plugin.saveSettings();
+				})
+					.setValue(this.plugin.settings.critereTriSetting)
 			});
 
 
