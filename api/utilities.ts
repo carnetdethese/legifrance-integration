@@ -1,77 +1,11 @@
 import { DilaApiClient } from 'api/client'
 import { LegifranceSettings } from 'main';
 import { listRouteConsult } from './constants';
-import { Decision, Sommaire } from 'abstracts/decisions';
+import { Decision } from 'abstracts/decisions';
+import * as interfaces from 'abstracts/searches'
 
-// Création des interfaces pour construire une recherche avancée.
 
-export interface expressionRechercheForm {
-  valeur?:string;
-  type?:string;
-  operateur?:string;
-}
-
-export interface RechercheForm {
-  expressionRechercheForm: expressionRechercheForm[];
-  fond:string;
-  operateurGeneral:string;
-}
-
-export interface rechercheAvStructure { // Base
-  recherche:champsRechercheAvancees,
-  fond:string
-}
-
-export interface champsRechercheAvancees { // Interface pour le champ : recherche
-  operateur?:string,
-  pageSize:number,
-  sort:string,
-  typePagination:string,
-  pageNumber:number,
-  champs:Champs[],
-  filtres: Filtres[]
-}
-
-export interface Filtres {
-  facette:string,
-  dates: champDate
-}
-
-export interface champDate {
-  start: string,
-  end: string
-}
-
-export interface dateFormat {
-  annee: string,
-  mois: string,
-  jour: string
-}
-
-export interface Champs { // Interface pour le champ : Champs
-  operateur?:string,
-  criteres:Criteres[],
-  typeChamp:string
-}
-
-export interface Criteres { // interface pour le champ : criteres. Peut y en avoir plusieurs.
-  operateur:string,
-  criteres?:Criteres,
-  valeur:string,
-  proximite:number,
-  typeRecherche:string
-}
-
-export interface ficheArretChamp {
-  [key:string]:string | undefined | number | Sommaire[], 
-  faits:string,
-  procedure:string,
-  moyens:string,
-  question:string,
-  solution:string
-}
-
-export interface dataFiche extends ficheArretChamp, Decision {}
+export interface dataFiche extends interfaces.ficheArretChamp, Decision {}
 
 export class agentSearch {
   
@@ -81,11 +15,6 @@ export class agentSearch {
   constructor(settings:LegifranceSettings) {
     this.settings = settings;
     this.dilaApi = new DilaApiClient(this.settings.clientId, this.settings.clientSecret, this.settings.apiHost, this.settings.tokenHost);
-  }
-
-
-  rechercheAvancee(champsRecherche:expressionRechercheForm, nbResult:number) {
-
   }
 
   rechercheSimple(valeur:string, fond:string, nbResultat:number) {
@@ -123,7 +52,7 @@ export class agentSearch {
     return await this.dilaApi.fetch(requestOptions);
   }
 
-  async advanceSearchText(search:rechercheAvStructure) {
+  async advanceSearchText(search:interfaces.rechercheAvStructure) {
     const requestOptions = {
       path: "/search",
       method: "POST",

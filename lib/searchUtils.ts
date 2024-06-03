@@ -3,6 +3,36 @@ import { Setting } from "obsidian";
 import * as constants from "api/constants"
 import { ResearchTextView } from "views/researchText";
 
+
+export function fondField(view:ResearchTextView, fond:HTMLElement) {
+
+    new Setting(fond)
+      .setName("Fond : ")
+      .addDropdown((fondSelected) => {
+        constants.codeFond.forEach((value, key) => {
+          fondSelected.addOption(key, value)
+        });
+        fondSelected
+          .onChange(() => {
+          view.document.updatingFond(fondSelected.getValue());
+          fondSelected.setValue(view.document.fond);
+        })
+          .setValue(view.document.fond)
+      })
+
+    new Setting(fond)
+      .setName("Opérateur général : ")
+      .addDropdown((opeGen) => {
+        constants.operateursRecherche.forEach((value, key) => {
+          opeGen.addOption(key, value)
+        })
+        opeGen.onChange(() => {
+          view.document.recherche.operateur = opeGen.getValue();
+        })
+        opeGen.setValue(view.document.recherche.champs[0].operateur as string)
+      })
+  }
+
 export function newExpression(view:ResearchTextView, container:HTMLElement, id:number) {
     // incrementing number of fields and keeping count.
     const instanceCount = id + 1;
@@ -15,15 +45,15 @@ export function newExpression(view:ResearchTextView, container:HTMLElement, id:n
       .setName("Champ " + instanceCount)
       .addText((text) =>
         text.onChange((value) => {
-          view.recherche.recherche.champs[0].criteres[id].valeur = value
+          view.document.recherche.champs[0].criteres[id].valeur = value
           })
-        .setValue(view.recherche.recherche.champs[0].criteres[id].valeur || ""))
+        .setValue(view.document.recherche.champs[0].criteres[id].valeur || ""))
       .addButton(cb => cb
         .setIcon("plus")
         .onClick(() => {
           if (view.compteur < 4 ) {
             view.compteur += 1;
-             view.recherche.recherche.champs[0].criteres.push({
+             view.document.recherche.champs[0].criteres.push({
                valeur:"", 
                typeRecherche:constants.typeRecherche.keys().next().value, 
                operateur:constants.operateursRecherche.keys().next().value,
@@ -37,7 +67,7 @@ export function newExpression(view:ResearchTextView, container:HTMLElement, id:n
         .setIcon("minus")
         .onClick(() => {
           if (view.compteur > 0) {
-            view.recherche.recherche.champs[0].criteres.pop();
+            view.document.recherche.champs[0].criteres.pop();
             view.compteur -= 1;
             newExpression(view, container, view.compteur);
             view.onOpen();
@@ -50,14 +80,14 @@ export function newExpression(view:ResearchTextView, container:HTMLElement, id:n
         constants.typeRecherche.forEach((value, key) => {
         typeRechercheChamp.addOption(key, value)
         typeRechercheChamp.onChange((value) =>
-          view.recherche.recherche.champs[0].criteres[id].typeRecherche = value
+          view.document.recherche.champs[0].criteres[id].typeRecherche = value
         )});
         })
       .addDropdown((operateur) => {
         constants.operateursRecherche.forEach((value, key) => {
           operateur.addOption(key, value)
           operateur.onChange((value) =>
-            view.recherche.recherche.champs[0].criteres[id].operateur = value
+            view.document.recherche.champs[0].criteres[id].operateur = value
           )
         })
       });

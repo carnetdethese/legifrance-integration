@@ -4,7 +4,7 @@ import { Decision, findLink, getDecisionInfo } from "abstracts/decisions" ;
 import LegifrancePlugin  from "main";
 import { replaceMark } from "lib/tools";
 import { agentSearch } from "api/utilities";
-import { resultatsRecherche } from "abstracts/resultatRecherche";
+import { resultatsRecherche } from "abstracts/searches";
 
 interface entreeDecision {
     title:string,

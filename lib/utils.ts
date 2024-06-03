@@ -2,31 +2,7 @@ import { codeFond, operateursRecherche } from "api/constants";
 import { Setting } from "obsidian";
 import { ResearchTextView } from "views/researchText";
 import { textReaderView } from "views/viewText";
-
-export function fondField(view:ResearchTextView, fond:HTMLElement) {
-    new Setting(fond)
-      .setName("Fond : ")
-      .addDropdown((fondSelected) => {
-        codeFond.forEach((value, key) => {
-          fondSelected.addOption(key, value)
-        });
-        fondSelected.onChange(() => {
-          view.recherche.fond = fondSelected.getValue();
-        })
-      })
-
-    new Setting(fond)
-      .setName("Opérateur général : ")
-      .addDropdown((opeGen) => {
-        operateursRecherche.forEach((value, key) => {
-          opeGen.addOption(key, value)
-        })
-        opeGen.onChange(() => {
-          view.recherche.recherche.operateur = opeGen.getValue();
-        })
-        opeGen.setValue(view.recherche.recherche.champs[0].operateur as string)
-      })
-  }
+import { dateFormat } from "./dateHandler";
 
 
 export function ajoutBouton(view:textReaderView, element:HTMLElement) {
@@ -111,9 +87,9 @@ export async function creerUneNouvelleNote(view:textReaderView, header:HTMLEleme
   }
 
 
-export function startDateBeforeEndDate(start:string, end:string) {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
+export function startDateBeforeEndDate(start:dateFormat, end:dateFormat) {
+  const startDate = new Date(start.toString());
+  const endDate = new Date(end.toString());
 
   if (startDate < endDate) {
       return true;  
@@ -128,5 +104,6 @@ export function startDateBeforeEndDate(start:string, end:string) {
 export function getTodaysDate() {
   const padZero = (num: number, pad: number) => num.toString().padStart(pad, '0');
   let date = new Date();
-  return date.getFullYear() + "-" + padZero((date.getMonth() + 1), 2) + "-" + padZero(date.getDate(), 2);
+  const todaysDate = new dateFormat(date.getFullYear().toString(), date.getMonth().toString(), date.getDate().toString());
+  return todaysDate.toString();
 }

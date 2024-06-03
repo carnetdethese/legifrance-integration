@@ -71,7 +71,7 @@ export class DilaApiClient {
         return this.globalToken;
     }
 
-    async fetch({ path, method = "POST", params, }: { path: string; method?: string; params?: object }):Promise<object> {
+    async fetch({ path, method = "POST", params, }: { path: string; method?: string; params?: object}):Promise<object> {
         const [routeName] = path.split("/").slice(-1);
         const token = await this.getAccessToken();
         const url = `${this.apiHost}/${path}`;

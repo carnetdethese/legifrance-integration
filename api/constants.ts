@@ -1,3 +1,4 @@
+
 export const typeRecherche = new Map<string, string>([ // Type de la recherche
 	["UN_DES_MOTS", "Un de ces mots"],
 	["EXACTE", "Exacte"],
@@ -12,11 +13,11 @@ export const operateursRecherche = new Map<string, string>([ // Opérateur de ce
 ]);
 
 export const codeFond = new Map<string, string>([ // Fond dans lequel la recherche sera effectuée
-	//["ALL", "Tous les fonds"],
+	["ALL", "Tous les fonds"],
 	["CETAT", "Juridictions administratives"],
 	["CONSTIT", "Conseil constitutionnel"],
 	["JURI", "Juridictions judiciaires"],
-	// ["LEGI", "Législation"]
+	["LEGI", "Législation"]
 ]);
 
 export const champRecherche = new Map<string, string>([ // Type du champ dans lequel chercher.

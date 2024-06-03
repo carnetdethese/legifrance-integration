@@ -3,7 +3,7 @@ import { MontrerResultatsModal } from "./ShowModal";
 import { agentSearch } from "api/utilities";
 import LegifrancePlugin, { LegifranceSettings } from "main";
 import { codeFond, operateursRecherche, typeRecherche } from "api/constants";
-import { resultatsRecherche } from "abstracts/resultatRecherche";
+import { resultatsRecherche } from "abstracts/searches";
 
 
 

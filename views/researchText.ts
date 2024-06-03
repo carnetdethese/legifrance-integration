@@ -1,24 +1,23 @@
-import { ItemView, WorkspaceLeaf, Setting, Notice, Modal } from "obsidian";
-import { codeFond, typeRecherche, operateursRecherche, critereTri } from "api/constants";
-import { agentSearch, expressionRechercheForm, rechercheAvStructure } from "api/utilities";
-import { creerUneNouvelleNote, fondField, getTodaysDate, startDateBeforeEndDate } from "lib/utils";
+import { ItemView, WorkspaceLeaf, Setting, Notice } from "obsidian";
+import { typeRecherche, operateursRecherche } from "api/constants";
+import { agentSearch } from "api/utilities";
+import { champsRechercheAvancees } from "abstracts/searches";
+import { creerUneNouvelleNote } from "lib/utils";
 import { MontrerResultatsModal } from "modals/ShowModal";
 import LegifrancePlugin from "main";
 import { textReaderView } from "./viewText";
 import { documentHandler, resultatsRecherche } from "abstracts/searches";
-import { Root } from 'react-dom/client'
 import { WaitModal } from "modals/WaitModal";
 import { dateHandler } from "lib/dateHandler";
-import { PopUpModal } from "modals/popUp";
+import { newExpression, fondField } from "lib/searchUtils";
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
 export class ResearchTextView extends ItemView {
   document:documentHandler;
-  recherche:rechercheAvStructure;
-  valeursRecherche:expressionRechercheForm[];
+  dateRecherche: dateHandler;
+  recherche:champsRechercheAvancees;
   compteur:number;
-  nbChamps:number;
   agentChercheur:agentSearch;
   searchResult:resultatsRecherche;
   activeResearchType:string;
@@ -27,18 +26,15 @@ export class ResearchTextView extends ItemView {
   rechercheDiv:HTMLElement;
   valeurRecherche:string;
   plugin:LegifrancePlugin;
-  maxResults:number;
   activeViewLeaf:textReaderView;
-  root:Root;
-  dateRecherche: dateHandler;
-
 
   constructor(plugin:LegifrancePlugin, leaf: WorkspaceLeaf, agentChercheur:agentSearch) {
     super(leaf);
     this.compteur = 0;
     this.agentChercheur = agentChercheur;
     this.plugin = plugin;
-    this.document = new documentHandler(this);
+    this.dateRecherche = new dateHandler(this);
+    this.document = new documentHandler(this.app, this);
     // this.initSearch();
   }
 
@@ -48,6 +44,16 @@ export class ResearchTextView extends ItemView {
 
   getDisplayText() {
     return "Légifrance";
+  }
+
+
+  showActiveViewTextInfo() {
+    console.log(this.activeViewLeaf);
+  }
+
+  setActiveViewText(view:textReaderView) {
+    this.activeViewLeaf = view;
+    return this.activeViewLeaf;
   }
 
   async onOpen() { // initializing the view
@@ -94,77 +100,6 @@ export class ResearchTextView extends ItemView {
 
   async onClose() {
     // Nothing to clean up.
-    this.root?.unmount();
-  }
-
-  showActiveViewTextInfo() {
-    console.log(this.activeViewLeaf);
-  }
-
-  setActiveViewText(view:textReaderView) {
-    this.activeViewLeaf = view;
-    return this.activeViewLeaf;
-  }
-
-  // When user clicks on the "plus" or "minus" button, show or delete a field of search.
-  newExpression(container:HTMLElement, id:number) {
-    // incrementing number of fields and keeping count.
-    const instanceCount = id + 1;
-    if (this.compteur > 5 || this.compteur < 0) {
-      return
-    }
-
-    // building the fields. 
-    new Setting(container)
-      .setName("Champ " + instanceCount)
-      .addText((text) =>
-        text.onChange((value) => {
-          this.document.recherche.recherche.champs[0].criteres[id].valeur = value
-          })
-        .setValue(this.document.recherche.recherche.champs[0].criteres[id].valeur || ""))
-      .addButton(cb => cb
-        .setIcon("plus")
-        .onClick(() => {
-          if (this.compteur < 4 ) {
-            this.compteur += 1;
-             this.document.recherche.recherche.champs[0].criteres.push({
-               valeur:"", 
-               typeRecherche:typeRecherche.keys().next().value, 
-               operateur:operateursRecherche.keys().next().value,
-               proximite: 2
-             });
-            this.newExpression(container, this.compteur);
-            this.onOpen();
-          }
-      }))
-      .addButton(cb => cb
-        .setIcon("minus")
-        .onClick(() => {
-          if (this.compteur > 0) {
-            this.document.recherche.recherche.champs[0].criteres.pop();
-            this.compteur -= 1;
-            this.newExpression(container, this.compteur);
-            this.onOpen();
-          }
-        })
-      );
-    
-    new Setting(container)
-      .addDropdown((typeRechercheChamp) => {
-        typeRecherche.forEach((value, key) => {
-        typeRechercheChamp.addOption(key, value)
-        typeRechercheChamp.onChange((value) =>
-          this.document.recherche.recherche.champs[0].criteres[id].typeRecherche = value
-        )});
-        })
-      .addDropdown((operateur) => {
-        operateursRecherche.forEach((value, key) => {
-          operateur.addOption(key, value)
-          operateur.onChange((value) =>
-            this.document.recherche.recherche.champs[0].criteres[id].operateur = value
-          )
-        })
-      });
   }
 
   advancedSearchEngine() {
@@ -174,16 +109,18 @@ export class ResearchTextView extends ItemView {
     const fond = this.rechercheDiv.createEl("div");  
     fondField(this, fond);
 
-    const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
-    this.dateRecherche.champDate(dateDebut, "start");
-
-    const dateFin = new Setting(this.rechercheDiv).setName("Date de fin");
-    this.dateRecherche.champDate(dateFin, "end");
+    if (this.document.fond != "ALL") {
+      const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
+      this.dateRecherche.champDate(dateDebut, "start");
+  
+      const dateFin = new Setting(this.rechercheDiv).setName("Date de fin");
+      this.dateRecherche.champDate(dateFin, "end");
+    }
 
     const valuesRecherche = this.rechercheDiv.createEl("div");
 
     for (let i = 0 ; i <= this.compteur ; i++){
-      this.newExpression(valuesRecherche, i);
+      newExpression(this, valuesRecherche, i);
     }
   
     new Setting(valuesRecherche)
@@ -200,13 +137,12 @@ export class ResearchTextView extends ItemView {
   simpleSearchEngine() {
     this.rechercheDiv.empty();
     this.activeResearchType = "simple";
-    this.initSearch();
     this.compteur = 0;
 
     fondField(this, this.rechercheDiv);
 
-    if (this.document.recherche.recherche.champs.length <= 0) {
-      this.document.recherche.recherche.champs[0].criteres.push({
+    if (this.document.recherche.champs.length <= 0) {
+      this.document.recherche.champs[0].criteres.push({
         valeur: "", 
         typeRecherche:typeRecherche.keys().next().value, 
         proximite: 2,
@@ -214,19 +150,22 @@ export class ResearchTextView extends ItemView {
       });
     }
 
-    const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
-    this.dateRecherche.champDate(dateDebut, "start");
+    if (this.document.fond != "ALL") {
 
-    const dateFin = new Setting(this.rechercheDiv).setName("Date de fin");
-    this.dateRecherche.champDate(dateFin, "end");
+      const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
+      this.dateRecherche.champDate(dateDebut, "start");
+  
+      const dateFin = new Setting(this.rechercheDiv).setName("Date de fin");
+      this.dateRecherche.champDate(dateFin, "end");
+    }
 
     new Setting(this.rechercheDiv)
       .setName("Recherche")
       .addText((text) =>
         text.onChange((value) => {
-        this.document.recherche.recherche.champs[0].criteres[0].valeur = value
+        this.document.recherche.champs[0].criteres[0].valeur = value
           })
-        .setValue(this.document.recherche.recherche.champs[0].criteres[0].valeur || ""))
+        .setValue(this.document.recherche.champs[0].criteres[0].valeur || ""))
     
     new Setting(this.rechercheDiv)
       .addDropdown((typeRechercheChamp) => {
@@ -249,27 +188,29 @@ export class ResearchTextView extends ItemView {
               await this.launchSearch();
               this.onOpen();
             }));
+
+
+      new Setting(this.rechercheDiv)
+          .addButton((btn) => btn
+            .setButtonText("Debug")
+            .setCta()
+            .onClick(() => this.document.showSearch())
+          );
   }
 
-
-
   async launchSearch() {
-    let today = getTodaysDate();
-    if (!this.document.recherche.recherche.filtres[0].dates.end) this.document.recherche.recherche.filtres[0].dates.end = today;
-    if (!this.document.recherche.recherche.filtres[0].dates.start) this.document.recherche.recherche.filtres[0].dates.start = "1800-01-01";
+    let check = await this.document.checkBeforeSearch();
+    if (check == 'false') return;
 
-    if (!startDateBeforeEndDate(this.document.recherche.recherche.filtres[0].dates.start, this.document.recherche.recherche.filtres[0].dates.end)) {
-      new PopUpModal(this.app, "Vous devez entrer une date de début antérieure à la date de fin !").open();
-      return
-    }
+    console.log(check);
 
     const waitingModal = new WaitModal(this.app);
     waitingModal.open();
 
     try {
-      this.searchResult = await this.agentChercheur.advanceSearchText(this.recherche) as resultatsRecherche;
+      this.searchResult = await this.agentChercheur.advanceSearchText(this.document.toObject()) as resultatsRecherche;
 
-      for (const elt of this.document.recherche.recherche.champs[0].criteres){
+      for (const elt of this.document.recherche.champs[0].criteres){
           this.valeurRecherche += elt.valeur;
       }
 
@@ -282,37 +223,6 @@ export class ResearchTextView extends ItemView {
     }
   }
 
-initSearch() {
-  this.dateRecherche = new dateHandler(this);
 
-  this.recherche = {
-    recherche: {
-      filtres: [{
-        facette: "DATE_DECISION",
-        dates: {
-          start: "",
-          end: ""
-        }
-      }],
-      pageSize: this.plugin.settings.maxResults,
-      sort: this.plugin.settings.critereTriSetting,
-      // operateur: operateursRecherche.keys().next().value,
-      typePagination: "DEFAUT",
-      pageNumber: 1,
-      champs: [{
-        typeChamp: "ALL",
-        operateur: operateursRecherche.keys().next().value,
-        criteres: [{
-          valeur: "", 
-          typeRecherche:typeRecherche.keys().next().value, 
-          proximite: 2,
-          operateur:operateursRecherche.keys().next().value
-        }],
-      }]
-    },
-    fond: codeFond.keys().next().value,
-  }
-    
-}
 
 }  
