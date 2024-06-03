@@ -5,7 +5,7 @@ import { creerUneNouvelleNote, fondField, getTodaysDate, startDateBeforeEndDate 
 import { MontrerResultatsModal } from "modals/ShowModal";
 import LegifrancePlugin from "main";
 import { textReaderView } from "./viewText";
-import { documentHandler, resultatsRecherche } from "abstracts/resultatRecherche";
+import { documentHandler, resultatsRecherche } from "abstracts/searches";
 import { Root } from 'react-dom/client'
 import { WaitModal } from "modals/WaitModal";
 import { dateHandler } from "lib/dateHandler";
@@ -38,8 +38,8 @@ export class ResearchTextView extends ItemView {
     this.compteur = 0;
     this.agentChercheur = agentChercheur;
     this.plugin = plugin;
-    this.document = new documentHandler();
-    this.initSearch();
+    this.document = new documentHandler(this);
+    // this.initSearch();
   }
 
   getViewType() {
@@ -119,15 +119,15 @@ export class ResearchTextView extends ItemView {
       .setName("Champ " + instanceCount)
       .addText((text) =>
         text.onChange((value) => {
-          this.recherche.recherche.champs[0].criteres[id].valeur = value
+          this.document.recherche.recherche.champs[0].criteres[id].valeur = value
           })
-        .setValue(this.recherche.recherche.champs[0].criteres[id].valeur || ""))
+        .setValue(this.document.recherche.recherche.champs[0].criteres[id].valeur || ""))
       .addButton(cb => cb
         .setIcon("plus")
         .onClick(() => {
           if (this.compteur < 4 ) {
             this.compteur += 1;
-             this.recherche.recherche.champs[0].criteres.push({
+             this.document.recherche.recherche.champs[0].criteres.push({
                valeur:"", 
                typeRecherche:typeRecherche.keys().next().value, 
                operateur:operateursRecherche.keys().next().value,
@@ -141,7 +141,7 @@ export class ResearchTextView extends ItemView {
         .setIcon("minus")
         .onClick(() => {
           if (this.compteur > 0) {
-            this.recherche.recherche.champs[0].criteres.pop();
+            this.document.recherche.recherche.champs[0].criteres.pop();
             this.compteur -= 1;
             this.newExpression(container, this.compteur);
             this.onOpen();
@@ -154,14 +154,14 @@ export class ResearchTextView extends ItemView {
         typeRecherche.forEach((value, key) => {
         typeRechercheChamp.addOption(key, value)
         typeRechercheChamp.onChange((value) =>
-          this.recherche.recherche.champs[0].criteres[id].typeRecherche = value
+          this.document.recherche.recherche.champs[0].criteres[id].typeRecherche = value
         )});
         })
       .addDropdown((operateur) => {
         operateursRecherche.forEach((value, key) => {
           operateur.addOption(key, value)
           operateur.onChange((value) =>
-            this.recherche.recherche.champs[0].criteres[id].operateur = value
+            this.document.recherche.recherche.champs[0].criteres[id].operateur = value
           )
         })
       });
@@ -205,8 +205,8 @@ export class ResearchTextView extends ItemView {
 
     fondField(this, this.rechercheDiv);
 
-    if (this.recherche.recherche.champs.length <= 0) {
-      this.recherche.recherche.champs[0].criteres.push({
+    if (this.document.recherche.recherche.champs.length <= 0) {
+      this.document.recherche.recherche.champs[0].criteres.push({
         valeur: "", 
         typeRecherche:typeRecherche.keys().next().value, 
         proximite: 2,
@@ -224,9 +224,9 @@ export class ResearchTextView extends ItemView {
       .setName("Recherche")
       .addText((text) =>
         text.onChange((value) => {
-        this.recherche.recherche.champs[0].criteres[0].valeur = value
+        this.document.recherche.recherche.champs[0].criteres[0].valeur = value
           })
-        .setValue(this.recherche.recherche.champs[0].criteres[0].valeur || ""))
+        .setValue(this.document.recherche.recherche.champs[0].criteres[0].valeur || ""))
     
     new Setting(this.rechercheDiv)
       .addDropdown((typeRechercheChamp) => {
@@ -255,10 +255,10 @@ export class ResearchTextView extends ItemView {
 
   async launchSearch() {
     let today = getTodaysDate();
-    if (!this.recherche.recherche.filtres[0].dates.end) this.recherche.recherche.filtres[0].dates.end = today;
-    if (!this.recherche.recherche.filtres[0].dates.start) this.recherche.recherche.filtres[0].dates.start = "1800-01-01";
+    if (!this.document.recherche.recherche.filtres[0].dates.end) this.document.recherche.recherche.filtres[0].dates.end = today;
+    if (!this.document.recherche.recherche.filtres[0].dates.start) this.document.recherche.recherche.filtres[0].dates.start = "1800-01-01";
 
-    if (!startDateBeforeEndDate(this.recherche.recherche.filtres[0].dates.start, this.recherche.recherche.filtres[0].dates.end)) {
+    if (!startDateBeforeEndDate(this.document.recherche.recherche.filtres[0].dates.start, this.document.recherche.recherche.filtres[0].dates.end)) {
       new PopUpModal(this.app, "Vous devez entrer une date de début antérieure à la date de fin !").open();
       return
     }
@@ -269,7 +269,7 @@ export class ResearchTextView extends ItemView {
     try {
       this.searchResult = await this.agentChercheur.advanceSearchText(this.recherche) as resultatsRecherche;
 
-      for (const elt of this.recherche.recherche.champs[0].criteres){
+      for (const elt of this.document.recherche.recherche.champs[0].criteres){
           this.valeurRecherche += elt.valeur;
       }
 

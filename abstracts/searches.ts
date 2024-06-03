@@ -1,6 +1,7 @@
 import { rechercheAvStructure } from "api/utilities"
 import { resumeDecision } from "./decisions"
 import * as constants from "api/constants";
+import { ResearchTextView } from "views/researchText";
 
 export interface resultatsRecherche {
 	results: {
@@ -32,15 +33,10 @@ export interface reponseDocument {
 // Classes et fonctions pour mieux intégrer les recherches avancées dans les fonds. Les classes devraient disposer :
 // - D'une fonction de mise à jour automatique des champs en fonction des fonds selectionnées (donc renvoyer, par exemple, une liste avec les critères de tri applicables à chaque collection).
 
-
-
-
-
-
 export class documentHandler {
     recherche:rechercheAvStructure;
 
-    constructor() {
+    constructor(view:ResearchTextView) {
         this.recherche = {
             recherche:
          {
@@ -51,8 +47,8 @@ export class documentHandler {
                 end: ""
               }
             }],
-            pageSize: this.plugin.settings.maxResults,
-            sort: this.plugin.settings.critereTriSetting,
+            pageSize: view.plugin.settings.maxResults,
+            sort: view.plugin.settings.critereTriSetting,
             // operateur: operateursRecherche.keys().next().value,
             typePagination: "DEFAUT",
             pageNumber: 1,

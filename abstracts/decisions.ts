@@ -1,7 +1,7 @@
 import { agentSearch } from "api/utilities";
 import { removeTags } from "lib/tools";
 import { htmlToMarkdown } from "obsidian";
-import { reponseDocument } from "./resultatRecherche";
+import { reponseDocument } from "./searches";
 
 export interface resumeDecision {
 	resumePrincipal:string;
