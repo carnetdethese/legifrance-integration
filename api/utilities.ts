@@ -4,7 +4,6 @@ import { listRouteConsult } from './constants';
 import { Decision } from 'abstracts/decisions';
 import * as interfaces from 'abstracts/searches'
 
-
 export interface dataFiche extends interfaces.ficheArretChamp, Decision {}
 
 export class agentSearch {

@@ -209,6 +209,7 @@ export class ResearchTextView extends ItemView {
 
     try {
       this.searchResult = await this.agentChercheur.advanceSearchText(this.document.toObject()) as resultatsRecherche;
+      console.log(this.searchResult);
 
       for (const elt of this.document.recherche.champs[0].criteres){
           this.valeurRecherche += elt.valeur;
