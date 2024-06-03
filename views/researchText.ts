@@ -1,11 +1,11 @@
 import { ItemView, WorkspaceLeaf, Setting, Notice, Modal } from "obsidian";
 import { codeFond, typeRecherche, operateursRecherche, critereTri } from "api/constants";
 import { agentSearch, expressionRechercheForm, rechercheAvStructure } from "api/utilities";
-import { creerUneNouvelleNote, fondField, startDateBeforeEndDate } from "lib/utils";
+import { creerUneNouvelleNote, fondField, getTodaysDate, startDateBeforeEndDate } from "lib/utils";
 import { MontrerResultatsModal } from "modals/ShowModal";
 import LegifrancePlugin from "main";
 import { textReaderView } from "./viewText";
-import { resultatsRecherche } from "abstracts/resultatRecherche";
+import { documentHandler, resultatsRecherche } from "abstracts/resultatRecherche";
 import { Root } from 'react-dom/client'
 import { WaitModal } from "modals/WaitModal";
 import { dateHandler } from "lib/dateHandler";
@@ -14,6 +14,7 @@ import { PopUpModal } from "modals/popUp";
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
 export class ResearchTextView extends ItemView {
+  document:documentHandler;
   recherche:rechercheAvStructure;
   valeursRecherche:expressionRechercheForm[];
   compteur:number;
@@ -37,6 +38,7 @@ export class ResearchTextView extends ItemView {
     this.compteur = 0;
     this.agentChercheur = agentChercheur;
     this.plugin = plugin;
+    this.document = new documentHandler();
     this.initSearch();
   }
 
@@ -249,43 +251,10 @@ export class ResearchTextView extends ItemView {
             }));
   }
 
-  initSearch() {
-    this.dateRecherche = new dateHandler(this);
 
-    this.recherche = {
-      recherche: {
-        filtres: [{
-          facette: "DATE_DECISION",
-          dates: {
-            start: "",
-            end: ""
-          }
-        }],
-        pageSize: this.plugin.settings.maxResults,
-        sort: this.plugin.settings.critereTriSetting,
-        // operateur: operateursRecherche.keys().next().value,
-        typePagination: "DEFAUT",
-        pageNumber: 1,
-        champs: [{
-          typeChamp: "ALL",
-          operateur: operateursRecherche.keys().next().value,
-          criteres: [{
-            valeur: "", 
-            typeRecherche:typeRecherche.keys().next().value, 
-            proximite: 2,
-            operateur:operateursRecherche.keys().next().value
-          }],
-        }]
-      },
-      fond: codeFond.keys().next().value,
-    }
-      
-  }
 
   async launchSearch() {
-    const padZero = (num: number, pad: number) => num.toString().padStart(pad, '0');
-    let date = new Date();
-    let today = date.getFullYear() + "-" + padZero((date.getMonth() + 1), 2) + "-" + padZero(date.getDate(), 2);
+    let today = getTodaysDate();
     if (!this.recherche.recherche.filtres[0].dates.end) this.recherche.recherche.filtres[0].dates.end = today;
     if (!this.recherche.recherche.filtres[0].dates.start) this.recherche.recherche.filtres[0].dates.start = "1800-01-01";
 
@@ -311,8 +280,39 @@ export class ResearchTextView extends ItemView {
     } finally {
         waitingModal.close();
     }
+  }
+
+initSearch() {
+  this.dateRecherche = new dateHandler(this);
+
+  this.recherche = {
+    recherche: {
+      filtres: [{
+        facette: "DATE_DECISION",
+        dates: {
+          start: "",
+          end: ""
+        }
+      }],
+      pageSize: this.plugin.settings.maxResults,
+      sort: this.plugin.settings.critereTriSetting,
+      // operateur: operateursRecherche.keys().next().value,
+      typePagination: "DEFAUT",
+      pageNumber: 1,
+      champs: [{
+        typeChamp: "ALL",
+        operateur: operateursRecherche.keys().next().value,
+        criteres: [{
+          valeur: "", 
+          typeRecherche:typeRecherche.keys().next().value, 
+          proximite: 2,
+          operateur:operateursRecherche.keys().next().value
+        }],
+      }]
+    },
+    fond: codeFond.keys().next().value,
+  }
+    
 }
-
-
 
 }  

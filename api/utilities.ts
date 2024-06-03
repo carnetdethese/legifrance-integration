@@ -74,6 +74,7 @@ export interface ficheArretChamp {
 export interface dataFiche extends ficheArretChamp, Decision {}
 
 export class agentSearch {
+  
   settings:LegifranceSettings;
   dilaApi:DilaApiClient;
 

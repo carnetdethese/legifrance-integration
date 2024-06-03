@@ -123,3 +123,10 @@ export function startDateBeforeEndDate(start:string, end:string) {
       return true;
   }
 }
+
+
+export function getTodaysDate() {
+  const padZero = (num: number, pad: number) => num.toString().padStart(pad, '0');
+  let date = new Date();
+  return date.getFullYear() + "-" + padZero((date.getMonth() + 1), 2) + "-" + padZero(date.getDate(), 2);
+}
