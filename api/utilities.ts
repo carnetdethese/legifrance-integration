@@ -3,8 +3,11 @@ import { LegifranceSettings } from 'main';
 import { listRouteConsult } from './constants';
 import { Decision } from 'abstracts/decisions';
 import * as interfaces from 'abstracts/searches'
+import { legalDocument } from 'abstracts/document';
+import { legalStatute } from 'abstracts/loi';
 
-export interface dataFiche extends interfaces.ficheArretChamp, Decision {}
+
+export interface dataFiche extends interfaces.ficheArretChamp, Decision, legalDocument, legalStatute {}
 
 export class agentSearch {
   
@@ -16,41 +19,6 @@ export class agentSearch {
     this.dilaApi = new DilaApiClient(this.settings.clientId, this.settings.clientSecret, this.settings.apiHost, this.settings.tokenHost);
   }
 
-  rechercheSimple(valeur:string, fond:string, nbResultat:number) {
-    return {
-      "recherche": {
-          "pageSize":nbResultat,
-          "sort": "PERTINENCE",
-          "pageNumber": 1,
-          "typePagination": "DEFAUT",
-          "champs": [
-              {
-                  "typeChamp": "ALL",
-                  "criteres": [
-                      {
-                          "typeRecherche": "UN_DES_MOTS",
-                          "valeur": valeur,
-                          "operateur": "ET"
-                      }
-                  ],
-                  "operateur": "ET"
-              }
-          ]
-      },
-    "fond": fond
-    }
-  }
-
-  async searchText(search:string, fond:string, maxResults:number) {
-    const requestOptions = {
-      path: "/search",
-      method: "POST",
-      params: this.rechercheSimple(search, fond, maxResults)
-    }
-
-    return await this.dilaApi.fetch(requestOptions);
-  }
-
   async advanceSearchText(search:interfaces.rechercheAvStructure) {
     const requestOptions = {
       path: "/search",
@@ -59,25 +27,13 @@ export class agentSearch {
     }
 
     const result = await this.dilaApi.fetch(requestOptions);
-
     return result;
   }
 
-  async fetchText(texte:Decision, valeurRecherche:string) {
-    let parametres;
-    const path = getPathID(texte.id) as string;
+  async fetchText(texte:legalDocument | Decision, valeurRecherche:string) {
+    const path = this.getPathID(texte.id) as string;
 
-    if (texte.id.startsWith("LEGI")) {
-      parametres = {
-        "textId": texte.id,
-        "searchedString": valeurRecherche,
-        "date": texte.date
-      }}
-    else {
-      parametres = {
-        "textId": texte.id,
-        "searchedString": valeurRecherche
-      }}
+    let parametres = this.defineParamConsult(texte.id, valeurRecherche, texte.date);
 
     const requestOptions = {
       path: path,
@@ -87,10 +43,34 @@ export class agentSearch {
       return await this.dilaApi.fetch(requestOptions);
   }
 
+  getPathID(id:string) {
+    const path = listRouteConsult.get(id.substring(0,4));
+    return path;
+  }
 
-}
+  defineParamConsult(id:string, valeurRecherche:string, date?:string) {
+    let result;
 
-function getPathID(id:string) {
-  const path = listRouteConsult.get(id.substring(0,4));
-  return path;
-}
+    if (id.startsWith("LEGI")) {
+      result = {
+        "textId": id,
+        "searchedString": valeurRecherche,
+        "date": date
+      }}
+
+    else if (id.startsWith("JORF")) {
+      result = {
+        "textCid": id,
+        "searchedString": valeurRecherche
+      }}  
+
+    else {
+      result = {
+        "textId": id,
+        "searchedString": valeurRecherche
+      }}
+  
+    return result;
+  }
+
+}  

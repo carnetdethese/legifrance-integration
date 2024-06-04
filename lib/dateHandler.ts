@@ -1,6 +1,5 @@
 import { dateJour, dateMois, dateAnnee } from "api/constants";
 import { champDate } from "abstracts/searches";
-import { PopUpModal } from "modals/popUp";
 import { Setting, Notice, DropdownComponent } from "obsidian";
 import { ResearchTextView } from "views/researchText";
 

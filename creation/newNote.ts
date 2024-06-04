@@ -1,19 +1,26 @@
 import * as Handlebars from "handlebars";
 import { Decision } from "abstracts/decisions";
 import { App } from "obsidian";
-import { dataFiche, ficheArretChamp } from "api/utilities";
+import { dataFiche  } from "api/utilities";
+import { legalDocument } from "abstracts/document";
+import { formattedStatute } from "abstracts/loi";
+import { ficheArretChamp } from "abstracts/searches";
+
+function isDecision(doc: legalDocument): doc is Decision {
+    return (doc as Decision).juridiction !== undefined;
+}
 
 export class newNote {
     app:App;
     template:string;
     titreTemplate:string;
-    data:Decision;
+    data:Decision | legalDocument | formattedStatute;
     folder:string;
     champFiche:ficheArretChamp;
     dataNote:dataFiche;
 
 
-    constructor(app:App, template:string, templateTitre:string, data:Decision) {
+    constructor(app:App, template:string, templateTitre:string, data:Decision | legalDocument | formattedStatute) {
         this.app = app;
         this.template = template;
         this.champFiche = {
@@ -24,13 +31,16 @@ export class newNote {
             solution: ""       
          }
         this.data = data;
-        this.folder = this.folderSetting("Décisions/");
+        this.folder = this.folderSetting("Décisions/") || "";
         this.titreTemplate = templateTitre;
     }
 
     folderSetting(chosenFolder:string) {
-        const filePath = chosenFolder + this.data.juridiction + "/";
-        return filePath
+        if (isDecision(this.data as Decision)) { 
+            const filePath = chosenFolder + this.data.juridiction + "/";
+            return filePath
+        } 
+
     }
 
     async renderFileTitle () {

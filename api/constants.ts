@@ -69,7 +69,8 @@ export const listRouteConsult = new Map<string, string>([
 	["CETA", "/consult/juri"],
 	["CONS", "/consult/juri"],
 	["JORF", "/consult/jorf"],
-	["KALI", "/consult/kaliText"]
+	["KALI", "/consult/kaliText"],
+	["LODA", "/consult/lawDecree"]
 ])
 
 export const dateJour = new Map<string, string>();

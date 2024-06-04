@@ -1,11 +1,12 @@
-import { resumeDecision } from "./decisions"
+import { Sommaire, resumeDocument } from "abstracts/document"
+import {  } from "abstracts/document";
 import * as constants from "api/constants";
 import { ResearchTextView } from "views/researchText";
-import { Sommaire } from "./decisions";
 import { getTodaysDate, startDateBeforeEndDate } from "lib/utils";
 import { PopUpModal } from "modals/popUp";
 import { App } from "obsidian";
 import { dateFormat } from "lib/dateHandler";
+import { statuteArticles, statuteSections } from "./loi";
 
 // Création des interfaces pour construire une recherche avancée.
 
@@ -39,12 +40,6 @@ export interface champDate {
   end: dateFormat | string
 }
 
-export interface dateFormat {
-  annee: string,
-  mois: string,
-  jour: string
-}
-
 export interface Champs { // Interface pour le champ : Champs
   operateur?:string,
   criteres:Criteres[],
@@ -60,7 +55,7 @@ export interface Criteres { // interface pour le champ : criteres. Peut y en avo
 }
 
 export interface ficheArretChamp {
-  [key:string]:string | undefined | number | Sommaire[], 
+  [key:string]:string | undefined | number | Sommaire[] | statuteArticles[] | statuteSections[ ], 
   faits:string,
   procedure:string,
   moyens:string,
@@ -89,7 +84,7 @@ export interface reponseDocument {
         dateTexte:string,
         natureJuridiction:string,
         formation:string,
-        sommaire:resumeDecision[],
+        sommaire:resumeDocument[],
         num:string,
         urlCC:string
     }
@@ -161,10 +156,13 @@ export class documentHandler {
       this.recherche.sort = "";
       this.recherche.filtres = [];
     }
-
-    if (selection == "CETAT" || selection == "JURI" || selection == "CONSTIT") {
+    else if (selection == "CETAT" || selection == "JURI" || selection == "CONSTIT") {
       this.recherche.filtres[0] = {'dates':{'start': new dateFormat(), 'end': new dateFormat()}, 'facette':'DATE_DECISION'};
     }
+    else if (selection == "LEGI") {
+      this.recherche.filtres[0] = {'dates':{'start': new dateFormat(), 'end': new dateFormat()}, 'facette':'DATE_DECISION'};
+    }
+
 
     this.view.onOpen();
   }

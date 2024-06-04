@@ -3,7 +3,7 @@ import { Decision } from "abstracts/decisions";
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import { newNote } from "creation/newNote";
 import { ResearchTextView, RESEARCH_TEXT_VIEW } from "./researchText";
-import { replaceMark } from "lib/tools";
+import { removeTags, replaceHTMLTags, replaceMark } from "lib/tools";
 
 
 export const TEXT_READER_VIEW = "text-reader-view";
@@ -55,12 +55,12 @@ export class textReaderView extends ItemView {
     content.createEl("h5", {text: "Texte intégral"});
 
     if (this.decision.texteIntegralHTML) {
-      const texteArray = this.decision.texteIntegralHTML.split("<br/>");
+      const texteArray = this.decision.texteIntegralHTML.split("<p>");
 
       texteArray?.forEach(elt => {
+        elt = removeTags(elt);
         const para = content.createEl("p");
         replaceMark(elt, para);
-        //content.createEl("p", { text: elt });
       })
     }
 

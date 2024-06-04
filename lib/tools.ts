@@ -1,4 +1,3 @@
-
 export async function replaceMark(texte:string, container:HTMLElement) {
     if (texte !== null) {
         texte.split(/(<mark>.*?<\/mark>)/g).forEach(segment => {
@@ -17,15 +16,20 @@ export async function replaceMark(texte:string, container:HTMLElement) {
     return container
 }
 
-export function removeTags(str:string) {
 
+export function removeTags(str:string) {
     if ((str === null) || (str === ''))
         return '';
     else
         str = str.toString();
- 
-    // Regular expression to identify HTML tags in
-    // the input string. Replacing the identified
-    // HTML tag with a null string.
+
     return str.replace(/(<([^>]+)>)/ig, '');
+}
+
+export function replaceParaTags(str:string) {
+    let newStr;
+    newStr = str.replace(/(<p>)/ig, '\n')
+    newStr = newStr.replace(/(<\/p>)/ig, '');
+    console.log(newStr);
+    return newStr;
 }

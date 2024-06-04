@@ -1,7 +1,7 @@
 import { agentSearch } from "api/utilities";
-import { removeTags } from "lib/tools";
-import { htmlToMarkdown } from "obsidian";
 import { reponseDocument } from "./searches";
+import { getDecisionInfo } from "./decisions";
+import { getStatuteInfo } from "./loi";
 
 export interface resumeDocument {
 	resumePrincipal:string;
@@ -13,19 +13,31 @@ export interface legalDocument {
 	texte: string;
 	lien: string;
 	origin: string;
+	nature?:string;
+	cid?:string;
     date?: string;
+	texteIntegral?:string;
+	texteIntegralHTML?:string;
 }
 
 export interface Sommaire {
 	resume:string;
 }
 
-
 export async function getDocumentInfo(document:legalDocument, valeurRecherche:string, apiClient:agentSearch) {
 	// objet Document qui récupère une copie de l'objet passé en argument
 	const infoDocument:legalDocument = document;
 
-	// Variable qui contient la réponse de la requête 
+	if (document.origin == "CETAT" || document.origin == "JURI" || document.origin == "CONSTIT") {
+		return getDecisionInfo(document, valeurRecherche, apiClient);
+	}
+	if (document.nature == "CONSTITUTION") {
+		return getStatuteInfo(document, valeurRecherche, apiClient);
+	}
+
+	// if (document.cid) document.id = document.cid;
+
+	// Variable qui contient la réponse de la requête
 	const response:reponseDocument = await apiClient.fetchText(document, valeurRecherche) as reponseDocument; // requête à l'API
 
 	console.log(response);

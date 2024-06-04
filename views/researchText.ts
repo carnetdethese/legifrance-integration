@@ -224,6 +224,4 @@ export class ResearchTextView extends ItemView {
     }
   }
 
-
-
 }  

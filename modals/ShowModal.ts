@@ -6,10 +6,12 @@ import LegifrancePlugin  from "main";
 import { replaceMark } from "lib/tools";
 import { agentSearch } from "api/utilities";
 import { resultatsRecherche } from "abstracts/searches";
+import { formattedStatute } from "abstracts/loi";
 
 interface entreeDocument {
     title:string,
-    id:string
+    id:string,
+	cid:string,
 }
 
 export class MontrerResultatsModal extends SuggestModal<legalDocument> {
@@ -35,22 +37,26 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
     getResultsDocument(data:resultatsRecherche) {
 
 		const resultsDic:legalDocument[] = [];
-		let contenuTexte:string, origine:string, date:string;
+		let contenuTexte:string, origine:string, date:string, cid:string, nature:string;
 
         if (data && data.results && Array.isArray(data.results)) {
 			data.results.forEach(result => {
 				// Process each search result here
 				contenuTexte = result.text;
 				origine = result.origin;
+				nature = result.nature;
 				if (result.date) { date = result.date }
 				result.titles.forEach((entree:entreeDocument) => {
+					if (entree.cid) cid = entree.cid;
 						resultsDic.push({
 							titre: entree.title,
 							id: entree.id,
 							texte: contenuTexte,
 							lien: findLink(origine, entree.id),
-							origin: origine,
-							date:date
+							origin:origine,
+							nature:nature,
+							date:date,
+							cid:cid
 						});
 					});
 			});
@@ -84,15 +90,10 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
 	// Perform action on the selected suggestion.
 	async onChooseSuggestion(decision: legalDocument, evt: MouseEvent | KeyboardEvent) {
 		if (this.ALL_DOCUMENTS.find(elt => elt.id == decision.id) !== undefined) {
-			let documentContent:legalDocument | Decision;
+			let documentContent:legalDocument | Decision | formattedStatute;
 			let selectedDocument:legalDocument = this.ALL_DOCUMENTS.find(elt => elt.id == decision.id) as legalDocument;
 
-			if (selectedDocument.origin == "CETAT" || selectedDocument.origin == "JURI" || selectedDocument.origin == "CONSTIT") {
-				documentContent = await getDecisionInfo(selectedDocument, this.valeurRecherche, this.agentChercheur) as Decision;
-			}
-			else {
-				documentContent = await getDocumentInfo(selectedDocument, this.valeurRecherche, this.agentChercheur) as legalDocument;
-			}
+			documentContent = await getDocumentInfo(selectedDocument, this.valeurRecherche, this.agentChercheur);
 
 			if (this.createNote) {
 				new newNote(this.app, this.plugin.settings.template, this.plugin.settings.fileTitle, documentContent).createNote();

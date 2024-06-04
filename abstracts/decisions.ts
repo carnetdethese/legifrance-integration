@@ -7,7 +7,9 @@ import { htmlToMarkdown } from "obsidian";
 export const urlFond = new Map<string, string>([
 	["CETAT", "/ceta/id/"],
 	["CONSTIT", "/cons/id/"],
-	["JURI", "/juri/id/"]
+	["JURI", "/juri/id/"],
+	["LEGI", "/legi/id/"],
+	["JORF", "/jorf/id"]
 ]);
 
 export const codeJuridiction = new Map<string, string>([
@@ -18,8 +20,6 @@ export const codeJuridiction = new Map<string, string>([
 ]);
 
 export interface Decision extends legalDocument {
-	texteIntegral?: string;
-	texteIntegralHTML?:string;
 	numero?: string;
 	annee?:number;
 	juridiction?:string;
