@@ -151,7 +151,6 @@ export class ResearchTextView extends ItemView {
     }
 
     if (this.document.fond != "ALL") {
-
       const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
       this.dateRecherche.champDate(dateDebut, "start");
   
@@ -201,9 +200,7 @@ export class ResearchTextView extends ItemView {
   async launchSearch() {
     let check = await this.document.checkBeforeSearch();
     if (check == 'false') return;
-
-    console.log(check);
-
+    
     const waitingModal = new WaitModal(this.app);
     waitingModal.open();
 

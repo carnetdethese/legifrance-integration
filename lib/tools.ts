@@ -27,9 +27,7 @@ export function removeTags(str:string) {
 }
 
 export function replaceParaTags(str:string) {
-    let newStr;
-    newStr = str.replace(/(<p>)/ig, '\n')
+    let newStr = str.replace(/(<p>)/ig, '\n')
     newStr = newStr.replace(/(<\/p>)/ig, '');
-    console.log(newStr);
     return newStr;
 }

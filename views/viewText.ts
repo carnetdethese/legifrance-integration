@@ -14,7 +14,6 @@ export class textReaderView extends ItemView {
   nouvelleNote:newNote;
   researchTab:ResearchTextView;
 
-
   constructor(plugin:LegifrancePlugin, leaf: WorkspaceLeaf) {
     super(leaf);
     this.plugin = plugin;
@@ -33,43 +32,17 @@ export class textReaderView extends ItemView {
   getDisplayText() {
     return this.decision.id;
   }
+
+
   async onOpen() {
     const container = this.containerEl.children[1];
     container.empty();
 
-    container.createEl("h4", { text: this.decision.id });
-
-    const infoBox = container.createEl("div", { cls: "showline"})
-    infoBox.createEl("h5", {text: "Informations" })
-
-    infoBox.createEl("p", { text: `Juridiction : ${this.decision.juridiction}`, cls:"infoDecision" } );
-    infoBox.createEl("p", { text: `Date : ${this.decision.date}`, cls:"infoDecision" } );
-    infoBox.createEl("p", { text: `Numéro : ${this.decision.numero}`, cls:"infoDecision" } );
-    if (this.decision.formation) { infoBox.createEl("p", { text: `Formation : ${this.decision.formation}`, cls:"infoDecision" } ); } 
-    if (this.decision.abstract) {infoBox.createEl("p", { text: `Solution : ${this.decision.abstract}`, cls:"infoDecision" } );}
-
-    infoBox.createEl("p", {text: "–––––––––––––––––", cls:"break"});
-
-    const content = container.createDiv();
-
-    content.createEl("h5", {text: "Texte intégral"});
-
-    if (this.decision.texteIntegralHTML) {
-      const texteArray = this.decision.texteIntegralHTML.split("<p>");
-
-      texteArray?.forEach(elt => {
-        elt = removeTags(elt);
-        const para = content.createEl("p");
-        replaceMark(elt, para);
-      })
+    if (this.decision.origin == "CETAT" || this.decision.origin == "JURI" || this.decision.origin == "CONSTIT") {
+      this.viewDecision(container);
     }
-
-    if (this.decision.sommaires) {
-      content.createEl("h4", {text: "Sommaires" })
-      this.decision.sommaires.forEach(elt => {
-        content.createEl("p", { text: elt.resume });
-      })
-
+    else {
+      this.viewStatute(container)
     }
 
     if (this.researchTab){
@@ -83,4 +56,81 @@ export class textReaderView extends ItemView {
       await this.researchTab.onOpen();
     }
   }
+
+  viewStatute(container:Element) {
+    container.createEl("h2", { text: this.decision.id });
+    const infoBox = container.createEl("div", { cls: "showline"})
+
+    infoBox.createEl("h3", {text: "Informations" })
+
+    infoBox.createEl("p", { text: `Titre : ${this.decision.titre}`, cls:"infoDecision" } );
+    infoBox.createEl("p", { text: `Date : ${this.decision.date}`, cls:"infoDecision" } );
+    infoBox.createEl("p", { text: `Numéro : ${this.decision.numero}`, cls:"infoDecision" } );
+    if (this.decision.formation) { infoBox.createEl("p", { text: `Formation : ${this.decision.formation}`, cls:"infoDecision" } ); } 
+    if (this.decision.abstract) {infoBox.createEl("p", { text: `Solution : ${this.decision.abstract}`, cls:"infoDecision" } );}
+
+    infoBox.createEl("p", {text: "–––––––––––––––––", cls:"break"});
+
+    const content = container.createDiv();
+
+    content.createEl("h3", {text: "Texte intégral"});
+
+    if (this.decision.texteIntegral) {
+      const texteArray = this.decision.texteIntegral.split(/\n/);
+      texteArray?.forEach(elt => {
+        if (elt.startsWith("##")) {
+          this.showElementOfStatute("h4", elt, content)
+        }
+        else if (elt.startsWith('###')) {
+          this.showElementOfStatute("h5", elt, content)
+        }
+        else {
+          this.showElementOfStatute("p", elt, content)
+        }
+      })
+    }
+  }
+
+  viewDecision(container:Element) {
+    container.createEl("h2", { text: this.decision.id });
+
+    const infoBox = container.createEl("div", { cls: "showline"})
+    infoBox.createEl("h3", {text: "Informations" })
+
+    infoBox.createEl("p", { text: `Juridiction : ${this.decision.juridiction}`, cls:"infoDecision" } );
+    infoBox.createEl("p", { text: `Date : ${this.decision.date}`, cls:"infoDecision" } );
+    infoBox.createEl("p", { text: `Numéro : ${this.decision.numero}`, cls:"infoDecision" } );
+    if (this.decision.formation) { infoBox.createEl("p", { text: `Formation : ${this.decision.formation}`, cls:"infoDecision" } ); } 
+    if (this.decision.abstract) {infoBox.createEl("p", { text: `Solution : ${this.decision.abstract}`, cls:"infoDecision" } );}
+
+    infoBox.createEl("p", {text: "–––––––––––––––––", cls:"break"});
+
+    const content = container.createDiv();
+
+    content.createEl("h3", {text: "Texte intégral"});
+
+    if (this.decision.texteIntegralHTML) {
+      const texteArray = this.decision.texteIntegralHTML.split("<p>");
+      texteArray?.forEach(elt => {
+        this.showElementOfStatute("p", elt, content)
+      })
+    }
+
+    if (this.decision.sommaires) {
+      content.createEl("h3", {text: "Sommaires" })
+      this.decision.sommaires.forEach(elt => {
+        content.createEl("p", { text: elt.resume });
+      })
+
+    }
+
+
+  }
+
+  showElementOfStatute(el:keyof HTMLElementTagNameMap, elt:string, content:Element) {
+    elt = removeTags(elt);
+    const para = content.createEl(el);
+    replaceMark(elt, para);
+  }
+
 }

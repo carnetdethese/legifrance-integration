@@ -105,7 +105,7 @@ export class documentHandler {
     this.recherche = {
       filtres: [],
       pageSize: view.plugin.settings.maxResults,
-      sort: view.plugin.settings.critereTriSetting,
+      sort: "",
       // operateur: operateursRecherche.keys().next().value,
       typePagination: "DEFAUT",
       pageNumber: 1,
@@ -152,15 +152,19 @@ export class documentHandler {
     this.fond = selection;    
 
     if (selection == "ALL") {
-      this.recherche.filtres[0].facette = "";
-      this.recherche.sort = "";
-      this.recherche.filtres = [];
+      if (this.recherche.filtres[0]) {
+        this.recherche.filtres[0].facette = "";
+        this.recherche.sort = "";
+        this.recherche.filtres = [];
+      }
     }
     else if (selection == "CETAT" || selection == "JURI" || selection == "CONSTIT") {
       this.recherche.filtres[0] = {'dates':{'start': new dateFormat(), 'end': new dateFormat()}, 'facette':'DATE_DECISION'};
+      this.recherche.sort = this.view.plugin.settings.critereTriSetting;
     }
-    else if (selection == "LEGI") {
-      this.recherche.filtres[0] = {'dates':{'start': new dateFormat(), 'end': new dateFormat()}, 'facette':'DATE_DECISION'};
+    else if (selection == "JORF") {
+      this.recherche.sort = "PUBLICATION_DATE_ASC";
+      this.recherche.filtres[0] = {'dates':{'start': new dateFormat(), 'end': new dateFormat()}, 'facette':'DATE_PUBLICATION'};
     }
 
 

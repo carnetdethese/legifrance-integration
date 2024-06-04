@@ -13,6 +13,7 @@ export interface legalDocument {
 	texte: string;
 	lien: string;
 	origin: string;
+	numero?:string;
 	nature?:string;
 	cid?:string;
     date?: string;
@@ -31,7 +32,7 @@ export async function getDocumentInfo(document:legalDocument, valeurRecherche:st
 	if (document.origin == "CETAT" || document.origin == "JURI" || document.origin == "CONSTIT") {
 		return getDecisionInfo(document, valeurRecherche, apiClient);
 	}
-	if (document.nature == "CONSTITUTION") {
+	if (document.origin == "JORF" || document.origin == "LEGI") {
 		return getStatuteInfo(document, valeurRecherche, apiClient);
 	}
 

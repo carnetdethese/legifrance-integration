@@ -32,8 +32,13 @@ export class agentSearch {
 
   async fetchText(texte:legalDocument | Decision, valeurRecherche:string) {
     const path = this.getPathID(texte.id) as string;
+    let id = texte.id;
 
-    let parametres = this.defineParamConsult(texte.id, valeurRecherche, texte.date);
+    // console.log(id);
+    // if (texte.origin == "JORF" || texte.origin == "LEGI") id = texte.cid as string;
+    // console.log(id);
+
+    let parametres = this.defineParamConsult(id, valeurRecherche, texte.date);
 
     const requestOptions = {
       path: path,

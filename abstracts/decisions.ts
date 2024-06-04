@@ -20,7 +20,6 @@ export const codeJuridiction = new Map<string, string>([
 ]);
 
 export interface Decision extends legalDocument {
-	numero?: string;
 	annee?:number;
 	juridiction?:string;
 	formation?: string;
