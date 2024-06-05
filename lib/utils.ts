@@ -1,6 +1,4 @@
-import { codeFond, operateursRecherche } from "api/constants";
 import { Setting } from "obsidian";
-import { ResearchTextView } from "views/researchText";
 import { textReaderView } from "views/viewText";
 import { dateFormat } from "./dateHandler";
 
@@ -47,19 +45,19 @@ export function ajoutBouton(view:textReaderView, element:HTMLElement) {
 
 export async function creerUneNouvelleNote(view:textReaderView, header:HTMLElement) {    
   header.createEl("h4", { text: "Créer une note de jurisprudence"});
-  header.createEl("p", {text: view.decision.titre});
+  header.createEl("p", {text: view.document.data.titre});
       
   new Setting(header)
     .setName("Titre")
     .addText(cb => {
-      cb.setPlaceholder(view.decision.id)
+      cb.setPlaceholder(view.document.data.id)
 
-      if (view.decision.titreNote) {
-        cb.setPlaceholder(view.decision.titreNote)
+      if (view.document.data.titreNote) {
+        cb.setPlaceholder(view.document.data.titreNote)
       }
 
       cb.onChange((value) => {
-        view.decision.titreNote = value;
+        view.document.data.titreNote = value;
       })}
     )
     
@@ -67,9 +65,9 @@ export async function creerUneNouvelleNote(view:textReaderView, header:HTMLEleme
   new Setting(header)
     .setName("Contribution")
     .addTextArea(cb => cb
-      .setValue(view.decision.contributionNote || "")
+      .setValue(view.document.data.contributionNote || "")
       .onChange((value) => {
-        view.decision.contributionNote = value;
+        view.document.data.contributionNote = value;
       })
     )
   

@@ -3,7 +3,7 @@ import { Decision } from "abstracts/decisions";
 import { App } from "obsidian";
 import { dataFiche  } from "api/utilities";
 import { legalDocument } from "abstracts/document";
-import { formattedStatute } from "abstracts/loi";
+import { legalStatute } from "abstracts/loi";
 import { ficheArretChamp } from "abstracts/searches";
 
 function isDecision(doc: legalDocument): doc is Decision {
@@ -14,13 +14,13 @@ export class newNote {
     app:App;
     template:string;
     titreTemplate:string;
-    data:Decision | legalDocument | formattedStatute;
+    data:Decision | legalDocument | legalStatute;
     folder:string;
     champFiche:ficheArretChamp;
     dataNote:dataFiche;
 
 
-    constructor(app:App, template:string, templateTitre:string, data:Decision | legalDocument | formattedStatute) {
+    constructor(app:App, template:string, templateTitre:string, data:Decision | legalDocument | legalStatute) {
         this.app = app;
         this.template = template;
         this.champFiche = {

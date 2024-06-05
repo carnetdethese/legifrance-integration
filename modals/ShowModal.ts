@@ -6,7 +6,8 @@ import LegifrancePlugin  from "main";
 import { replaceMark } from "lib/tools";
 import { agentSearch } from "api/utilities";
 import { resultatsRecherche } from "abstracts/searches";
-import { formattedStatute } from "abstracts/loi";
+import { legalStatute } from "abstracts/loi";
+import { addView } from "views/viewsData";
 
 interface entreeDocument {
     title:string,
@@ -90,7 +91,7 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
 	// Perform action on the selected suggestion.
 	async onChooseSuggestion(decision: legalDocument, evt: MouseEvent | KeyboardEvent) {
 		if (this.ALL_DOCUMENTS.find(elt => elt.id == decision.id) !== undefined) {
-			let documentContent:legalDocument | Decision | formattedStatute;
+			let documentContent:legalDocument | Decision | legalStatute;
 			let selectedDocument:legalDocument = this.ALL_DOCUMENTS.find(elt => elt.id == decision.id) as legalDocument;
 
 			documentContent = await getDocumentInfo(selectedDocument, this.valeurRecherche, this.agentChercheur);
@@ -100,7 +101,8 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
 				new Notice(`Selected ${decision.id}`);
 			}
 			else {
-				this.plugin.decision = selectedDocument;
+				addView(selectedDocument, this.plugin.document);
+				this.plugin.instancesOfDocumentViews += 1;
 				this.plugin.activateTextReaderView();
 			}
 		}

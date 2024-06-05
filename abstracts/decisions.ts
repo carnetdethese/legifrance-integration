@@ -26,8 +26,6 @@ export interface Decision extends legalDocument {
 	urlCC?: string; // Lien vers le site du Conseil constitutionnel
 	sommaires?: Sommaire[];
 	abstract?:string;
-	titreNote?:string;
-	contributionNote?:string;
 }
 
 const baseUrl = "https://www.legifrance.gouv.fr"

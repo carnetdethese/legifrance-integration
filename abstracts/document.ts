@@ -19,6 +19,8 @@ export interface legalDocument {
     date?: string;
 	texteIntegral?:string;
 	texteIntegralHTML?:string;
+	titreNote?:string;
+	contributionNote?:string;
 }
 
 export interface Sommaire {

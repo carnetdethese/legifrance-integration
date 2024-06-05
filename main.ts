@@ -3,8 +3,7 @@ import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian'
 import { RESEARCH_TEXT_VIEW, ResearchTextView } from 'views/researchText';
 import { critereTri } from 'api/constants';
 import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
-import { Decision } from 'abstracts/decisions';
-import { WaitModal } from 'modals/WaitModal';
+import { documentDataStorage } from 'views/viewsData';
 
 export interface LegifranceSettings {
 	clientId: string;
@@ -62,21 +61,15 @@ tags:
 
 export default class LegifrancePlugin extends Plugin {
 	settings: LegifranceSettings;
-	decision:Decision;
+	document:Array<documentDataStorage>;
 	searchTab:ResearchTextView|null = null;
 	instanceApiClient:agentSearch;
+	instancesOfDocumentViews:number;
 
 	async onload() {
 		await this.loadSettings();
-
-		this.decision = {
-			titre: "string",
-			id: "string",
-			texte: "string",
-			lien: "string",
-			origin: "string",
-			juridiction: "string"
-		}
+		this.document = [];
+		this.instancesOfDocumentViews = 0;
 
 		this.instanceApiClient = new agentSearch(this.settings);
 
@@ -170,12 +163,12 @@ export default class LegifrancePlugin extends Plugin {
 	}
 
 	async activateTextReaderView() {
+		console.log(this.document);
 		const { workspace } = this.app;
 	
 		let leaf: WorkspaceLeaf | null = null;
 	
 		// Our view could not be found in the workspace, create a new leaf
-		// in the right sidebar for it
 		leaf = workspace.getLeaf(true);
 		if (leaf) { await leaf.setViewState({ type: TEXT_READER_VIEW, active: true });  }
 		if (leaf) { workspace.revealLeaf(leaf); }
