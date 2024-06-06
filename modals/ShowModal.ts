@@ -1,13 +1,14 @@
 import { newNote } from "creation/newNote";
 import { App, SuggestModal, Notice } from "obsidian";
 import { legalDocument, getDocumentInfo } from "abstracts/document" ;
-import { findLink, getDecisionInfo, Decision} from "abstracts/decisions";
+import { findLink, getDecisionInfo, Decision, codeJuridiction} from "abstracts/decisions";
 import LegifrancePlugin  from "main";
 import { replaceMark } from "lib/tools";
 import { agentSearch } from "api/utilities";
 import { resultatsRecherche } from "abstracts/searches";
 import { legalStatute } from "abstracts/loi";
 import { addView } from "views/viewsData";
+import { codeJurisprudence } from "api/constants";
 
 interface entreeDocument {
     title:string,
@@ -34,11 +35,9 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
 	}
 
 	// fonction qui construit une liste d'objet Document permettant d'être rendu par la fonction de rendu plus bas. 
-
     getResultsDocument(data:resultatsRecherche) {
-
 		const resultsDic:legalDocument[] = [];
-		let contenuTexte:string, origine:string, date:string, cid:string, nature:string;
+		let contenuTexte:string, origine:string, date:string, cid:string, nature:string, type:string;
 
         if (data && data.results && Array.isArray(data.results)) {
 			data.results.forEach(result => {
@@ -46,10 +45,12 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
 				contenuTexte = result.text;
 				origine = result.origin;
 				nature = result.nature;
+				type = codeJurisprudence.includes(origine) ? "jurisprudence" : "document";
 				if (result.date) { date = result.date }
 				result.titles.forEach((entree:entreeDocument) => {
 					if (entree.cid) cid = entree.cid;
 						resultsDic.push({
+							type: type,
 							titre: entree.title,
 							id: entree.id,
 							texte: contenuTexte,
@@ -73,12 +74,6 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
 			decision.titre.toLowerCase().includes(query.toLowerCase())
 		);
 	}
-	
-	// Renders each suggestion item.
-	// renderSuggestion(decision: Document, el: HTMLElement) {
-	// 	el.createEl("div", { text: decision.titre  });
-	// 	el.createEl("small", { text: decision.texte });
-	// }
 
 	async renderSuggestion(decision: legalDocument, el: HTMLElement) {
 		const titleDiv = await replaceMark(decision.titre, document.createElement('div'));
@@ -93,6 +88,7 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
 		if (this.ALL_DOCUMENTS.find(elt => elt.id == decision.id) !== undefined) {
 			let documentContent:legalDocument | Decision | legalStatute;
 			let selectedDocument:legalDocument = this.ALL_DOCUMENTS.find(elt => elt.id == decision.id) as legalDocument;
+			console.log('avant', this.plugin.document.length);
 
 			documentContent = await getDocumentInfo(selectedDocument, this.valeurRecherche, this.agentChercheur);
 

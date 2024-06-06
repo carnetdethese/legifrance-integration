@@ -43,7 +43,7 @@ export function ajoutBouton(view:textReaderView, element:HTMLElement) {
 
 }
 
-export async function creerUneNouvelleNote(view:textReaderView, header:HTMLElement) {    
+export async function noteJurisprudence (view:textReaderView, header:HTMLElement) {
   header.createEl("h4", { text: "Créer une note de jurisprudence"});
   header.createEl("p", {text: view.document.data.titre});
       
@@ -60,7 +60,6 @@ export async function creerUneNouvelleNote(view:textReaderView, header:HTMLEleme
         view.document.data.titreNote = value;
       })}
     )
-    
   
   new Setting(header)
     .setName("Contribution")
@@ -72,6 +71,16 @@ export async function creerUneNouvelleNote(view:textReaderView, header:HTMLEleme
     )
   
   ajoutBouton(view, header);
+}
+
+export async function noteDocument (view:textReaderView, header:HTMLElement) {
+
+}
+
+export async function creerUneNouvelleNote(view:textReaderView, header:HTMLElement) {    
+
+  if (view.document.data.type == "jurisprudence") noteJurisprudence(view, header);
+  else noteDocument(view, header);
   
   new Setting(header)
     .addButton(cb => cb

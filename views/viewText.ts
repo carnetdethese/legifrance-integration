@@ -17,11 +17,18 @@ export class textReaderView extends ItemView {
   constructor(plugin:LegifrancePlugin, leaf: WorkspaceLeaf) {
     super(leaf);
     this.plugin = plugin;
-    this.id = plugin.instancesOfDocumentViews;
-    console.log(this.id);
+
+    if (this.plugin.tabViewIdToShow && this.plugin.tabViewIdToShow != -1) {
+      this.id = this.plugin.tabViewIdToShow;
+      this.plugin.tabViewIdToShow = -1;
+      this.document = this.plugin.document[this.id];
+    }
+    else this.id = this.plugin.instancesOfDocumentViews;
+
     if (findViewById(this.id, plugin.document) != undefined) this.document = findViewById(this.id, plugin.document) as documentDataStorage;
-    this.nouvelleNote = new newNote(this.plugin.app, this.plugin.settings.template, this.plugin.settings.fileTitle, this.document.data);
-    
+
+    if (this.document != undefined) this.nouvelleNote = new newNote(this.plugin.app, this.plugin.settings.template, this.plugin.settings.fileTitle, this.document.data);
+
     if (this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW).length > 0){
       this.researchTab = this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW)[0].view as ResearchTextView;
     }
@@ -60,7 +67,7 @@ export class textReaderView extends ItemView {
   }
 
   viewStatute(container:Element) {
-    container.createEl("h2", { text: this.document.id.toString() });
+    container.createEl("h2", { text: this.document.data.id.toString() });
     const infoBox = container.createEl("div", { cls: "showline"})
 
     infoBox.createEl("h3", {text: "Informations" })
@@ -95,7 +102,7 @@ export class textReaderView extends ItemView {
 
   viewDecision(container:Element) {
 
-    container.createEl("h2", { text: this.document.id.toString() });
+    container.createEl("h2", { text: this.document.data.id.toString() });
 
     const infoBox = container.createEl("div", { cls: "showline"})
     infoBox.createEl("h3", {text: "Informations" })

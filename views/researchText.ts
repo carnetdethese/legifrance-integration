@@ -10,6 +10,7 @@ import { documentHandler, resultatsRecherche } from "abstracts/searches";
 import { WaitModal } from "modals/WaitModal";
 import { dateHandler } from "lib/dateHandler";
 import { newExpression, fondField } from "lib/searchUtils";
+import { deleteDocEntry } from "./viewsData";
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
@@ -26,7 +27,7 @@ export class ResearchTextView extends ItemView {
   rechercheDiv:HTMLElement;
   valeurRecherche:string;
   plugin:LegifrancePlugin;
-  activeViewLeaf:textReaderView;
+  activeViewLeaf:textReaderView | null;
 
   constructor(plugin:LegifrancePlugin, leaf: WorkspaceLeaf, agentChercheur:agentSearch) {
     super(leaf);
@@ -46,14 +47,13 @@ export class ResearchTextView extends ItemView {
     return "Légifrance";
   }
 
-
-  showActiveViewTextInfo() {
-    console.log(this.activeViewLeaf);
-  }
-
   setActiveViewText(view:textReaderView) {
     this.activeViewLeaf = view;
     return this.activeViewLeaf;
+  }
+
+  deleteActiveViewText() {
+    this.activeViewLeaf = null;
   }
 
   async onOpen() { // initializing the view
@@ -93,9 +93,15 @@ export class ResearchTextView extends ItemView {
 
       this.listResults = container.createDiv();
 
-      if (this.activeViewLeaf) {
+      this.historiqueView()
+
+      if (this.activeViewLeaf && this.plugin.document.length > 0) {
         creerUneNouvelleNote(this.activeViewLeaf, this.listResults);
       }  
+  }
+
+  openViewText(id:string) {
+    this.plugin.activateTextReaderView();
   }
 
   async onClose() {
@@ -188,13 +194,6 @@ export class ResearchTextView extends ItemView {
               this.onOpen();
             }));
 
-
-      new Setting(this.rechercheDiv)
-          .addButton((btn) => btn
-            .setButtonText("Debug")
-            .setCta()
-            .onClick(() => this.document.showSearch())
-          );
   }
 
   async launchSearch() {
@@ -221,4 +220,36 @@ export class ResearchTextView extends ItemView {
     }
   }
 
+
+  historiqueView() {
+    let value:string = "-1";
+    this.listResults.createEl("h5", {text: "Historique"});
+
+    if (this.plugin.document.length == 0) this.listResults.createEl("p", {text: "Rien à afficher. Et si vous faisiez une recherche ?"});
+
+      for (let doc of this.plugin.document) {
+        new Setting(this.listResults)
+          .setName(doc.data.id)
+          .setDesc(`${doc.data.titre}`)
+          .addExtraButton(cb => cb 
+            .setIcon('external-link')
+            .onClick(() => {   
+              this.plugin.tabViewIdToShow = doc.id;
+              doc.status = true;
+              this.plugin.activateTextReaderView();
+              this.onOpen();
+            })
+          )
+          .addExtraButton(cb => cb
+            .setIcon('x')
+            .onClick(() => {
+              deleteDocEntry(doc.id, this.plugin.document);
+              this.plugin.saveSettings();
+              this.onOpen();
+              console.log(this.plugin.document.length);
+              this.plugin.instancesOfDocumentViews -= 1;
+            })
+          )
+      }    
+  }
 }  

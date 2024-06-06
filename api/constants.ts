@@ -7,6 +7,13 @@ export const typeRecherche = new Map<string, string>([ // Type de la recherche
 	["AUCUNE_CORRESPONDANCE_A_CETTE_EXPRESSION", "Exclure l'expression"]
 ]);
 
+export const codeJurisprudence = [
+	'CETAT', 
+	'CONSTIT',
+	'JURI'
+]
+
+
 export const operateursRecherche = new Map<string, string>([ // Opérateur de ce champ avec les autres expressions
     ["ET", "et"],
     ["OU", "ou"]

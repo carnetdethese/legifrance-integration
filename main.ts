@@ -5,6 +5,11 @@ import { critereTri } from 'api/constants';
 import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
 import { documentDataStorage } from 'views/viewsData';
 
+interface dataJson {
+	data:documentDataStorage[];
+	settings:LegifranceSettings;
+}
+
 export interface LegifranceSettings {
 	clientId: string;
 	clientSecret: string;
@@ -65,11 +70,15 @@ export default class LegifrancePlugin extends Plugin {
 	searchTab:ResearchTextView|null = null;
 	instanceApiClient:agentSearch;
 	instancesOfDocumentViews:number;
+	activeLeaves:Set<number>;
+	tabViewIdToShow:number;
 
 	async onload() {
 		await this.loadSettings();
-		this.document = [];
-		this.instancesOfDocumentViews = 0;
+		this.activeLeaves = new Set();
+
+		this.instancesOfDocumentViews = this.document.length;
+		this.tabViewIdToShow = -1;
 
 		this.instanceApiClient = new agentSearch(this.settings);
 
@@ -95,38 +104,73 @@ export default class LegifrancePlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'debug',
+			name:'debug',
+			callback: () => {
+				console.log(this.document);
+			}
+		})
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new LegifranceSettingTab(this.app, this));
 
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', this.onActiveLeafChange.bind(this))
 		);
+
 	}
 
 	onunload() {
+
 	}
 
+	handleLeafChange() {
+        const leaves = this.app.workspace.getLeavesOfType(TEXT_READER_VIEW);
+		const searchTab = this.getSearchTab();
+        const currentActiveLeafIds = new Set(leaves.map(l => {
+			const view = l.view as textReaderView;
+			return view.document.id;
+		}));
+
+        // Check for removed leaves
+        for (const id of this.activeLeaves) {
+            if (!currentActiveLeafIds.has(id)) {
+                console.log(`Leaf with ID ${id} has been closed`);
+                this.activeLeaves.delete(id);
+				if (searchTab) {
+					searchTab.deleteActiveViewText();
+					searchTab.onOpen();
+				};
+				const view = this.document.find(l => l.id == id);
+				if (view) view.status = false;
+            }
+        }
+
+        // Update the active leaves set
+        this.activeLeaves = currentActiveLeafIds;
+    }
+
 	onActiveLeafChange() {
-		const leaves = this.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW);
-		let searchTab:ResearchTextView|null = null;
-
-		if (leaves.length > 0) {
-			searchTab = leaves[0].view as ResearchTextView;
-		}
-
+		const searchTab = this.getSearchTab();
 		const activeLeaf = this.app.workspace.getActiveViewOfType(textReaderView);
 
 		if (activeLeaf){
 			if (searchTab){
 				searchTab.setActiveViewText(activeLeaf);
-				searchTab?.onOpen();
 			}
 		}
-
+		if (searchTab) searchTab.onOpen();
+		
+		this.handleLeafChange();
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const data:dataJson = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
+		if (data.data && data.data.length > 0) this.document = data.data;
+		else this.document = [];
+
 		if (this.instanceApiClient) {
 			this.updateApiAgent(this.settings);
 		}
@@ -138,7 +182,13 @@ export default class LegifrancePlugin extends Plugin {
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		const data:dataJson = {
+			data:this.document,
+			settings:this.settings
+		}
+
+		await this.saveData(data);
+
 		if (this.instanceApiClient) {
 			this.updateApiAgent(this.settings);
 		}
@@ -163,15 +213,34 @@ export default class LegifrancePlugin extends Plugin {
 	}
 
 	async activateTextReaderView() {
-		console.log(this.document);
+		if (this.document.length == 0) return;
+		this.saveSettings();
+
 		const { workspace } = this.app;
-	
+
+		// const leaves = workspace.getLeavesOfType(TEXT_READER_VIEW);
+		// for (let leaf of leaves) {
+		// 	const textView: textReaderView = leaf.view as textReaderView;
+		// 	console.log(textView.document.id);
+		// }
+
 		let leaf: WorkspaceLeaf | null = null;
-	
+
 		// Our view could not be found in the workspace, create a new leaf
 		leaf = workspace.getLeaf(true);
 		if (leaf) { await leaf.setViewState({ type: TEXT_READER_VIEW, active: true });  }
 		if (leaf) { workspace.revealLeaf(leaf); }
+	}
+
+	getSearchTab():ResearchTextView | null {
+		const leaves = this.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW);
+		let searchTab:ResearchTextView|null = null;
+
+		if (leaves.length > 0) {
+			searchTab = leaves[0].view as ResearchTextView;
+			return searchTab
+		}
+		else return null;
 	}
 }
 

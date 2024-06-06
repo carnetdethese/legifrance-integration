@@ -13,6 +13,7 @@ export interface legalDocument {
 	texte: string;
 	lien: string;
 	origin: string;
+	type:string,
 	numero?:string;
 	nature?:string;
 	cid?:string;
