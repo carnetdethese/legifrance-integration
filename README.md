@@ -1,3 +1,7 @@
+Un tuto-vidéo est disponible ici :
+
+[![OBSIDIAN - Légifrance Intégration](https://img.youtube.com/vi/yfMnuPNtTqM/0.jpg)](https://www.youtube.com/watch?v=yfMnuPNtTqM)
+
 ## Intégration de l'API Légifrance dans Obsidian
 
 Ce module intègre l'API Légifrance dans l'environnement de travail [Obsidian.md](https://obsidian.md/).
@@ -8,9 +12,10 @@ Très simple d'utilisation, ce module vous permet de rechercher parmi les diffé
 
 ## Comment le lancer ?
 
-Deux solutions pour le lancer : 
-- cliquer sur l'icône "⚖️" dans la barre latérale gauche ;
-- lancer la palette de commande (`Cmd+P` / `CTRL+P`) et chercher "Légifrance Intégration". 
+Deux solutions pour le lancer :
+
+-   cliquer sur l'icône "⚖️" dans la barre latérale gauche ;
+-   lancer la palette de commande (`Cmd+P` / `CTRL+P`) et chercher "Légifrance Intégration".
 
 ## Options
 

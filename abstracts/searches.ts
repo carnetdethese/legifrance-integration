@@ -54,6 +54,14 @@ export interface Criteres { // interface pour le champ : criteres. Peut y en avo
   typeRecherche:string
 }
 
+
+export interface noteDocumentChamp {
+  [key:string]:string | undefined | number | Sommaire[] | statuteArticles[] | statuteSections[ ],
+  notes:string,
+  interet: string,
+  connexes:string
+}
+
 export interface ficheArretChamp {
   [key:string]:string | undefined | number | Sommaire[] | statuteArticles[] | statuteSections[ ], 
   faits:string,
@@ -149,30 +157,34 @@ export class documentHandler {
   }
 
   updatingFond(selection:string) {
-    this.fond = selection;    
+    this.fond = selection;
 
-    if (selection == "ALL") {
-      if (this.recherche.filtres[0]) {
-        this.recherche.filtres[0].facette = "";
-        this.recherche.sort = "";
-        this.recherche.filtres = [];
-      }
+    if (selection == "ALL" || selection == "CODE_ETAT") {
+      this.resetDate();
     }
+
     else if (selection == "CETAT" || selection == "JURI" || selection == "CONSTIT") {
-      this.recherche.filtres[0] = {'dates':{'start': new dateFormat(), 'end': new dateFormat()}, 'facette':'DATE_DECISION'};
-      this.recherche.sort = this.view.plugin.settings.critereTriSetting;
-    }
-    else if (selection == "JORF") {
-      this.recherche.sort = "PUBLICATION_DATE_ASC";
-      this.recherche.filtres[0] = {'dates':{'start': new dateFormat(), 'end': new dateFormat()}, 'facette':'DATE_PUBLICATION'};
+      this.updateDate(this.view.plugin.settings.critereTriSetting, 'DATE_DECISION');
     }
 
+    else if (selection == "JORF") {
+      this.updateDate("PUBLICATION_DATE_ASC", 'DATE_PUBLICATION');
+    }
 
     this.view.onOpen();
   }
 
-  disablingDateFields() {
+  resetDate() {
+    if (this.recherche.filtres[0]) {
+      this.recherche.filtres[0].facette = "";
+      this.recherche.sort = "PERTINENCE";
+      this.recherche.filtres = [];
+    }
+  }
 
+  updateDate(critereTri:string, facette:string) {
+    this.recherche.sort = this.view.plugin.settings.critereTriSetting;
+    this.recherche.filtres[0] = {'dates':{'start': new dateFormat(), 'end': new dateFormat()}, 'facette':'DATE_DECISION'};
   }
 
   showSearch() {
@@ -184,7 +196,7 @@ export class documentHandler {
     let today = getTodaysDate();
     let start = new dateFormat("1800", "1", "1");
 
-    if (this.fond != "ALL") {
+    if (this.fond != "ALL" && this.fond != "CODE_ETAT") {
       if (!this.recherche.filtres[0].dates.end.toString()) this.recherche.filtres[0].dates.end = today;
       if (!this.recherche.filtres[0].dates.start.toString()) this.recherche.filtres[0].dates.start = start.toString();
       

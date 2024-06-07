@@ -5,6 +5,7 @@ import { dateFormat } from "./dateHandler";
 
 export function ajoutBouton(view:textReaderView, element:HTMLElement) {
   const ficheArretChamp = view.nouvelleNote.champFiche;
+  console.log(ficheArretChamp);
 
   // Loop through each property of FicheArretChamp interface
   for (const property in ficheArretChamp) {
@@ -43,23 +44,25 @@ export function ajoutBouton(view:textReaderView, element:HTMLElement) {
 
 }
 
+function defineTitleNote(view:textReaderView, header:HTMLElement) {
+  new Setting(header)
+  .setName("Titre")
+  .addText(cb => {
+    cb.setPlaceholder(view.document.data.id)
+    if (view.document.data.titreNote) {
+      cb.setPlaceholder(view.document.data.titreNote)
+    }
+    cb.onChange((value) => {
+      view.document.data.titreNote = value;
+    })}
+  )
+}
+
 export async function noteJurisprudence (view:textReaderView, header:HTMLElement) {
   header.createEl("h4", { text: "Créer une note de jurisprudence"});
   header.createEl("p", {text: view.document.data.titre});
       
-  new Setting(header)
-    .setName("Titre")
-    .addText(cb => {
-      cb.setPlaceholder(view.document.data.id)
-
-      if (view.document.data.titreNote) {
-        cb.setPlaceholder(view.document.data.titreNote)
-      }
-
-      cb.onChange((value) => {
-        view.document.data.titreNote = value;
-      })}
-    )
+  defineTitleNote(view, header);
   
   new Setting(header)
     .setName("Contribution")
@@ -71,9 +74,16 @@ export async function noteJurisprudence (view:textReaderView, header:HTMLElement
     )
   
   ajoutBouton(view, header);
+
 }
 
 export async function noteDocument (view:textReaderView, header:HTMLElement) {
+  header.createEl("h4", { text: "Créer une note de document"});
+  header.createEl("p", {text: view.document.data.titre});
+
+  defineTitleNote(view, header);
+
+  ajoutBouton(view, header);
 
 }
 
@@ -90,7 +100,6 @@ export async function creerUneNouvelleNote(view:textReaderView, header:HTMLEleme
         await view.nouvelleNote.createNote();
       })
     )
-    
   }
 
 

@@ -2,12 +2,11 @@ import { DilaApiClient } from 'api/client'
 import { LegifranceSettings } from 'main';
 import { listRouteConsult } from './constants';
 import { Decision } from 'abstracts/decisions';
-import * as interfaces from 'abstracts/searches'
+import {ficheArretChamp, noteDocumentChamp, rechercheAvStructure } from 'abstracts/searches'
 import { legalDocument } from 'abstracts/document';
 import { legalStatute } from 'abstracts/loi';
 
-
-export interface dataFiche extends interfaces.ficheArretChamp, Decision, legalDocument, legalStatute {}
+export interface dataFiche extends ficheArretChamp, noteDocumentChamp, Decision, legalDocument, legalStatute {}
 
 export class agentSearch {
   
@@ -19,7 +18,7 @@ export class agentSearch {
     this.dilaApi = new DilaApiClient(this.settings.clientId, this.settings.clientSecret, this.settings.apiHost, this.settings.tokenHost);
   }
 
-  async advanceSearchText(search:interfaces.rechercheAvStructure) {
+  async advanceSearchText(search:rechercheAvStructure) {
     const requestOptions = {
       path: "/search",
       method: "POST",
@@ -30,15 +29,15 @@ export class agentSearch {
     return result;
   }
 
-  async fetchText(texte:legalDocument | Decision, valeurRecherche:string) {
-    const path = this.getPathID(texte.id) as string;
+  async fetchText(texte:legalDocument | Decision | legalStatute, valeurRecherche:string) {
+    const path = this.getPathID(texte.fond) as string;
     let id = texte.id;
 
     // console.log(id);
     // if (texte.origin == "JORF" || texte.origin == "LEGI") id = texte.cid as string;
     // console.log(id);
 
-    let parametres = this.defineParamConsult(id, valeurRecherche, texte.date);
+    let parametres = this.defineParamConsult(id, valeurRecherche, texte, texte.date);
 
     const requestOptions = {
       path: path,
@@ -48,21 +47,28 @@ export class agentSearch {
       return await this.dilaApi.fetch(requestOptions);
   }
 
-  getPathID(id:string) {
-    const path = listRouteConsult.get(id.substring(0,4));
+  getPathID(fond:string) {
+    const path = listRouteConsult.get(fond.substring(0,4));
     return path;
   }
 
-  defineParamConsult(id:string, valeurRecherche:string, date?:string) {
+  defineParamConsult(id:string, valeurRecherche:string, document:legalDocument | Decision | legalStatute, date?:string) {
     let result;
+    console.log(document.fond);
 
-    if (id.startsWith("LEGI")) {
+    if (document.fond == "ALL") {
       result = {
         "textId": id,
         "searchedString": valeurRecherche,
         "date": date
       }}
 
+    else if (document.fond == "CODE_ETAT" || document.fond == "CODE_DATE") {
+      result = {
+        "id": id,
+      }
+    }
+    
     else if (id.startsWith("JORF")) {
       result = {
         "textCid": id,

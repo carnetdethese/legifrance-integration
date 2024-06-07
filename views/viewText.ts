@@ -1,6 +1,6 @@
 import LegifrancePlugin from "main";
 import { ItemView, WorkspaceLeaf } from "obsidian";
-import { newNote } from "creation/newNote";
+import { isDecision, newNote } from "creation/newNote";
 import { ResearchTextView, RESEARCH_TEXT_VIEW } from "./researchText";
 import { removeTags, replaceMark } from "lib/tools";
 import { documentDataStorage, findViewById } from "./viewsData";
@@ -27,11 +27,15 @@ export class textReaderView extends ItemView {
 
     if (findViewById(this.id, plugin.document) != undefined) this.document = findViewById(this.id, plugin.document) as documentDataStorage;
 
-    if (this.document != undefined) this.nouvelleNote = new newNote(this.plugin.app, this.plugin.settings.template, this.plugin.settings.fileTitle, this.document.data);
+    this.document.template = this.document.data.type == "jurisprudence" ? this.plugin.settings.templateDecision : this.plugin.settings.templateDocument;
+
+    if (this.document != undefined) this.nouvelleNote = new newNote(this.plugin.app, this.document.template, this.plugin.settings.fileTitle, this.document.data);
 
     if (this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW).length > 0){
       this.researchTab = this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW)[0].view as ResearchTextView;
     }
+
+    console.log(this.document.template);
   }
 
   getViewType() {
@@ -67,6 +71,7 @@ export class textReaderView extends ItemView {
   }
 
   viewStatute(container:Element) {
+
     container.createEl("h2", { text: this.document.data.id.toString() });
     const infoBox = container.createEl("div", { cls: "showline"})
 
@@ -75,8 +80,9 @@ export class textReaderView extends ItemView {
     infoBox.createEl("p", { text: `Titre : ${this.document.data.titre}`, cls:"infoDecision" } );
     infoBox.createEl("p", { text: `Date : ${this.document.data.date}`, cls:"infoDecision" } );
     infoBox.createEl("p", { text: `Numéro : ${this.document.data.numero}`, cls:"infoDecision" } );
-    if (this.document.data.formation) { infoBox.createEl("p", { text: `Formation : ${this.document.data.formation}`, cls:"infoDecision" } ); } 
-    if (this.document.data.abstract) {infoBox.createEl("p", { text: `Solution : ${this.document.data.abstract}`, cls:"infoDecision" } );}
+
+    if (isDecision(this.document.data) && this.document.data.formation) { infoBox.createEl("p", { text: `Formation : ${this.document.data.formation}`, cls:"infoDecision" } ); } 
+    if (isDecision(this.document.data) && this.document.data.abstract) {infoBox.createEl("p", { text: `Solution : ${this.document.data.abstract}`, cls:"infoDecision" } );}
 
     infoBox.createEl("p", {text: "–––––––––––––––––", cls:"break"});
 
@@ -107,11 +113,13 @@ export class textReaderView extends ItemView {
     const infoBox = container.createEl("div", { cls: "showline"})
     infoBox.createEl("h3", {text: "Informations" })
 
-    infoBox.createEl("p", { text: `Juridiction : ${this.document.data.juridiction}`, cls:"infoDecision" } );
-    infoBox.createEl("p", { text: `Date : ${this.document.data.date}`, cls:"infoDecision" } );
-    infoBox.createEl("p", { text: `Numéro : ${this.document.data.numero}`, cls:"infoDecision" } );
-    if (this.document.data.formation) { infoBox.createEl("p", { text: `Formation : ${this.document.data.formation}`, cls:"infoDecision" } ); } 
-    if (this.document.data.abstract) {infoBox.createEl("p", { text: `Solution : ${this.document.data.abstract}`, cls:"infoDecision" } );}
+    if (isDecision(this.document.data)) {
+      infoBox.createEl("p", { text: `Juridiction : ${this.document.data.juridiction}`, cls:"infoDecision" } );
+      infoBox.createEl("p", { text: `Date : ${this.document.data.date}`, cls:"infoDecision" } );
+      infoBox.createEl("p", { text: `Numéro : ${this.document.data.numero}`, cls:"infoDecision" } );
+      if (this.document.data.formation) { infoBox.createEl("p", { text: `Formation : ${this.document.data.formation}`, cls:"infoDecision" } ); } 
+      if (this.document.data.abstract) {infoBox.createEl("p", { text: `Solution : ${this.document.data.abstract}`, cls:"infoDecision" } );}
+    }
 
     infoBox.createEl("p", {text: "–––––––––––––––––", cls:"break"});
 
@@ -126,7 +134,7 @@ export class textReaderView extends ItemView {
       })
     }
 
-    if (this.document.data.sommaires) {
+    if (isDecision(this.document.data) && this.document.data.sommaires) {
       content.createEl("h3", {text: "Sommaires" })
       this.document.data.sommaires.forEach(elt => {
         content.createEl("p", { text: elt.resume });

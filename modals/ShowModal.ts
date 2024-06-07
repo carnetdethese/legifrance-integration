@@ -23,9 +23,11 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
 	ALL_DOCUMENTS:legalDocument[];
 	agentChercheur:agentSearch;
 	createNote:boolean;
+	fond:string;
 
-	constructor(app: App, plugin:LegifrancePlugin, content:resultatsRecherche, valeurRecherche:string, apiClient:agentSearch, createNote:boolean) {
+	constructor(app: App, plugin:LegifrancePlugin, content:resultatsRecherche, valeurRecherche:string, apiClient:agentSearch, createNote:boolean, fond:string) {
 		super(app);
+		this.fond = fond;
         this.results = content;
 		this.plugin = plugin;
 		this.ALL_DOCUMENTS = this.getResultsDocument(content);
@@ -50,6 +52,7 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
 				result.titles.forEach((entree:entreeDocument) => {
 					if (entree.cid) cid = entree.cid;
 						resultsDic.push({
+							fond: this.fond,
 							type: type,
 							titre: entree.title,
 							id: entree.id,
@@ -93,7 +96,7 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
 			documentContent = await getDocumentInfo(selectedDocument, this.valeurRecherche, this.agentChercheur);
 
 			if (this.createNote) {
-				new newNote(this.app, this.plugin.settings.template, this.plugin.settings.fileTitle, documentContent).createNote();
+				new newNote(this.app, this.plugin.settings.templateDecision, this.plugin.settings.fileTitle, documentContent).createNote();
 				new Notice(`Selected ${decision.id}`);
 			}
 			else {

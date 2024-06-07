@@ -156,7 +156,7 @@ export class ResearchTextView extends ItemView {
       });
     }
 
-    if (this.document.fond != "ALL") {
+    if (this.document.fond != "ALL" && this.document.fond != "CODE_ETAT") {
       const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
       this.dateRecherche.champDate(dateDebut, "start");
   
@@ -198,6 +198,7 @@ export class ResearchTextView extends ItemView {
 
   async launchSearch() {
     let check = await this.document.checkBeforeSearch();
+    console.log(this.document.recherche, this.document.fond);
     if (check == 'false') return;
     
     const waitingModal = new WaitModal(this.app);
@@ -205,13 +206,13 @@ export class ResearchTextView extends ItemView {
 
     try {
       this.searchResult = await this.agentChercheur.advanceSearchText(this.document.toObject()) as resultatsRecherche;
-      console.log(this.searchResult);
+
 
       for (const elt of this.document.recherche.champs[0].criteres){
           this.valeurRecherche += elt.valeur;
       }
 
-      new MontrerResultatsModal(this.app, this.plugin, this.searchResult, this.valeurRecherche, this.agentChercheur, false).open();
+      new MontrerResultatsModal(this.app, this.plugin, this.searchResult, this.valeurRecherche, this.agentChercheur, false, this.document.fond).open();
     } catch (error) {
         console.error('Error performing search:', error);
         new Notice('Une erreur est survenue durant la requête. Veuillez vérifier vos identifiants et réessayer.');

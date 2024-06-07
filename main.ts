@@ -15,7 +15,8 @@ export interface LegifranceSettings {
 	clientSecret: string;
 	apiHost: string;
 	tokenHost: string;
-	template: string;
+	templateDecision: string;
+	templateDocument:string;
 	fileTitle:string;
 	maxResults:number;
 	critereTriSetting:string;
@@ -26,38 +27,8 @@ const DEFAULT_SETTINGS: LegifranceSettings = {
 	clientSecret: '',
 	apiHost: 'https://api.piste.gouv.fr/dila/legifrance/lf-engine-app',
 	tokenHost: 'https://oauth.piste.gouv.fr',
-	template: `---
-date: {{date}}
-juridiction: {{juridiction}}
-formation: {{formation}}
-nom: {{titre}}
-apport: 
-numero: {{numero}} 
-citation: {{citation}}
-lien: {{lien}}
-contribution: {{contribution}}
-tags: 
----
-
-## Fiche et commentaire
-
-### Fiche d'arrêt 
-
-{{ faits }}
-
-{{ procedure }}
-
-{{ moyens }}
-
-{{ question }}
-
-{{ solution }}
-
-### Commentaire
-
-## Décision 
-
-{{texteIntegral}}`,
+	templateDecision: `---\ndate: {{date}}\njuridiction: {{juridiction}}\nformation: {{formation}}\nnom: {{titre}}\napport: \nnumero: {{numero}} \ncitation: {{citation}}\nlien: {{lien}}\ncontribution: {{contribution}}\ntags: \n---\n\n## Fiche et commentaire\n\n### Fiche d'arrêt \n\n{{ faits }}\n\n{{ procedure }}\n\n{{ moyens }}\n\n{{ question }}\n\n{{ solution }}\n\n### Commentaire\n\n## Décision \n\n{{texteIntegral}}`,
+	templateDocument: `---\ndate: {{date}}\norigine: {{origine}}\nnom: {{titre}}\napport: \nnumero: {{numero}} \nlien: {{lien}}\ncontribution: {{contribution}}\ntags: \n---\n\n## Notes\n\n## Document\n\n{{texteIntegral}}`,
 	fileTitle: '{{id}}',
 	maxResults: 20,
 	critereTriSetting: critereTri.keys().next().value
@@ -161,7 +132,7 @@ export default class LegifrancePlugin extends Plugin {
 			}
 		}
 		if (searchTab) searchTab.onOpen();
-		
+
 		this.handleLeafChange();
 	}
 
@@ -309,15 +280,36 @@ class LegifranceSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Personnalisation").setHeading();
 
 		new Setting(containerEl)
-			.setName('Modèle')
-			.setDesc('Modèle')
-			.addTextArea(text => text
+			.setName('Modèle de fiche d\'arrêt')
+			.setDesc('Note d\'arrêt')
+			.addTextArea(text => {text
 				.setPlaceholder("Définissez le modèle de fiches ici.")
-				.setValue(this.plugin.settings.template)
+				.setValue(this.plugin.settings.templateDecision)
 				.onChange(async (value) => {
-					this.plugin.settings.template = value;
+					this.plugin.settings.templateDecision = value;
 					await this.plugin.saveSettings();
-				}));
+				});
+				text.inputEl.style.width = "400px";
+				text.inputEl.style.height = "200px";
+			}
+			);
+
+		new Setting(containerEl)
+			.setName('Modèle de note de document')
+			.setDesc('Autre document juridique')
+			.addTextArea(text => {
+				text
+				.setPlaceholder("Définissez le modèle de fiches ici.")
+				.setValue(this.plugin.settings.templateDocument)
+				.onChange(async (value) => {
+					this.plugin.settings.templateDocument = value;
+					await this.plugin.saveSettings();
+				});
+
+				text.inputEl.style.width = "400px";
+				text.inputEl.style.height = "200px";
+			}
+			);
 
 		new Setting(containerEl)
 			.setName('Nom du fichier')

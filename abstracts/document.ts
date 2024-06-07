@@ -8,6 +8,7 @@ export interface resumeDocument {
 }
 
 export interface legalDocument {
+	fond:string;
 	titre: string;
 	id: string;
 	texte: string;

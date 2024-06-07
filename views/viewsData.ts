@@ -6,11 +6,13 @@ export class documentDataStorage {
     id: number;
     status:boolean;
     data: legalDocument | Decision | legalStatute;
+    template?:string;
 
     constructor(id: number, data: legalDocument | Decision | legalStatute) {
         this.id = id;
         this.status = true;
-        this.data = data;
+        if (data.type == "jurisprudence") this.data = data as Decision;
+        else this.data = data as legalStatute;
     }
 }
 

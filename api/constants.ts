@@ -24,7 +24,8 @@ export const codeFond = new Map<string, string>([ // Fond dans lequel la recherc
 	["CETAT", "Juridictions administratives"],
 	["CONSTIT", "Conseil constitutionnel"],
 	["JURI", "Juridictions judiciaires"],
-	["JORF", "Législation"]
+	["JORF", "Législation"],
+	["CODE_ETAT", "Codes"]
 ]);
 
 export const champRecherche = new Map<string, string>([ // Type du champ dans lequel chercher.
@@ -69,7 +70,7 @@ export const critereTri = new Map<string, string>([ // Fond dans lequel la reche
 ]);
 
 export const listRouteConsult = new Map<string, string>([
-	["CODE", "/consult/code"],
+	["CODE", "/consult/getArticle"],
 	["CNIL", "/consult/cnil"],
 	["LEGI", "/consult/legiPart"],
 	["JURI", "/consult/juri"],
