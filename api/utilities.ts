@@ -19,6 +19,7 @@ export class agentSearch {
   }
 
   async advanceSearchText(search:rechercheAvStructure) {
+    console.log(search);
     const requestOptions = {
       path: "/search",
       method: "POST",
@@ -30,14 +31,9 @@ export class agentSearch {
   }
 
   async fetchText(texte:legalDocument | Decision | legalStatute, valeurRecherche:string) {
-    const path = this.getPathID(texte.fond) as string;
-    let id = texte.id;
+    const path = this.getPathID(texte.origin) as string;
 
-    // console.log(id);
-    // if (texte.origin == "JORF" || texte.origin == "LEGI") id = texte.cid as string;
-    // console.log(id);
-
-    let parametres = this.defineParamConsult(id, valeurRecherche, texte, texte.date);
+    let parametres = this.defineParamConsult(valeurRecherche, texte, texte.date);
 
     const requestOptions = {
       path: path,
@@ -47,37 +43,36 @@ export class agentSearch {
       return await this.dilaApi.fetch(requestOptions);
   }
 
-  getPathID(fond:string) {
-    const path = listRouteConsult.get(fond.substring(0,4));
+  getPathID(origin:string) {
+    const path = listRouteConsult.get(origin.substring(0,4));
     return path;
   }
 
-  defineParamConsult(id:string, valeurRecherche:string, document:legalDocument | Decision | legalStatute, date?:string) {
+  defineParamConsult(valeurRecherche:string, document:legalDocument | Decision | legalStatute, date?:string) {
     let result;
     console.log(document.fond);
 
     if (document.fond == "ALL") {
+      
       result = {
-        "textId": id,
-        "searchedString": valeurRecherche,
-        "date": date
+        "textId": document.id,
+        "searchedString": valeurRecherche
       }}
-
     else if (document.fond == "CODE_ETAT" || document.fond == "CODE_DATE") {
       result = {
-        "id": id,
+        "id": document.id,
+        "searchedString": valeurRecherche
       }
     }
-    
-    else if (id.startsWith("JORF")) {
+    else if (document.fond == "JORF") {
       result = {
-        "textCid": id,
+        "textCid": document.cid,
         "searchedString": valeurRecherche
       }}  
 
     else {
       result = {
-        "textId": id,
+        "textId": document.id,
         "searchedString": valeurRecherche
       }}
   

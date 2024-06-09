@@ -31,9 +31,9 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
         this.results = content;
 		this.plugin = plugin;
 		this.ALL_DOCUMENTS = this.getResultsDocument(content);
-		this.valeurRecherche = valeurRecherche || "";
 		this.agentChercheur = apiClient;
 		this.createNote = createNote;
+		this.valeurRecherche = valeurRecherche;
 	}
 
 	// fonction qui construit une liste d'objet Document permettant d'être rendu par la fonction de rendu plus bas. 

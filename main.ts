@@ -18,9 +18,7 @@ export interface LegifranceSettings {
 	templateDecision: string;
 	templateDocument:string;
 	fileTitle:string;
-	maxResults:number;
-	critereTriSetting:string;
-}
+	maxResults:number;}
 
 const DEFAULT_SETTINGS: LegifranceSettings = {
 	clientId: '',
@@ -31,7 +29,6 @@ const DEFAULT_SETTINGS: LegifranceSettings = {
 	templateDocument: `---\ndate: {{date}}\norigine: {{origine}}\nnom: {{titre}}\napport: \nnumero: {{numero}} \nlien: {{lien}}\ncontribution: {{contribution}}\ntags: \n---\n\n## Notes\n\n## Document\n\n{{texteIntegral}}`,
 	fileTitle: '{{id}}',
 	maxResults: 20,
-	critereTriSetting: critereTri.keys().next().value
 }
 
 
@@ -334,20 +331,6 @@ class LegifranceSettingTab extends PluginSettingTab {
 				})
 				.setDynamicTooltip()
 			);
-
-		new Setting(containerEl)
-			.setName('Tri des résultats')
-			.addDropdown((triResultats) => {
-				critereTri.forEach((value, key) => {
-					triResultats.addOption(key, value)
-				});
-				triResultats
-					.onChange(async (valeur) => {
-					this.plugin.settings.critereTriSetting = valeur;
-					await this.plugin.saveSettings();
-				})
-					.setValue(this.plugin.settings.critereTriSetting)
-			});
 
 
 		containerEl.createEl("h2", {text: "Dossiers"});

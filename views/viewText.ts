@@ -4,6 +4,7 @@ import { isDecision, newNote } from "creation/newNote";
 import { ResearchTextView, RESEARCH_TEXT_VIEW } from "./researchText";
 import { removeTags, replaceMark } from "lib/tools";
 import { documentDataStorage, findViewById } from "./viewsData";
+import { legalDocument } from "abstracts/document";
 
 export const TEXT_READER_VIEW = "text-reader-view";
 
@@ -13,6 +14,7 @@ export class textReaderView extends ItemView {
   nouvelleNote:newNote;
   researchTab:ResearchTextView;
   id:number;
+  data:legalDocument;
 
   constructor(plugin:LegifrancePlugin, leaf: WorkspaceLeaf) {
     super(leaf);
@@ -25,7 +27,24 @@ export class textReaderView extends ItemView {
     }
     else this.id = this.plugin.instancesOfDocumentViews;
 
-    if (findViewById(this.id, plugin.document) != undefined) this.document = findViewById(this.id, plugin.document) as documentDataStorage;
+    if (findViewById(this.id, plugin.document) != undefined) {
+      this.document = findViewById(this.id, plugin.document) as documentDataStorage;
+      this.data = this.document.data;
+    }
+    else {
+      this.data = {
+        fond: "",
+        titre: "",
+        id: "",
+        texte: "",
+        lien: "",
+        origin: "",
+        type: ""
+      };
+      this.document = new documentDataStorage(0, this.data);
+    }
+
+    console.log(this.id, plugin.document);
 
     this.document.template = this.document.data.type == "jurisprudence" ? this.plugin.settings.templateDecision : this.plugin.settings.templateDocument;
 
@@ -35,7 +54,7 @@ export class textReaderView extends ItemView {
       this.researchTab = this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW)[0].view as ResearchTextView;
     }
 
-    console.log(this.document.template);
+
   }
 
   getViewType() {

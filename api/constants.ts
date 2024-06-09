@@ -7,10 +7,44 @@ export const typeRecherche = new Map<string, string>([ // Type de la recherche
 	["AUCUNE_CORRESPONDANCE_A_CETTE_EXPRESSION", "Exclure l'expression"]
 ]);
 
+
+export const criteresTriGeneraux = {
+	pertinence: {
+		pertinence: "PERTINENCE"
+	},
+	decisionAcco: {
+		DATE_ASC: "Chronologique",
+		DATE_DESC: "Antéchronologique"
+	},
+	cnil: {
+		DATE_DECISION_ASC: "Chronologique",
+		DATE_DECISION_DESC: "Antéchronologique"
+	},
+	jorfLoda: {
+		SIGNATURE_DATE_ASC: "Date signature asc",
+		SIGNATURE_DATE_DESC: "Date signature desc", 
+		PUBLICATION_DATE_ASC: "Date publication asc",
+		PUBLICATION_DATE_DESC: "Date publication desc"
+	},
+	circ: {
+		SIGNATURE_DATE_ASC: "Date signature asc",
+		SIGNATURE_DATE_DESC: "Date signature desc",
+		PUBLI_DATE_ASC: "Date publication asc",
+		PUBLI_DATE_DESC:"Date publication desc"
+	}
+}
+
 export const codeJurisprudence = [
 	'CETAT', 
 	'CONSTIT',
-	'JURI'
+	'JURI',
+	'CNIL'
+]
+
+export const codeLegalStatute = [
+	'JORF',
+	'LEGI',
+	'LODA_ETAT'
 ]
 
 
@@ -24,8 +58,12 @@ export const codeFond = new Map<string, string>([ // Fond dans lequel la recherc
 	["CETAT", "Juridictions administratives"],
 	["CONSTIT", "Conseil constitutionnel"],
 	["JURI", "Juridictions judiciaires"],
+	["CODE_ETAT", "Codes"],
 	["JORF", "Législation"],
-	["CODE_ETAT", "Codes"]
+	["CNIL", "CNIL"],
+	["LODA_ETAT", "LODA"],
+	["CIRC", "Circulaires"],
+	["ACCO", "Accords collectifs"]
 ]);
 
 export const champRecherche = new Map<string, string>([ // Type du champ dans lequel chercher.
@@ -78,7 +116,9 @@ export const listRouteConsult = new Map<string, string>([
 	["CONS", "/consult/juri"],
 	["JORF", "/consult/jorf"],
 	["KALI", "/consult/kaliText"],
-	["LODA", "/consult/lawDecree"]
+	["LODA", "/consult/lawDecree"],
+	["ACCO", "/consult/acco"],
+	["CIRC", "/consult/circulaire"]
 ])
 
 export const dateJour = new Map<string, string>();
@@ -118,3 +158,4 @@ for (let i = 1899; i <= 2014; i++) {
 		dateAnnee.set(i.toString(),  i.toString());
 	}
 }
+

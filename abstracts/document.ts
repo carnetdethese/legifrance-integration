@@ -2,6 +2,7 @@ import { agentSearch } from "api/utilities";
 import { reponseDocument } from "./searches";
 import { getDecisionInfo } from "./decisions";
 import { getStatuteInfo } from "./loi";
+import { codeJurisprudence, codeLegalStatute } from "api/constants";
 
 export interface resumeDocument {
 	resumePrincipal:string;
@@ -33,10 +34,12 @@ export async function getDocumentInfo(document:legalDocument, valeurRecherche:st
 	// objet Document qui récupère une copie de l'objet passé en argument
 	const infoDocument:legalDocument = document;
 
-	if (document.origin == "CETAT" || document.origin == "JURI" || document.origin == "CONSTIT") {
+	console.log(valeurRecherche);
+
+	if (codeJurisprudence.includes(document.origin)) {
 		return getDecisionInfo(document, valeurRecherche, apiClient);
 	}
-	if (document.origin == "JORF" || document.origin == "LEGI") {
+	if (codeLegalStatute.includes(document.origin)) {
 		return getStatuteInfo(document, valeurRecherche, apiClient);
 	}
 
