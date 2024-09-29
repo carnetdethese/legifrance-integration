@@ -1,7 +1,7 @@
 import { ModuleOptions, ClientCredentials } from "simple-oauth2"
 import { debug } from "console";
 import { Notice, requestUrl } from "obsidian";
-import { LegifranceSettings } from "main";
+import { LegifranceSettings } from "settings/settings";
 
 // Credit goes to https://github.com/SocialGouv/dila-api-client - I have adapted the code so it can use
 // obsidian settings. 
