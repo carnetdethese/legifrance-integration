@@ -24,11 +24,11 @@ export class newNote {
     dataNote:Partial<ficheArretChamp> | Partial<noteDocumentChamp>;
 
 
-    constructor(app:App, template:string, templateTitre:string, data:Decision | legalDocument | legalStatute) {
+    constructor(app:App, template:string, templateTitre:string, data:Decision | legalDocument | legalStatute, dossierBase:string) {
         this.app = app;
         this.template = template;
         this.data = data.type == "jurisprudence" ? data as Decision : data as legalStatute;
-        this.folder = this.folderSetting("Décisions/") || "";
+        this.folder = this.folderSetting(dossierBase) || "";
         this.titreTemplate = templateTitre;
         
         if (data.type == "jurisprudence") {
@@ -49,13 +49,18 @@ export class newNote {
         }
     }
 
-    folderSetting(chosenFolder:string) {
+    folderSetting(dossierBase:string) {
+        let filePath = "";
 
-        if (isDecision(this.data)) { 
-            const filePath = chosenFolder + this.data.juridiction + "/";
-            return filePath
-        } 
+        if (this.data.type == "jurisprudence") {
+            console.log(this.data.type);
+            filePath = `${dossierBase}/${this.data.juridiction}/`;
+        }
+        else {
+            filePath = `${dossierBase}`;
+        }
 
+        return filePath
     }
 
     async renderFileTitle () {
@@ -79,15 +84,16 @@ export class newNote {
         }
 
         let filePath:string = this.folder + fileTitle;
+
+        console.log(filePath);
+
         const templateContenuCompile = Handlebars.compile(this.template, {noEscape: true});
         const noteContent = templateContenuCompile(this.dataNote);
 
-
-
-        if (isDecision(this.data)) {    
-            if (this.app.vault.getFolderByPath("Décisions/" + this.data.juridiction) === null) {
+        if (this.data.type == "jurisprudence") {
+            if (this.app.vault.getFolderByPath(this.folder + this.data.juridiction) === null) {
                 console.log("Dossier inexistant alors dossier créé.");
-                this.app.vault.createFolder("Décisions/" + this.data.juridiction);
+                this.app.vault.createFolder(this.folder + this.data.juridiction);
             }
         }
 

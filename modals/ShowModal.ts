@@ -96,7 +96,7 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
 			documentContent = await getDocumentInfo(selectedDocument, this.valeurRecherche, this.agentChercheur);
 
 			if (this.createNote) {
-				new newNote(this.app, this.plugin.settings.templateDecision, this.plugin.settings.fileTitle, documentContent).createNote();
+				new newNote(this.app, this.plugin.settings.templateDecision, this.plugin.settings.fileTitle, documentContent, this.plugin.settings.dossierBase).createNote();
 				new Notice(`Selected ${decision.id}`);
 			}
 			else {

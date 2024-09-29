@@ -56,48 +56,51 @@ export class ResearchTextView extends ItemView {
     this.activeViewLeaf = null;
   }
 
+
+  researchTypeButtons(container:Element) {
+    const headerDiv = container.createDiv(); // creating header part
+    // Header setting, always shown.
+    new Setting(headerDiv) 
+      .addButton(cb => {
+        cb.setButtonText("Recherche simple")
+        if (this.activeResearchType == "simple") cb.setDisabled(true);
+        cb.onClick(() => {
+          this.simpleSearchEngine();
+          this.onOpen();
+
+        })
+      })
+      .addButton(cb => {
+        cb.setButtonText("Recherche avancée")
+        if (this.activeResearchType == "advance") cb.setDisabled(true);     
+        cb.onClick(() => {
+          this.advancedSearchEngine();
+          this.onOpen();
+        })
+      })
+  }
+
   async onOpen() { // initializing the view
     const container = this.containerEl.children[1];
-    container.empty(); // making sure nothing the view is refreshed everytime the function is called.
+    container.empty(); // making sure the view is refreshed everytime the function is called.
 
-    this.headerDiv = container.createDiv(); // creating header part
+    this.researchTypeButtons(container);
+
     this.rechercheDiv = container.createDiv(); // search div - alternating between simple or complex search
 
-    // Header setting, always shown.
-    new Setting(this.headerDiv) 
-      .addButton(cb => cb 
-        .setButtonText("Recherche simple")
-        .onClick(() => {
-          if (this.activeResearchType != 'simple') {
-            this.onOpen();
-            this.simpleSearchEngine();
-          }
-        })
-      )
-      .addButton(cb => cb
-        .setButtonText("Recherche avancée")
-        .onClick(() => {
-          if (this.activeResearchType != "advance") {
-            this.onOpen();
-            this.advancedSearchEngine();
-          }
-        })
-      )
+    if (this.activeResearchType == "simple") {
+      this.simpleSearchEngine();
+    }
+    else if (this.activeResearchType == "advance") {
+      this.advancedSearchEngine();
+    }
 
-      if (this.activeResearchType == "simple") {
-        this.simpleSearchEngine();
-      }
-      else if (this.activeResearchType == "advance") {
-        this.advancedSearchEngine();
-      }
+    this.listResults = container.createDiv();
+    this.historiqueView();
 
-      this.listResults = container.createDiv();
-
-      this.historiqueView()
-
-      if (this.activeViewLeaf && this.plugin.document.length > 0) {
-        creerUneNouvelleNote(this.activeViewLeaf, this.listResults);
-      }  
+    if (this.activeViewLeaf && this.plugin.document.length > 0) {
+      creerUneNouvelleNote(this.activeViewLeaf, this.listResults);
+    }  
   }
 
   openViewText(id:string) {
@@ -114,6 +117,8 @@ export class ResearchTextView extends ItemView {
 
     const fond = this.rechercheDiv.createEl("div");  
     fondField(this, fond);
+
+    if (this.document.fond == "") return;
 
     if (this.document.fond != "ALL") {
       const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
@@ -147,6 +152,8 @@ export class ResearchTextView extends ItemView {
 
     fondField(this, this.rechercheDiv);
 
+    if (this.document.fond == "") return;
+
     if (this.document.recherche.champs.length <= 0) {
       this.document.recherche.champs[0].criteres.push({
         valeur: "", 
@@ -156,7 +163,7 @@ export class ResearchTextView extends ItemView {
       });
     }
 
-    if (this.document.fond != "ALL" && this.document.fond != "CODE_ETAT" && this.document.fond != "CNIL") {
+    if (this.document.fond != "ALL" && this.document.fond != "CODE_ETAT" && this.document.fond != "CNIL" && this.document.fond != "") {
       const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
       this.dateRecherche.champDate(dateDebut, "start");
   
@@ -171,9 +178,15 @@ export class ResearchTextView extends ItemView {
           .setValue(this.document.recherche.champs[0].criteres[0].valeur)
           .onChange(() => {
             this.document.recherche.champs[0].criteres[0].valeur = text.getValue();
-            console.log(this.document.recherche.champs[0].criteres[0].valeur)
+            // console.log(this.document.recherche.champs[0].criteres[0].valeur)
               })
-            );
+            .inputEl.addEventListener('keypress', (event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault(); // Prevent default form submission
+                this.launchSearch(); // Call your search function
+                this.onOpen();
+              }
+            }));
     
     new Setting(this.rechercheDiv)
       .addDropdown((typeRechercheChamp) => {
@@ -195,14 +208,20 @@ export class ResearchTextView extends ItemView {
             .addOptions(this.document.criteresTri)
             .onChange(() => this.document.updateFacette(cb.getValue()));
         })
-        .addButton((btn) =>
+        .addButton((btn) => {
           btn
-            .setButtonText("Valider")
-            .setCta()
-            .onClick(async () => {
-              await this.launchSearch();
-              this.onOpen();
-            }));
+          .setButtonText("Valider")
+          .setCta()
+          .onClick(async () => {
+            await this.launchSearch();
+            this.onOpen();
+          })
+        
+          if (this.document.fond == "") {
+            btn.removeCta();
+            btn.setDisabled(true);
+          }
+        });
 
   }
 
@@ -216,7 +235,7 @@ export class ResearchTextView extends ItemView {
     try {
       this.searchResult = await this.agentChercheur.advanceSearchText(this.document.toObject()) as resultatsRecherche;
 
-      console.log(this.searchResult);
+      // console.log(this.searchResult);
 
       this.valeurRecherche = "";
 
@@ -232,7 +251,6 @@ export class ResearchTextView extends ItemView {
         waitingModal.close();
     }
   }
-
 
   historiqueView() {
     let value:string = "-1";
@@ -259,7 +277,7 @@ export class ResearchTextView extends ItemView {
               deleteDocEntry(doc.id, this.plugin.document);
               this.plugin.saveSettings();
               this.onOpen();
-              console.log(this.plugin.document.length);
+              // console.log(this.plugin.document.length);
               this.plugin.instancesOfDocumentViews -= 1;
             })
           )

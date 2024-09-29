@@ -99,15 +99,15 @@ export class dateHandler {
 
     champDate(setting:Setting, type:string) {
         this.createDropdown(setting, dateJour, type, 'jour', (value: string) => {
-        this.handleDateChange(value, "jour", type);
+            this.handleDateChange(value, "jour", type);
         });
 
         this.createDropdown(setting, dateMois, type, 'mois', (value: string) => {
-        this.handleDateChange(value, "mois", type);
+            this.handleDateChange(value, "mois", type);
         });
 
         this.createDropdown(setting, dateAnnee, type, 'annee', (value: string) => {
-        this.handleDateChange(value, "annee", type);
+            this.handleDateChange(value, "annee", type);
         });
 
     }

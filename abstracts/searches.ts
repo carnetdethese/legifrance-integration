@@ -131,7 +131,10 @@ export class documentHandler {
         }],
       }]
     };
+
     this.fond = constants.codeFond.keys().next().value;
+
+    this.updatingFond(this.fond);
   }
 
   toObject() {

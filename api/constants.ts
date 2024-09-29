@@ -53,17 +53,23 @@ export const operateursRecherche = new Map<string, string>([ // Opérateur de ce
     ["OU", "ou"]
 ]);
 
+
+// Pour l'instant, je bloque l'accès aux recherches des autres fonds le temps de finir le développement.
+
 export const codeFond = new Map<string, string>([ // Fond dans lequel la recherche sera effectuée
-	["ALL", "Tous les fonds"],
+	// ["ALL", "Tous les fonds"],
+	// ["", ""],
 	["CETAT", "Juridictions administratives"],
 	["CONSTIT", "Conseil constitutionnel"],
 	["JURI", "Juridictions judiciaires"],
-	["CODE_ETAT", "Codes"],
-	["JORF", "Législation"],
-	["CNIL", "CNIL"],
-	["LODA_ETAT", "LODA"],
-	["CIRC", "Circulaires"],
-	["ACCO", "Accords collectifs"]
+	// ["CODE_ETAT", "Codes"],
+	// ["JORF", "JORF"],
+	// ["CNIL", "CNIL"],
+	// ["LODA_ETAT", "LODA"],
+	// ["CIRC", "Circulaires"],
+	// ["ACCO", "Accords collectifs"],
+	// ["LEGI", "Législation"],
+	// ["KALI", "Conventions collectives"]
 ]);
 
 export const champRecherche = new Map<string, string>([ // Type du champ dans lequel chercher.
@@ -99,12 +105,6 @@ export const champRecherche = new Map<string, string>([ // Type du champ dans le
 	["RAISON_SOCIALE", ""],
 	["MOTS_CLES", ""],
 	["IDCC", ""]
-]);
-
-export const critereTri = new Map<string, string>([ // Fond dans lequel la recherche sera effectuée
-	["PERTINENCE", "Pertinence"],
-	["DATE_DESC", "Date descendante"],
-	["DATE_ASC", "Date ascendante"]
 ]);
 
 export const listRouteConsult = new Map<string, string>([
@@ -148,10 +148,12 @@ export const dateMois = new Map<string, string>([
 	["12", "Décembre"]
 ]);
 
+const currentYear: number = new Date().getFullYear();
+
 export const dateAnnee = new Map<string, string>();
 
-for (let i = 1899; i <= 2014; i++) {
-	if (i == 1899) {
+for (let i = currentYear+1; i >= 1899; i--) {
+	if (i == (currentYear+1)) {
 		dateAnnee.set("", "");
 	}
 	else {

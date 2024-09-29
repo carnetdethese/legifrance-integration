@@ -15,11 +15,13 @@ export function fondField(view:ResearchTextView, fond:HTMLElement) {
         fondSelected
           .onChange(() => {
           view.document.updatingFond(fondSelected.getValue());
-          console.log(view.document.recherche);
+          // console.log(view.document.recherche);
           fondSelected.setValue(view.document.fond);
         })
           .setValue(view.document.fond)
       })
+
+    if (view.document.fond == "") return;
 
     new Setting(fond)
       .setName("Opérateur général : ")
@@ -48,7 +50,14 @@ export function newExpression(view:ResearchTextView, container:HTMLElement, id:n
         text.onChange((value) => {
           view.document.recherche.champs[0].criteres[id].valeur = value
           })
-        .setValue(view.document.recherche.champs[0].criteres[id].valeur || ""))
+        .setValue(view.document.recherche.champs[0].criteres[id].valeur || "")
+        .inputEl.addEventListener('keypress', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault(); // Prevent default form submission
+            view.launchSearch(); // Call your search function
+            view.onOpen();
+          }
+        }))        
       .addButton(cb => cb
         .setIcon("plus")
         .onClick(() => {

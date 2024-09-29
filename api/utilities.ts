@@ -1,5 +1,5 @@
 import { DilaApiClient } from 'api/client'
-import { LegifranceSettings } from 'main';
+import { LegifranceSettings } from 'settings/settings';
 import { listRouteConsult } from './constants';
 import { Decision } from 'abstracts/decisions';
 import {ficheArretChamp, noteDocumentChamp, rechercheAvStructure } from 'abstracts/searches'
@@ -52,24 +52,17 @@ export class agentSearch {
     let result;
     console.log(document.fond);
 
-    if (document.fond == "ALL") {
-      
-      result = {
-        "textId": document.id,
-        "searchedString": valeurRecherche
-      }}
-    else if (document.fond == "CODE_ETAT" || document.fond == "CODE_DATE") {
+    if (document.nature == "CODE") {
       result = {
         "id": document.id,
         "searchedString": valeurRecherche
       }
     }
-    else if (document.fond == "JORF") {
+    else if (document.origin == "JORF") {
       result = {
         "textCid": document.cid,
         "searchedString": valeurRecherche
-      }}  
-
+      }}
     else {
       result = {
         "textId": document.id,

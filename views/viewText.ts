@@ -44,11 +44,11 @@ export class textReaderView extends ItemView {
       this.document = new documentDataStorage(0, this.data);
     }
 
-    console.log(this.id, plugin.document);
+    // console.log(this.id, plugin.document);
 
     this.document.template = this.document.data.type == "jurisprudence" ? this.plugin.settings.templateDecision : this.plugin.settings.templateDocument;
 
-    if (this.document != undefined) this.nouvelleNote = new newNote(this.plugin.app, this.document.template, this.plugin.settings.fileTitle, this.document.data);
+    if (this.document != undefined) this.nouvelleNote = new newNote(this.plugin.app, this.document.template, this.plugin.settings.fileTitle, this.document.data, this.plugin.settings.dossierBase);
 
     if (this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW).length > 0){
       this.researchTab = this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW)[0].view as ResearchTextView;
