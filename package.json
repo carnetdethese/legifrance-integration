@@ -1,6 +1,6 @@
 {
 	"name": "legifrance-integration",
-	"version": "1.1",
+	"version": "1.1.15",
 	"description": "Module d'intégration de l'API Légifrance dans l'environnement de travail Obsidian.",
 	"main": "main.js",
 	"scripts": {
