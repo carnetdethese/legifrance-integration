@@ -1,4 +1,4 @@
-import { documentHandler } from "abstracts/searches";
+import { documentHandlerBase } from "abstracts/searches";
 import { Setting } from "obsidian";
 import * as constants from "api/constants"
 import { ResearchTextView } from "views/researchText";

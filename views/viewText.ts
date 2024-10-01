@@ -53,8 +53,6 @@ export class textReaderView extends ItemView {
     if (this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW).length > 0){
       this.researchTab = this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW)[0].view as ResearchTextView;
     }
-
-
   }
 
   getViewType() {
@@ -158,10 +156,7 @@ export class textReaderView extends ItemView {
       this.document.data.sommaires.forEach(elt => {
         content.createEl("p", { text: elt.resume });
       })
-
     }
-
-
   }
 
   showElementOfStatute(el:keyof HTMLElementTagNameMap, elt:string, content:Element) {

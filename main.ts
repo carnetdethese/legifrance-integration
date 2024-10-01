@@ -1,9 +1,13 @@
 import { agentSearch } from 'api/utilities';
-import { Plugin, WorkspaceLeaf } from 'obsidian';
+import { Editor, Plugin, WorkspaceLeaf } from 'obsidian';
 import { RESEARCH_TEXT_VIEW, ResearchTextView } from 'views/researchText';
 import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
 import { documentDataStorage } from 'views/viewsData';
 import { LegifranceSettings, DEFAULT_SETTINGS, LegifranceSettingTab } from 'settings/settings';
+import { documentHandlerBase } from 'abstracts/searches';
+
+// Defining global variables
+export let globalSettings:LegifranceSettings, agentChercheur:agentSearch;
 
 interface dataJson {
 	data:documentDataStorage[];
@@ -12,26 +16,33 @@ interface dataJson {
 
 
 export default class LegifrancePlugin extends Plugin {
+	static instance: LegifrancePlugin;
 	settings: LegifranceSettings;
 	document:Array<documentDataStorage>;
 	searchTab:ResearchTextView|null = null;
-	instanceApiClient:agentSearch;
 	instancesOfDocumentViews:number;
 	activeLeaves:Set<number>;
 	tabViewIdToShow:number;
 
 	async onload() {
+		LegifrancePlugin.instance = this;
+
+		// Assigning global variables 
+		globalSettings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		agentChercheur = new agentSearch(globalSettings);
+
+
 		await this.loadSettings();
 		this.activeLeaves = new Set();
 
 		this.instancesOfDocumentViews = this.document.length;
 		this.tabViewIdToShow = -1;
 
-		this.instanceApiClient = new agentSearch(this.settings);
+
 
 		this.registerView(
 			RESEARCH_TEXT_VIEW,
-			(leaf) => new ResearchTextView(this, leaf, this.instanceApiClient)
+			(leaf) => new ResearchTextView(this, leaf, agentChercheur)
 		);
 
 		this.registerView(
@@ -52,12 +63,17 @@ export default class LegifrancePlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'debug',
-			name:'debug',
-			callback: () => {
-				console.log(this.document);
-			}
-		})
+			id: "search-selection",
+			name: "Chercher la sélection",
+			editorCallback: (editor: Editor) => {
+			  const selection = editor.getSelection();
+			  const documentHandler = new documentHandlerBase();
+			  documentHandler.recherche.champs[0].criteres[0].valeur = selection;
+			  documentHandler.updatingFond("ALL");
+			  documentHandler.recherche.champs[0].criteres[0].typeRecherche = "EXACTE";
+			  documentHandler.launchSearch();
+			},
+		  });
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new LegifranceSettingTab(this.app, this));
@@ -118,14 +134,14 @@ export default class LegifrancePlugin extends Plugin {
 		if (data.data && data.data.length > 0) this.document = data.data;
 		else this.document = [];
 
-		if (this.instanceApiClient) {
+		if (agentChercheur) {
 			this.updateApiAgent(this.settings);
 		}
 	}
 
 	updateApiAgent(settings:LegifranceSettings) {
-		this.instanceApiClient.settings = settings;
-		this.instanceApiClient.dilaApi.updateConfig(settings);
+		agentChercheur.settings = settings;
+		agentChercheur.dilaApi.updateConfig(settings);
 	}
 
 	async saveSettings() {
@@ -136,7 +152,7 @@ export default class LegifrancePlugin extends Plugin {
 
 		await this.saveData(data);
 
-		if (this.instanceApiClient) {
+		if (agentChercheur) {
 			this.updateApiAgent(this.settings);
 		}
 	}

@@ -4,10 +4,14 @@ import * as constants from "api/constants";
 import { ResearchTextView } from "views/researchText";
 import { getTodaysDate, startDateBeforeEndDate } from "lib/utils";
 import { PopUpModal } from "modals/popUp";
-import { App } from "obsidian";
+import { App, Notice } from "obsidian";
 import { dateFormat } from "lib/dateHandler";
 import { statuteArticles, statuteSections } from "./loi";
 import { codeJuridiction } from "./decisions";
+import { MontrerResultatsModal } from "modals/ShowModal";
+import { agentSearch } from "api/utilities";
+import LegifrancePlugin, { agentChercheur, globalSettings } from "main";
+import { WaitModal } from "modals/WaitModal";
 
 // Création des interfaces pour construire une recherche avancée.
 
@@ -72,7 +76,6 @@ export interface ficheArretChamp {
   solution:string
 }
 
-
 export interface resultatsRecherche {
 	results: {
         titles?: {
@@ -102,20 +105,15 @@ export interface reponseDocument {
 // Classes et fonctions pour mieux intégrer les recherches avancées dans les fonds. Les classes devraient disposer :
 // - D'une fonction de mise à jour automatique des champs en fonction des fonds selectionnées (donc renvoyer, par exemple, une liste avec les critères de tri applicables à chaque collection).
 
-export class documentHandler {
-  app:App;
-  view:ResearchTextView;
+export class documentHandlerBase {
   recherche:champsRechercheAvancees;
   fond:string;
   criteresTri:Record<string, string>;
 
-  constructor(app:App, view:ResearchTextView) {
-    this.app = app;
-    this.view = view;
-    
+  constructor() {
     this.recherche = {
       filtres: [],
-      pageSize: view.plugin.settings.maxResults,
+      pageSize: globalSettings.maxResults,
       sort: "",
       // operateur: operateursRecherche.keys().next().value,
       typePagination: "DEFAUT",
@@ -127,13 +125,12 @@ export class documentHandler {
           valeur: "", 
           typeRecherche:constants.typeRecherche.keys().next().value, 
           proximite: 2,
-          operateur:constants.operateursRecherche.keys().next().value
+          operateur:constants.operateursRecherche.keys().next().value,
         }],
       }]
     };
 
     this.fond = constants.codeFond.keys().next().value;
-
     this.updatingFond(this.fond);
   }
 
@@ -166,10 +163,10 @@ export class documentHandler {
     this.fond = selection;
 
     // setting or resetting the date field according to the "fond"
-    if (selection == "ALL" || selection == "CODE_ETAT" || selection == "CNIL") this.resetDate();
-    else if (selection == "CETAT" || selection == "JURI" || selection == "CONSTIT") this.updateDate();
-    else if (constants.codeLegalStatute.includes(selection)) this.updateDate();
+    if (["ALL", "CODE_ETAT", "CNIL"].includes(selection)) this.resetDate();
+    else if (["CETAT", "JURI", "CONSTIT"].includes(selection) || constants.codeLegalStatute.includes(selection)) this.updateDate();
     else this.updateDate();
+
 
     // setting or resetting the sorting criteria. The variable is used as a Record by the 
     // Obsidian dropdown component to show the criteria in the research view.
@@ -180,7 +177,6 @@ export class documentHandler {
     else if (selection == "CIRC") this.criteresTri = constants.criteresTriGeneraux.circ;
 
     this.updateFacette(); // updating the date filter facet.
-    this.view.onOpen();
   }
 
 
@@ -226,6 +222,7 @@ export class documentHandler {
   }
 
   async checkBeforeSearch() {
+    const pluginInstance = LegifrancePlugin.instance;
     let today = getTodaysDate();
     let start = new dateFormat("1800", "1", "1");
 
@@ -234,12 +231,64 @@ export class documentHandler {
       if (!this.recherche.filtres[0].dates.start.toString()) this.recherche.filtres[0].dates.start = start.toString();
       
       if (!startDateBeforeEndDate(this.recherche.filtres[0].dates.start as dateFormat, this.recherche.filtres[0].dates.end as dateFormat)) {
-        new PopUpModal(this.app, "Vous devez entrer une date de début antérieure à la date de fin !").open();
+        new PopUpModal(pluginInstance.app, "Vous devez entrer une date de début antérieure à la date de fin !").open();
         return 'false';
       }
     }
     return 'true';
   }
 
+  async searchAndShowModal() {
+    const pluginInstance = LegifrancePlugin.instance;
+    const pluginApp = pluginInstance.app;
+  
+    const searchResult = await agentChercheur.advanceSearchText(this.toObject()) as resultatsRecherche;
+  
+    let valeurRecherche = "";
+  
+    for (const elt of this.recherche.champs[0].criteres) {
+      valeurRecherche += elt.valeur;
+    }
+  
+    new MontrerResultatsModal(pluginApp, pluginInstance, searchResult,valeurRecherche, agentChercheur, false, this.fond).open();
+  }
+
+  async launchSearch() {
+    const pluginInstance = LegifrancePlugin.instance;
+
+    const check = await this.checkBeforeSearch();
+    if (check == 'false') return; 
+
+    const waitingModal = new WaitModal(pluginInstance.app);
+    waitingModal.open();
+
+    try {
+      this.searchAndShowModal();
+
+    } catch (error) {
+        console.error('Error performing search:', error);
+        new Notice('Une erreur est survenue durant la requête. Veuillez vérifier vos identifiants et réessayer.');
+    } finally {
+        waitingModal.close();
+    }
+
+  }
+
 
 }
+
+export class documentHandlerView extends documentHandlerBase {
+  view:ResearchTextView;
+  recherche:champsRechercheAvancees;
+  fond:string;
+  criteresTri:Record<string, string>;
+
+  constructor(view:ResearchTextView) {
+    super();
+  }
+
+  updatingFond(selection:string) {
+    super.updatingFond(selection);
+  }
+}
+

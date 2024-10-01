@@ -1,12 +1,12 @@
 import { ItemView, WorkspaceLeaf, Setting, Notice } from "obsidian";
 import { typeRecherche, operateursRecherche, codeLegalStatute, criteresTriGeneraux } from "api/constants";
 import { agentSearch } from "api/utilities";
-import { champsRechercheAvancees } from "abstracts/searches";
+import { champsRechercheAvancees, searchAndShowModal } from "abstracts/searches";
 import { creerUneNouvelleNote } from "lib/utils";
 import { MontrerResultatsModal } from "modals/ShowModal";
 import LegifrancePlugin from "main";
 import { textReaderView } from "./viewText";
-import { documentHandler, resultatsRecherche } from "abstracts/searches";
+import { documentHandlerView, resultatsRecherche } from "abstracts/searches";
 import { WaitModal } from "modals/WaitModal";
 import { dateHandler } from "lib/dateHandler";
 import { newExpression, fondField } from "lib/searchUtils";
@@ -15,7 +15,7 @@ import { deleteDocEntry } from "./viewsData";
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
 export class ResearchTextView extends ItemView {
-  document:documentHandler;
+  document:documentHandlerView;
   dateRecherche: dateHandler;
   recherche:champsRechercheAvancees;
   compteur:number;
@@ -35,7 +35,7 @@ export class ResearchTextView extends ItemView {
     this.agentChercheur = agentChercheur;
     this.plugin = plugin;
     this.dateRecherche = new dateHandler(this);
-    this.document = new documentHandler(this.app, this);
+    this.document = new documentHandlerView(this);
     // this.initSearch();
   }
 
@@ -140,7 +140,7 @@ export class ResearchTextView extends ItemView {
           .setButtonText("Valider")
           .setCta()
           .onClick(async () => {
-            await this.launchSearch();
+            await this.document.launchSearch();
           }));
 
   }
@@ -183,21 +183,33 @@ export class ResearchTextView extends ItemView {
             .inputEl.addEventListener('keypress', (event) => {
               if (event.key === 'Enter') {
                 event.preventDefault(); // Prevent default form submission
-                this.launchSearch(); // Call your search function
+                this.document.launchSearch(); // Call search function
                 this.onOpen();
               }
             }));
     
+
     new Setting(this.rechercheDiv)
       .addDropdown((typeRechercheChamp) => {
         typeRecherche.forEach((value, key) => {
           typeRechercheChamp.addOption(key, value)
-        });			
+        });
+        
+        typeRechercheChamp.onChange((value) => {
+          this.document.criteresTri.typeRecherche = value;
+          console.log(this.document.criteresTri.typeRecherche);
+        })
+        
         })
         .addDropdown((operateur) => {
           operateursRecherche.forEach((value, key) => {
             operateur.addOption(key, value)
           });
+
+          operateur.onChange((value) => {
+            this.document.criteresTri.operateur = value;
+            console.log(this.document.criteresTri.operateur);
+          })
         })
   
       new Setting(this.rechercheDiv)
@@ -213,7 +225,7 @@ export class ResearchTextView extends ItemView {
           .setButtonText("Valider")
           .setCta()
           .onClick(async () => {
-            await this.launchSearch();
+            await this.document.launchSearch();
             this.onOpen();
           })
         
@@ -223,33 +235,6 @@ export class ResearchTextView extends ItemView {
           }
         });
 
-  }
-
-  async launchSearch() {
-    let check = await this.document.checkBeforeSearch();
-    if (check == 'false') return;
-    
-    const waitingModal = new WaitModal(this.app);
-    waitingModal.open();
-
-    try {
-      this.searchResult = await this.agentChercheur.advanceSearchText(this.document.toObject()) as resultatsRecherche;
-
-      // console.log(this.searchResult);
-
-      this.valeurRecherche = "";
-
-      for (const elt of this.document.recherche.champs[0].criteres) {
-        this.valeurRecherche += elt.valeur;
-      }
-
-      new MontrerResultatsModal(this.app, this.plugin, this.searchResult, this.valeurRecherche, this.agentChercheur, false, this.document.fond).open();
-    } catch (error) {
-        console.error('Error performing search:', error);
-        new Notice('Une erreur est survenue durant la requête. Veuillez vérifier vos identifiants et réessayer.');
-    } finally {
-        waitingModal.close();
-    }
   }
 
   historiqueView() {

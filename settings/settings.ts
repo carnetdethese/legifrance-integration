@@ -29,6 +29,7 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 
 
 export class LegifranceSettingTab extends PluginSettingTab {
+
 	plugin: LegifrancePlugin;
 	filesFolders:Array<TAbstractFile>;
 	app:App;
