@@ -105,6 +105,11 @@ Une fois le module validé par l'équipe d'Obsidian, il sera disponible directem
 -   [x] Recherche complexe : intégration des opérateurs booléens.
 -   [ ] S'assurer que les _views_ persistent après redémarrage.
 
+
+## Discord
+
+Un serveur Discord vient d'ouvrir pour rassembler les juristes intéressés par la question du numérique de près ou de loin : https://discord.gg/nXavW4BTcW
+
 ## Soutien
 
 Si vous souhaitez soutenir le projet, vous le pouvez via ce lien :
