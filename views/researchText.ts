@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf, Setting, Notice } from "obsidian";
 import { typeRecherche, operateursRecherche, codeLegalStatute, criteresTriGeneraux } from "api/constants";
 import { agentSearch } from "api/utilities";
-import { champsRechercheAvancees, searchAndShowModal } from "abstracts/searches";
+import { champsRechercheAvancees } from "abstracts/searches";
 import { creerUneNouvelleNote } from "lib/utils";
 import { MontrerResultatsModal } from "modals/ShowModal";
 import LegifrancePlugin from "main";
@@ -58,8 +58,12 @@ export class ResearchTextView extends ItemView {
 
 
   researchTypeButtons(container:Element) {
+
     const headerDiv = container.createDiv(); // creating header part
     // Header setting, always shown.
+
+
+
     new Setting(headerDiv) 
       .addButton(cb => {
         cb.setButtonText("Recherche simple")
@@ -81,8 +85,13 @@ export class ResearchTextView extends ItemView {
   }
 
   async onOpen() { // initializing the view
-    const container = this.containerEl.children[1];
-    container.empty(); // making sure the view is refreshed everytime the function is called.
+    const baseContainer = this.containerEl.children[1];
+    baseContainer.empty(); // making sure the view is refreshed everytime the function is called.
+
+    const container = baseContainer.createDiv()
+    container.style.maxWidth = "800px";
+    container.style.width = "100%";
+    container.style.margin = "auto"
 
     this.researchTypeButtons(container);
 
@@ -96,7 +105,8 @@ export class ResearchTextView extends ItemView {
     }
 
     this.listResults = container.createDiv();
-    this.historiqueView();
+    const historiqueContainer = container.createDiv();
+    this.historiqueView(historiqueContainer);
 
     if (this.activeViewLeaf && this.plugin.document.length > 0) {
       creerUneNouvelleNote(this.activeViewLeaf, this.listResults);
@@ -194,10 +204,8 @@ export class ResearchTextView extends ItemView {
         typeRecherche.forEach((value, key) => {
           typeRechercheChamp.addOption(key, value)
         });
-        
         typeRechercheChamp.onChange((value) => {
-          this.document.criteresTri.typeRecherche = value;
-          console.log(this.document.criteresTri.typeRecherche);
+          this.document.updateTypeRechercheChamp(0, 0, value);
         })
         
         })
@@ -237,14 +245,14 @@ export class ResearchTextView extends ItemView {
 
   }
 
-  historiqueView() {
+  historiqueView(container:HTMLElement) {
     let value:string = "-1";
-    this.listResults.createEl("h5", {text: "Historique"});
+    container.createEl("h5", {text: "Historique"});
 
-    if (this.plugin.document.length == 0) this.listResults.createEl("p", {text: "Rien à afficher. Et si vous faisiez une recherche ?"});
+    if (this.plugin.document.length == 0) container.createEl("p", {text: "Rien à afficher. Et si vous faisiez une recherche ?"});
 
       for (let doc of this.plugin.document) {
-        new Setting(this.listResults)
+        new Setting(container)
           .setName(doc.data.id)
           .setDesc(`${doc.data.titre}`)
           .addExtraButton(cb => cb 

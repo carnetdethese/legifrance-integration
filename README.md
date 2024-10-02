@@ -55,7 +55,7 @@ _Création de la note automatiquement :_
 
 ### Les modèles
 
-Vous pouvez personnaliser le modèle de note qui sera créée comme vous l'entendez. Pour cela, utilisez la zone de texte à cet effet dans les paramètres. Le moteur de modèle est Mustache JS. Pour afficher une valeur, il suffit de l'encadrer entre deux paires d'accolades.
+Vous pouvez personnaliser le modèle de note qui sera créée comme vous l'entendez. Pour cela, utilisez la zone de texte à cet effet dans les paramètres. Le moteur de modèle est Handlebars JS (j'utilisais Mustache avant mais Handlebars offre de plus grandes possibilités). Pour afficher une valeur, il suffit de l'encadrer entre deux paires d'accolades.
 
 ex. `{{titre}}`
 
@@ -74,6 +74,8 @@ Voilà les variables accessibles :
 -   `{{ solution }}` - Solution de la décision
 -   `{{ urlCC }}` - Lien vers le site du Conseil constitutionnel pour les décisions du Conseil constitutionnel
 -   `{{ #sommaires }} {{ resume }} {{ /sommaires }}` (c'est une liste qui peut contenir plusieurs entrées. La syntaxe ici permet de faire une boucle et d'afficher toutes les entrées) - Liste des sommaires.
+
+Pour aller plus loin, vous pouvez consulter la [documentation de Handlebars](https://handlebarsjs.com). Une fonctionnalité utile, peut être, par exemple, d'intégrer un affichage conditionnel lorsque vous ne souhaitez pas utiliser l'éditeur de note d'arrêt, en utilisant le bloc `{{#if variable}} {{variable}} {{/if}}`.
 
 ## Comment l'utiliser
 

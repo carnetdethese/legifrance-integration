@@ -74,7 +74,6 @@ export async function noteJurisprudence (view:textReaderView, header:HTMLElement
     )
   
   ajoutBouton(view, header);
-
 }
 
 export async function noteDocument (view:textReaderView, header:HTMLElement) {

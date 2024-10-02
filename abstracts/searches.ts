@@ -134,6 +134,65 @@ export class documentHandlerBase {
     this.updatingFond(this.fond);
   }
 
+  // TODO : fonction permettant de mettre à jour la valeur du champ concerné. Permet d'éviter des appels directs aux propriétés de la classe. A terme, serait bien de rendre privées toutes les variables de document pour simplifier le code.
+
+  updateValue(champ:number, critere:number, valeur:string) {
+    // Champ et critere commencent à 0 - correspondent au rang dans l'Array correspondant.
+    this.recherche.champs[champ].criteres[critere].valeur = valeur;
+    return this.recherche.champs[champ].criteres[critere].valeur;
+  }
+
+  // Idem pour le numéro de la page demandée. Facilitera l'affichage lorsqu'on fera un moteur de présentation des résultats plus sympathiques.
+  updatePageNumber(newPage:number) {
+    this.recherche.pageNumber = newPage;
+    return this.recherche.pageNumber;
+  }
+
+  // Les quatres fonctions qui suivent permettent un meilleur contrôle de l'ajout ou la suppression d'un champ et d'un nouveau critère. Il faudra penser à implanter une logique de contrôle pour éviter que des champs requis soit supprimé, notamment.
+  createChamps() {
+
+  }
+
+  deleteChamps(champ:number) {
+
+  }
+
+  createCritere(champ:number) {
+    // Le paramètre "champ" correspond à l'index du champ dans lequel se trouve le critère à ajouter.
+    // La fonction pousse un nouveau critère en fin de liste.
+    // Possibilité d'ajouter jusque 3 critères par champs. 
+
+    if (this.recherche.champs[champ].criteres.length < 3) {
+      this.recherche.champs[champ].criteres.push({
+        operateur: constants.operateursRecherche.keys().next().value,
+        valeur: "",
+        proximite: 2,
+        typeRecherche: constants.typeRecherche.keys().next().value
+     })
+    }
+
+    return;
+  }
+
+  deleteCritere(champ:number, critere:number) {
+    if (critere > -1 && critere < this.recherche.champs[champ].criteres.length)
+    {
+      this.recherche.champs[champ].criteres.splice(critere, 1) // Remove 1 element at the specified index
+    }
+
+    return;
+  }
+
+  updateTypeRechercheChamp(champ:number, critere:number, type:string) {
+    if (this.recherche.champs[champ].criteres[critere]) {
+      this.recherche.champs[champ].criteres[critere].typeRecherche = type;
+    }
+
+    return this.recherche.champs[champ].criteres[critere].typeRecherche;
+  }
+
+
+
   toObject() {
     if (this.recherche.filtres[0]){
       this.recherche.filtres[0].dates.end = this.recherche.filtres[0].dates.end.toString();
@@ -178,7 +237,6 @@ export class documentHandlerBase {
 
     this.updateFacette(); // updating the date filter facet.
   }
-
 
   resetDate() {
     // Function that resets the date for the "fond" I couldn't yet find a way to implement completely.

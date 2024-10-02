@@ -22,6 +22,7 @@ export function fondField(view:ResearchTextView, fond:HTMLElement) {
       })
 
     if (view.document.fond == "") return;
+    if (view.activeResearchType == "simple") return;
 
     new Setting(fond)
       .setName("Opérateur général : ")
@@ -54,21 +55,16 @@ export function newExpression(view:ResearchTextView, container:HTMLElement, id:n
         .inputEl.addEventListener('keypress', (event) => {
           if (event.key === 'Enter') {
             event.preventDefault(); // Prevent default form submission
-            view.launchSearch(); // Call your search function
+            view.document.launchSearch(); // Call the search function
             view.onOpen();
           }
         }))        
       .addButton(cb => cb
         .setIcon("plus")
         .onClick(() => {
-          if (view.compteur < 4 ) {
+          if (view.compteur < 2 ) {
             view.compteur += 1;
-             view.document.recherche.champs[0].criteres.push({
-               valeur:"", 
-               typeRecherche:constants.typeRecherche.keys().next().value, 
-               operateur:constants.operateursRecherche.keys().next().value,
-               proximite: 2
-             });
+            view.document.createCritere(0);
             newExpression(view, container, view.compteur);
             view.onOpen();
           }
@@ -77,7 +73,7 @@ export function newExpression(view:ResearchTextView, container:HTMLElement, id:n
         .setIcon("minus")
         .onClick(() => {
           if (view.compteur > 0) {
-            view.document.recherche.champs[0].criteres.pop();
+            view.document.deleteCritere(0, view.compteur);
             view.compteur -= 1;
             newExpression(view, container, view.compteur);
             view.onOpen();

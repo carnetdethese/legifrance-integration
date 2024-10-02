@@ -5,6 +5,7 @@ import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
 import { documentDataStorage } from 'views/viewsData';
 import { LegifranceSettings, DEFAULT_SETTINGS, LegifranceSettingTab } from 'settings/settings';
 import { documentHandlerBase } from 'abstracts/searches';
+import { SEARCH_RESULT_VIEW, SearchResultView } from 'views/resultsView';
 
 // Defining global variables
 export let globalSettings:LegifranceSettings, agentChercheur:agentSearch;
@@ -41,6 +42,11 @@ export default class LegifrancePlugin extends Plugin {
 
 
 		this.registerView(
+			SEARCH_RESULT_VIEW,
+			(leaf) => new SearchResultView(leaf)
+		);
+
+		this.registerView(
 			RESEARCH_TEXT_VIEW,
 			(leaf) => new ResearchTextView(this, leaf, agentChercheur)
 		);
@@ -68,12 +74,21 @@ export default class LegifrancePlugin extends Plugin {
 			editorCallback: (editor: Editor) => {
 			  const selection = editor.getSelection();
 			  const documentHandler = new documentHandlerBase();
-			  documentHandler.recherche.champs[0].criteres[0].valeur = selection;
+
+			  documentHandler.updateValue(0, 0, selection);
+			  documentHandler.updateTypeRechercheChamp(0, 0, "EXACTE");
 			  documentHandler.updatingFond("ALL");
-			  documentHandler.recherche.champs[0].criteres[0].typeRecherche = "EXACTE";
 			  documentHandler.launchSearch();
 			},
 		  });
+
+		  this.addCommand({
+			id: 'voir-résultats',
+			name: 'Consulter les résultats',
+			callback: () => {
+				this.activateResultsView();
+			}
+		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new LegifranceSettingTab(this.app, this));
@@ -181,12 +196,6 @@ export default class LegifrancePlugin extends Plugin {
 
 		const { workspace } = this.app;
 
-		// const leaves = workspace.getLeavesOfType(TEXT_READER_VIEW);
-		// for (let leaf of leaves) {
-		// 	const textView: textReaderView = leaf.view as textReaderView;
-		// 	console.log(textView.document.id);
-		// }
-
 		let leaf: WorkspaceLeaf | null = null;
 
 		// Our view could not be found in the workspace, create a new leaf
@@ -194,6 +203,23 @@ export default class LegifrancePlugin extends Plugin {
 		if (leaf) { await leaf.setViewState({ type: TEXT_READER_VIEW, active: true });  }
 		if (leaf) { workspace.revealLeaf(leaf); }
 	}
+
+	async activateResultsView() {
+		const { workspace } = this.app;
+	
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(SEARCH_RESULT_VIEW);
+	
+		if (leaves.length > 0) {
+			// A leaf with our view already exists, use that
+			leaf = leaves[0];
+		} else {
+			leaf = workspace.getLeaf(false);
+			if (leaf) { await leaf.setViewState({ type: SEARCH_RESULT_VIEW, active: true });  }
+		}
+		if (leaf) { workspace.revealLeaf(leaf); }
+	}
+
 
 	getSearchTab():ResearchTextView | null {
 		const leaves = this.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW);

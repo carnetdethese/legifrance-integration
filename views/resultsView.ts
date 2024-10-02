@@ -2,7 +2,7 @@ import { ItemView, WorkspaceLeaf } from "obsidian";
 
 export const SEARCH_RESULT_VIEW = "search-result-view";
 
-export class ExampleView extends ItemView {
+export class SearchResultView extends ItemView {
   constructor(leaf: WorkspaceLeaf) {
     super(leaf);
   }
