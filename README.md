@@ -101,10 +101,18 @@ Une fois le module validé par l'équipe d'Obsidian, il sera disponible directem
 
 -   [x] Intégration d'un éditeur de fiche d'arrêt.
 -   [x] Visualisation des documents dans Obsidian dans une fenêtre, sans insertion dans une note.
--   [ ] Recherche dans tous les fonds disponibles.
+-   [ ] Recherche dans tous les fonds disponibles (en cours).
 -   [x] Recherche complexe : intégration des opérateurs booléens.
--   [ ] S'assurer que les _views_ persistent après redémarrage.
+-   [x] S'assurer que les _views_ persistent après redémarrage.
+-   [x] Gestionnaire d'historique.
+-   [x] Meilleur moteur d'affichage des résultats.
 
+### Fonctionnalités qui seraient chouettes de développer (si le temps le permet)
+
+-   [ ] Un _parser_ permettant de lister facilement tous les textes juridiques présents dans le coffre ;
+    -   [ ] _Parser_ de décisions.
+    -   [ ] _Parser_ de textes législatifs.
+-   [ ] Une prévisualisation des textes (peut-être sous la forme d'un pop-up lorsqu'on passe la souris au dessus d'un lien lié à Légifrance ?)
 
 ## Discord
 
