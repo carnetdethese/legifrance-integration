@@ -31,9 +31,17 @@ _Recherche simple :_
 
 <img src="./docs/images/recherche-simple.png" width=50% height=50%>
 
+_Historique :_
+
+<img src="./docs/images/historique.png" width=50% height=50%>
+
 _Affichage des résultats (mot recherché dans l'exemple : Constitution) :_
 
 <img src="./docs/images/affichage-resultats.png" width=50% height=50%>
+
+_Affichage des résultats (bêta) :_
+
+<img src="./docs/images/resultats-nouveau.png" width=50% height=50%>
 
 _Création de la note automatiquement :_
 
