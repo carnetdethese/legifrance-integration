@@ -27,6 +27,8 @@ Deux solutions pour le lancer :
 
 ### Captures d'écran
 
+Les captures d'écran peuvent différer de votre affichage en fonction du thème choisi.
+
 _Recherche simple :_
 
 <img src="./docs/images/recherche-simple.png" width=50% height=50%>
