@@ -107,7 +107,7 @@ Une fois le module validé par l'équipe d'Obsidian, il sera disponible directem
 -   [x] Gestionnaire d'historique.
 -   [x] Meilleur moteur d'affichage des résultats.
 
-### Fonctionnalités qui seraient chouettes de développer (si le temps le permet)
+### Fonctionnalités intéressantes à développer (si le temps le permet)
 
 -   [ ] Un _parser_ permettant de lister facilement tous les textes juridiques présents dans le coffre ;
     -   [ ] _Parser_ de décisions.
