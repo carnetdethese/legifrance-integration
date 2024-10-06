@@ -19,7 +19,7 @@ export class agentSearch {
   }
 
   async advanceSearchText(search:rechercheAvStructure) {
-    // console.log(search);
+
     const requestOptions = {
       path: "/search",
       method: "POST",
@@ -27,6 +27,7 @@ export class agentSearch {
     }
 
     const result = await this.dilaApi.fetch(requestOptions);
+
     return result;
   }
 

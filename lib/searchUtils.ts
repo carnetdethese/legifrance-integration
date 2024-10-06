@@ -1,4 +1,4 @@
-import { documentHandlerBase } from "abstracts/searches";
+import { documentSearchFieldsClass } from "abstracts/searches";
 import { Setting } from "obsidian";
 import * as constants from "api/constants"
 import { ResearchTextView } from "views/researchText";
@@ -14,14 +14,14 @@ export function fondField(view:ResearchTextView, fond:HTMLElement) {
         });
         fondSelected
           .onChange(() => {
-          view.document.updatingFond(fondSelected.getValue());
-          // // console.log(view.document.recherche);
-          fondSelected.setValue(view.document.fond);
+          view.documentFields.updatingFond(fondSelected.getValue());
+          // // console.log(view.documentFields.recherche);
+          fondSelected.setValue(view.documentFields.fond);
         })
-          .setValue(view.document.fond)
+          .setValue(view.documentFields.fond)
       })
 
-    if (view.document.fond == "") return;
+    if (view.documentFields.fond == "") return;
     if (view.activeResearchType == "simple") return;
 
     new Setting(fond)
@@ -31,9 +31,9 @@ export function fondField(view:ResearchTextView, fond:HTMLElement) {
           opeGen.addOption(key, value)
         })
         opeGen.onChange(() => {
-          view.document.recherche.operateur = opeGen.getValue();
+          view.documentFields.recherche.operateur = opeGen.getValue();
         })
-        opeGen.setValue(view.document.recherche.champs[0].operateur as string)
+        opeGen.setValue(view.documentFields.recherche.champs[0].operateur as string)
       })
   }
 
@@ -49,13 +49,13 @@ export function newExpression(view:ResearchTextView, container:HTMLElement, id:n
       .setName("Champ " + instanceCount)
       .addText((text) =>
         text.onChange((value) => {
-          view.document.recherche.champs[0].criteres[id].valeur = value
+          view.documentFields.recherche.champs[0].criteres[id].valeur = value
           })
-        .setValue(view.document.recherche.champs[0].criteres[id].valeur || "")
+        .setValue(view.documentFields.recherche.champs[0].criteres[id].valeur || "")
         .inputEl.addEventListener('keypress', (event) => {
           if (event.key === 'Enter') {
             event.preventDefault(); // Prevent default form submission
-            view.document.launchSearch(); // Call the search function
+            view.documentFields.launchSearch(); // Call the search function
             view.onOpen();
           }
         }))        
@@ -64,7 +64,7 @@ export function newExpression(view:ResearchTextView, container:HTMLElement, id:n
         .onClick(() => {
           if (view.compteur < 2 ) {
             view.compteur += 1;
-            view.document.createCritere(0);
+            view.documentFields.createCritere(0);
             newExpression(view, container, view.compteur);
             view.onOpen();
           }
@@ -73,7 +73,7 @@ export function newExpression(view:ResearchTextView, container:HTMLElement, id:n
         .setIcon("minus")
         .onClick(() => {
           if (view.compteur > 0) {
-            view.document.deleteCritere(0, view.compteur);
+            view.documentFields.deleteCritere(0, view.compteur);
             view.compteur -= 1;
             newExpression(view, container, view.compteur);
             view.onOpen();
@@ -86,14 +86,14 @@ export function newExpression(view:ResearchTextView, container:HTMLElement, id:n
         constants.typeRecherche.forEach((value, key) => {
         typeRechercheChamp.addOption(key, value)
         typeRechercheChamp.onChange((value) =>
-          view.document.recherche.champs[0].criteres[id].typeRecherche = value
+          view.documentFields.recherche.champs[0].criteres[id].typeRecherche = value
         )});
         })
       .addDropdown((operateur) => {
         constants.operateursRecherche.forEach((value, key) => {
           operateur.addOption(key, value)
           operateur.onChange((value) =>
-            view.document.recherche.champs[0].criteres[id].operateur = value
+            view.documentFields.recherche.champs[0].criteres[id].operateur = value
           )
         })
       });

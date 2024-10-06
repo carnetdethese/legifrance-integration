@@ -67,8 +67,8 @@ export class dateHandler {
             this.dropdownRef.get(`${type}mois`)?.setValue("");
         };
 
-        if (this.researchViewMod.document.recherche.filtres[0]) {
-            this.researchViewMod.document.recherche.filtres[0].dates[type as keyof champDate] = dateObj;
+        if (this.researchViewMod.documentFields.recherche.filtres[0]) {
+            this.researchViewMod.documentFields.recherche.filtres[0].dates[type as keyof champDate] = dateObj;
         }
     }
 
@@ -92,7 +92,7 @@ export class dateHandler {
             });
             valeurDate
                 .onChange(onChangeCallback)
-                .setValue(this.researchViewMod.document.recherche.filtres[0].dates[type as keyof champDate] as string);
+                .setValue(this.researchViewMod.documentFields.recherche.filtres[0].dates[type as keyof champDate] as string);
             this.dropdownRef.set(id, dropdown);
           });
     }

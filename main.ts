@@ -4,7 +4,7 @@ import { RESEARCH_TEXT_VIEW, ResearchTextView } from 'views/researchText';
 import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
 import { documentDataStorage } from 'views/viewsData';
 import { LegifranceSettings, DEFAULT_SETTINGS, LegifranceSettingTab } from 'settings/settings';
-import { documentHandlerBase, resultatsRecherche } from 'abstracts/searches';
+import { documentSearchFieldsClass, resultatsRecherche } from 'abstracts/searches';
 import { SEARCH_RESULT_VIEW, SearchResultView } from 'views/resultsView';
 import { documentsListe, getAgentChercheur, getDocumentsListe, globalSettings, setAgentChercheur, setDocumentsListe, setGlobalSettings } from 'globals/globals';
 
@@ -69,7 +69,7 @@ export default class LegifrancePlugin extends Plugin {
 			name: "Chercher la sélection",
 			editorCallback: (editor: Editor) => {
 			  const selection = editor.getSelection();
-			  const documentHandler = new documentHandlerBase();
+			  const documentHandler = new documentSearchFieldsClass();
 
 			  documentHandler.updateValue(0, 0, selection);
 			  documentHandler.updateTypeRechercheChamp(0, 0, "EXACTE");
@@ -198,7 +198,7 @@ export default class LegifrancePlugin extends Plugin {
 		if (leaf) { workspace.revealLeaf(leaf); }
 	}
 
-	async activateResultsView() {
+	async activateResultsView(searchFields:documentSearchFieldsClass) {
 		const { workspace } = this.app;
 	
 		let leaf: WorkspaceLeaf | null = null;
@@ -215,6 +215,7 @@ export default class LegifrancePlugin extends Plugin {
 		if (leaf) { 
 			workspace.revealLeaf(leaf); 
 			const view = leaf.view as SearchResultView;
+			view.addDocument(searchFields);
 			view.onOpen();
 		}
 	}

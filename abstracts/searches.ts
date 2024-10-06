@@ -89,6 +89,7 @@ export interface resultatsRecherche {
 		origin:string,
         date?:string
 	},
+  totalResultNumber: number,
   fond: string
 }
 
@@ -154,8 +155,7 @@ export class resultatsRechercheClass {
 
 // Classes et fonctions pour mieux intégrer les recherches avancées dans les fonds. Les classes devraient disposer :
 // - D'une fonction de mise à jour automatique des champs en fonction des fonds selectionnées (donc renvoyer, par exemple, une liste avec les critères de tri applicables à chaque collection).
-
-export class documentHandlerBase {
+export class documentSearchFieldsClass {
   recherche:champsRechercheAvancees;
   fond:string;
   criteresTri:Record<string, string>;
@@ -198,6 +198,19 @@ export class documentHandlerBase {
     return this.recherche.pageNumber;
   }
 
+  getCurrentPageNumber() {
+    return this.recherche.pageNumber;
+  }
+
+  updatePageSize(newSize:number) {
+    this.recherche.pageSize = newSize;
+    return;
+  }
+
+  getPageSize() {
+    return this.recherche.pageSize;
+  }
+
   // Les quatres fonctions qui suivent permettent un meilleur contrôle de l'ajout ou la suppression d'un champ et d'un nouveau critère. Il faudra penser à implanter une logique de contrôle pour éviter que des champs requis soit supprimé, notamment.
   createChamps() {
 
@@ -229,7 +242,6 @@ export class documentHandlerBase {
     {
       this.recherche.champs[champ].criteres.splice(critere, 1) // Remove 1 element at the specified index
     }
-
     return;
   }
 
@@ -276,7 +288,6 @@ export class documentHandlerBase {
     else if (["CETAT", "JURI", "CONSTIT"].includes(selection) || constants.codeLegalStatute.includes(selection)) this.updateDate();
     else this.updateDate();
 
-
     // setting or resetting the sorting criteria. The variable is used as a Record by the 
     // Obsidian dropdown component to show the criteria in the research view.
     if (selection == "ALL") this.criteresTri = constants.criteresTriGeneraux.pertinence;
@@ -299,7 +310,6 @@ export class documentHandlerBase {
   updateFacette(crit?:string) {
     // Function that updates the facet for the date filter according either 
     // to a criterium passed as argument or to the sorting field.
-
     if (crit) {
       this.recherche.sort = crit;
     }
@@ -318,6 +328,10 @@ export class documentHandlerBase {
         this.recherche.filtres[0].facette = "DATE_SIGNATURE";
       }
     }
+  }
+
+  getFacette() {
+    return this.recherche.sort;
   }
 
   updateDate() {
@@ -353,6 +367,8 @@ export class documentHandlerBase {
       valRecherche += elt.valeur;
     }
 
+    // console.log(this.recherche);
+
     setValeurRecherche(valRecherche);
     setResultatsVariable(await getAgentChercheur().advanceSearchText(this.toObject()) as resultatsRecherche)
   }
@@ -368,8 +384,9 @@ export class documentHandlerBase {
 
   async searchAndShowResults() {
     const pluginInstance = LegifrancePlugin.instance;
+    console.log(this.recherche.pageNumber);
     await this.search();
-    pluginInstance.activateResultsView();
+    pluginInstance.activateResultsView(this);
   }
 
   async launchSearch() {
@@ -390,11 +407,10 @@ export class documentHandlerBase {
     } finally {
         waitingModal.close();
     }
-
   }
 }
 
-export class documentHandlerView extends documentHandlerBase {
+export class documentHandlerView extends documentSearchFieldsClass {
   view:ResearchTextView;
   recherche:champsRechercheAvancees;
   fond:string;

@@ -16,7 +16,7 @@ import { documentsListe, getDocumentsListe } from "globals/globals";
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
 export class ResearchTextView extends ItemView {
-  document:documentHandlerView;
+  documentFields:documentHandlerView;
   dateRecherche: dateHandler;
   recherche:champsRechercheAvancees;
   compteur:number;
@@ -36,7 +36,7 @@ export class ResearchTextView extends ItemView {
     this.agentChercheur = agentChercheur;
     this.plugin = plugin;
     this.dateRecherche = new dateHandler(this);
-    this.document = new documentHandlerView(this);
+    this.documentFields = new documentHandlerView(this);
     // this.initSearch();
   }
 
@@ -127,9 +127,9 @@ export class ResearchTextView extends ItemView {
     const fond = this.rechercheDiv.createEl("div");  
     fondField(this, fond);
 
-    if (this.document.fond == "") return;
+    if (this.documentFields.fond == "") return;
 
-    if (this.document.fond != "ALL") {
+    if (this.documentFields.fond != "ALL") {
       const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
       this.dateRecherche.champDate(dateDebut, "start");
   
@@ -149,7 +149,8 @@ export class ResearchTextView extends ItemView {
           .setButtonText("Valider")
           .setCta()
           .onClick(async () => {
-            await this.document.launchSearch();
+            this.documentFields.updatePageNumber(1);
+            await this.documentFields.launchSearch();
           }));
 
   }
@@ -161,10 +162,10 @@ export class ResearchTextView extends ItemView {
 
     fondField(this, this.rechercheDiv);
 
-    if (this.document.fond == "") return;
+    if (this.documentFields.fond == "") return;
 
-    if (this.document.recherche.champs.length <= 0) {
-      this.document.recherche.champs[0].criteres.push({
+    if (this.documentFields.recherche.champs.length <= 0) {
+      this.documentFields.recherche.champs[0].criteres.push({
         valeur: "", 
         typeRecherche:typeRecherche.keys().next().value, 
         proximite: 2,
@@ -172,7 +173,7 @@ export class ResearchTextView extends ItemView {
       });
     }
 
-    if (this.document.fond != "ALL" && this.document.fond != "CODE_ETAT" && this.document.fond != "CNIL" && this.document.fond != "") {
+    if (this.documentFields.fond != "ALL" && this.documentFields.fond != "CODE_ETAT" && this.documentFields.fond != "CNIL" && this.documentFields.fond != "") {
       const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
       this.dateRecherche.champDate(dateDebut, "start");
   
@@ -184,15 +185,16 @@ export class ResearchTextView extends ItemView {
       .setName("Recherche")
       .addText((text) =>
         text
-          .setValue(this.document.recherche.champs[0].criteres[0].valeur)
+          .setValue(this.documentFields.recherche.champs[0].criteres[0].valeur)
           .onChange(() => {
-            this.document.recherche.champs[0].criteres[0].valeur = text.getValue();
-            // // console.log(this.document.recherche.champs[0].criteres[0].valeur)
+            this.documentFields.recherche.champs[0].criteres[0].valeur = text.getValue();
+            // // console.log(this.documentFields.recherche.champs[0].criteres[0].valeur)
               })
             .inputEl.addEventListener('keypress', (event) => {
               if (event.key === 'Enter') {
                 event.preventDefault(); // Prevent default form submission
-                this.document.launchSearch(); // Call search function
+                this.documentFields.updatePageNumber(1);
+                this.documentFields.launchSearch(); // Call search function
                 this.onOpen();
               }
             }));
@@ -204,7 +206,7 @@ export class ResearchTextView extends ItemView {
           typeRechercheChamp.addOption(key, value)
         });
         typeRechercheChamp.onChange((value) => {
-          this.document.updateTypeRechercheChamp(0, 0, value);
+          this.documentFields.updateTypeRechercheChamp(0, 0, value);
         })
         
         })
@@ -214,29 +216,23 @@ export class ResearchTextView extends ItemView {
           });
 
           operateur.onChange((value) => {
-            this.document.criteresTri.operateur = value;
-            // console.log(this.document.criteresTri.operateur);
+            this.documentFields.criteresTri.operateur = value;
+            // console.log(this.documentFields.criteresTri.operateur);
           })
         })
   
       new Setting(this.rechercheDiv)
-        .setName("Trier par :")
-        .addDropdown(cb => {
-          cb
-            .addOption(criteresTriGeneraux.pertinence.pertinence, "Pertinence")
-            .addOptions(this.document.criteresTri)
-            .onChange(() => this.document.updateFacette(cb.getValue()));
-        })
         .addButton((btn) => {
           btn
           .setButtonText("Valider")
           .setCta()
           .onClick(async () => {
-            await this.document.launchSearch();
+            this.documentFields.updatePageNumber(1);
+            await this.documentFields.launchSearch();
             this.onOpen();
           })
         
-          if (this.document.fond == "") {
+          if (this.documentFields.fond == "") {
             btn.removeCta();
             btn.setDisabled(true);
           }

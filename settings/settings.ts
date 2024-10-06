@@ -24,7 +24,7 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	templateDecision: `---\ndate: {{date}}\njuridiction: {{juridiction}}\nformation: {{formation}}\nnom: {{titre}}\napport: \nnumero: {{numero}} \ncitation: {{citation}}\nlien: {{lien}}\ncontribution: {{contribution}}\ntags: \n---\n\n## Fiche et commentaire\n\n### Fiche d'arrêt \n\n{{ faits }}\n\n{{ procedure }}\n\n{{ moyens }}\n\n{{ question }}\n\n{{ solution }}\n\n### Commentaire\n\n## Décision \n\n{{texteIntegral}}`,
 	templateDocument: `---\ndate: {{date}}\norigine: {{origine}}\nnom: {{titre}}\napport: \nnumero: {{numero}} \nlien: {{lien}}\ncontribution: {{contribution}}\ntags: \n---\n\n## Notes\n\n## Document\n\n{{texteIntegral}}`,
 	fileTitle: '{{id}}',
-	maxResults: 20,
+	maxResults: 25,
 	dossierBase: "/",
 	pageResultats: false
 }
@@ -144,15 +144,21 @@ export class LegifranceSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Nombre de résultats maximum')
 			.setDesc('Nombre de résultats maximum')
-			.addSlider(cb => cb
-				.setLimits(5, 50, 5)
-				.setValue(this.plugin.settings.maxResults)
-				.onChange(async (value) => {
-					this.plugin.settings.maxResults = value;
-					await this.plugin.saveSettings();
-				})
-				.setDynamicTooltip()
-			);
+			.addDropdown(cb => {
+				cb
+					.addOptions({
+						"10": "10",
+						"25": "25",
+						"50": "50",
+						"100": "100"
+						})
+					.setValue(this.plugin.settings.maxResults.toString())
+					.onChange(async (value) => {
+						this.plugin.settings.maxResults = Number(value);
+						await this.plugin.saveSettings();
+					})
+			})
+			
 
 		containerEl.createEl("h2", {text: "Dossiers"});
 
