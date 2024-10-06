@@ -41,7 +41,7 @@ export async function getDecisionInfo(document:Decision, valeurRecherche:string,
 	// Variable qui contient la réponse de la requête 
 	const response:reponseDocument = await apiClient.fetchText(document, valeurRecherche) as reponseDocument; // requête à l'API
 
-	console.log(response);
+	// console.log(response);
 
 	infoDocument.titre = removeTags(document.titre);
 	// Texte intégral au format markdown

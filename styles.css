@@ -7,6 +7,20 @@ If your plugin does not need CSS, delete this file.
 
 */
 
+:root {
+    --result-background-light: #f0f0f0; /* Light theme background */
+    --result-background-dark: #3a3a3a; /* Dark theme background */
+}
+
+.theme-light {
+    --result-background: var(--result-background-light);
+}
+
+.theme-dark {
+    --result-background: var(--result-background-dark);
+}
+
+
 mark {
     background-color: beige;
     padding: 1px;
@@ -25,4 +39,26 @@ mark {
 
 .infoDecision {
     font-weight: bold;
+}
+
+.resultat-document-container {
+    padding: 10px;
+}
+
+.resultat-document-container:hover {
+    background-color: var(--result-background);
+}
+
+.titre-document {
+    cursor: pointer;
+    margin-bottom: 5px;
+}
+
+.titre-document:hover {
+    text-decoration: underline;
+}
+
+
+.side-buttons {
+    color: blue;
 }

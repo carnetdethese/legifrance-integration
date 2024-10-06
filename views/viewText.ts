@@ -5,6 +5,7 @@ import { ResearchTextView, RESEARCH_TEXT_VIEW } from "./researchText";
 import { removeTags, replaceMark } from "lib/tools";
 import { documentDataStorage, findViewById } from "./viewsData";
 import { legalDocument } from "abstracts/document";
+import { documentsListe, getDocumentsListe } from "globals/globals";
 
 export const TEXT_READER_VIEW = "text-reader-view";
 
@@ -16,19 +17,20 @@ export class textReaderView extends ItemView {
   id:number;
   data:legalDocument;
 
-  constructor(plugin:LegifrancePlugin, leaf: WorkspaceLeaf) {
+  constructor(leaf: WorkspaceLeaf) {
     super(leaf);
-    this.plugin = plugin;
+    const pluginInstance = LegifrancePlugin.instance;
 
-    if (this.plugin.tabViewIdToShow && this.plugin.tabViewIdToShow != -1) {
-      this.id = this.plugin.tabViewIdToShow;
-      this.plugin.tabViewIdToShow = -1;
-      this.document = this.plugin.document[this.id];
+    
+    if (pluginInstance.tabViewIdToShow && pluginInstance.tabViewIdToShow != -1) {
+      this.id = pluginInstance.tabViewIdToShow;
+      pluginInstance.tabViewIdToShow = -1;
+      this.document = getDocumentsListe()[this.id];
     }
-    else this.id = this.plugin.instancesOfDocumentViews;
+    else this.id = pluginInstance.instancesOfDocumentViews;
 
-    if (findViewById(this.id, plugin.document) != undefined) {
-      this.document = findViewById(this.id, plugin.document) as documentDataStorage;
+    if (findViewById(this.id) != undefined) {
+      this.document = findViewById(this.id) as documentDataStorage;
       this.data = this.document.data;
     }
     else {
@@ -44,14 +46,14 @@ export class textReaderView extends ItemView {
       this.document = new documentDataStorage(0, this.data);
     }
 
-    // console.log(this.id, plugin.document);
+    // // console.log(this.id, plugin.document);
 
-    this.document.template = this.document.data.type == "jurisprudence" ? this.plugin.settings.templateDecision : this.plugin.settings.templateDocument;
+    this.document.template = this.document.data.type == "jurisprudence" ? pluginInstance.settings.templateDecision : pluginInstance.settings.templateDocument;
 
-    if (this.document != undefined) this.nouvelleNote = new newNote(this.plugin.app, this.document.template, this.plugin.settings.fileTitle, this.document.data, this.plugin.settings.dossierBase);
+    if (this.document != undefined) this.nouvelleNote = new newNote(pluginInstance.app, this.document.template, pluginInstance.settings.fileTitle, this.document.data, pluginInstance.settings.dossierBase);
 
-    if (this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW).length > 0){
-      this.researchTab = this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW)[0].view as ResearchTextView;
+    if (pluginInstance.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW).length > 0){
+      this.researchTab = pluginInstance.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW)[0].view as ResearchTextView;
     }
   }
 
@@ -88,7 +90,6 @@ export class textReaderView extends ItemView {
   }
 
   viewStatute(container:Element) {
-
     container.createEl("h2", { text: this.document.data.id.toString() });
     const infoBox = container.createEl("div", { cls: "showline"})
 
@@ -130,7 +131,7 @@ export class textReaderView extends ItemView {
     const infoBox = container.createEl("div", { cls: "showline"})
     infoBox.createEl("h3", {text: "Informations" })
 
-    if (isDecision(this.document.data)) {
+    if ('juridiction' in this.document.data) {
       infoBox.createEl("p", { text: `Juridiction : ${this.document.data.juridiction}`, cls:"infoDecision" } );
       infoBox.createEl("p", { text: `Date : ${this.document.data.date}`, cls:"infoDecision" } );
       infoBox.createEl("p", { text: `Numéro : ${this.document.data.numero}`, cls:"infoDecision" } );

@@ -4,22 +4,21 @@ import { RESEARCH_TEXT_VIEW, ResearchTextView } from 'views/researchText';
 import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
 import { documentDataStorage } from 'views/viewsData';
 import { LegifranceSettings, DEFAULT_SETTINGS, LegifranceSettingTab } from 'settings/settings';
-import { documentHandlerBase } from 'abstracts/searches';
+import { documentHandlerBase, resultatsRecherche } from 'abstracts/searches';
 import { SEARCH_RESULT_VIEW, SearchResultView } from 'views/resultsView';
+import { documentsListe, getAgentChercheur, getDocumentsListe, globalSettings, setAgentChercheur, setDocumentsListe, setGlobalSettings } from 'globals/globals';
 
-// Defining global variables
-export let globalSettings:LegifranceSettings, agentChercheur:agentSearch;
+
+
 
 interface dataJson {
 	data:documentDataStorage[];
 	settings:LegifranceSettings;
 }
 
-
 export default class LegifrancePlugin extends Plugin {
 	static instance: LegifrancePlugin;
 	settings: LegifranceSettings;
-	document:Array<documentDataStorage>;
 	searchTab:ResearchTextView|null = null;
 	instancesOfDocumentViews:number;
 	activeLeaves:Set<number>;
@@ -29,17 +28,14 @@ export default class LegifrancePlugin extends Plugin {
 		LegifrancePlugin.instance = this;
 
 		// Assigning global variables 
-		globalSettings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-		agentChercheur = new agentSearch(globalSettings);
-
+		setGlobalSettings(Object.assign({}, DEFAULT_SETTINGS, await this.loadData()))
+		setAgentChercheur(new agentSearch(globalSettings))
 
 		await this.loadSettings();
 		this.activeLeaves = new Set();
 
-		this.instancesOfDocumentViews = this.document.length;
+		this.instancesOfDocumentViews = getDocumentsListe().length;
 		this.tabViewIdToShow = -1;
-
-
 
 		this.registerView(
 			SEARCH_RESULT_VIEW,
@@ -48,12 +44,12 @@ export default class LegifrancePlugin extends Plugin {
 
 		this.registerView(
 			RESEARCH_TEXT_VIEW,
-			(leaf) => new ResearchTextView(this, leaf, agentChercheur)
+			(leaf) => new ResearchTextView(this, leaf, getAgentChercheur())
 		);
 
 		this.registerView(
 			TEXT_READER_VIEW,
-			(leaf) => new textReaderView(this, leaf)
+			(leaf) => new textReaderView(leaf)
 		);
 
 		this.addRibbonIcon('scale', 'Légifrance', async (evt: MouseEvent) => {
@@ -114,13 +110,13 @@ export default class LegifrancePlugin extends Plugin {
         // Check for removed leaves
         for (const id of this.activeLeaves) {
             if (!currentActiveLeafIds.has(id)) {
-                console.log(`Leaf with ID ${id} has been closed`);
+                // // console.log(`Leaf with ID ${id} has been closed`);
                 this.activeLeaves.delete(id);
 				if (searchTab) {
 					searchTab.deleteActiveViewText();
 					searchTab.onOpen();
 				};
-				const view = this.document.find(l => l.id == id);
+				const view = documentsListe.find(l => l.id == id);
 				if (view) view.status = false;
             }
         }
@@ -146,28 +142,28 @@ export default class LegifrancePlugin extends Plugin {
 	async loadSettings() {
 		const data:dataJson = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
-		if (data.data && data.data.length > 0) this.document = data.data;
-		else this.document = [];
+		if (data.data && data.data.length > 0)  setDocumentsListe(data.data);
+		else setDocumentsListe([]);
 
-		if (agentChercheur) {
+		if (getAgentChercheur()) {
 			this.updateApiAgent(this.settings);
 		}
 	}
 
 	updateApiAgent(settings:LegifranceSettings) {
-		agentChercheur.settings = settings;
-		agentChercheur.dilaApi.updateConfig(settings);
+		getAgentChercheur().settings = settings;
+		getAgentChercheur().dilaApi.updateConfig(settings);
 	}
 
 	async saveSettings() {
 		const data:dataJson = {
-			data:this.document,
+			data:documentsListe,
 			settings:this.settings
 		}
 
 		await this.saveData(data);
 
-		if (agentChercheur) {
+		if (getAgentChercheur()) {
 			this.updateApiAgent(this.settings);
 		}
 	}
@@ -191,13 +187,11 @@ export default class LegifrancePlugin extends Plugin {
 	}
 
 	async activateTextReaderView() {
-		if (this.document.length == 0) return;
+		if (documentsListe.length == 0) return;
 		this.saveSettings();
 
 		const { workspace } = this.app;
-
 		let leaf: WorkspaceLeaf | null = null;
-
 		// Our view could not be found in the workspace, create a new leaf
 		leaf = workspace.getLeaf(true);
 		if (leaf) { await leaf.setViewState({ type: TEXT_READER_VIEW, active: true });  }
@@ -217,7 +211,12 @@ export default class LegifrancePlugin extends Plugin {
 			leaf = workspace.getLeaf(false);
 			if (leaf) { await leaf.setViewState({ type: SEARCH_RESULT_VIEW, active: true });  }
 		}
-		if (leaf) { workspace.revealLeaf(leaf); }
+
+		if (leaf) { 
+			workspace.revealLeaf(leaf); 
+			const view = leaf.view as SearchResultView;
+			view.onOpen();
+		}
 	}
 
 

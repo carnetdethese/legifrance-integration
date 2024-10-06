@@ -15,7 +15,7 @@ export function fondField(view:ResearchTextView, fond:HTMLElement) {
         fondSelected
           .onChange(() => {
           view.document.updatingFond(fondSelected.getValue());
-          // console.log(view.document.recherche);
+          // // console.log(view.document.recherche);
           fondSelected.setValue(view.document.fond);
         })
           .setValue(view.document.fond)

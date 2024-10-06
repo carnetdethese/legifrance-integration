@@ -53,7 +53,7 @@ export class newNote {
         let filePath = "";
 
         if (this.data.type == "jurisprudence" && "juridiction" in this.data) {
-            console.log(this.data.type);
+            // // console.log(this.data.type);
             filePath = `${dossierBase}/${this.data.juridiction}/`;
         }
         else {
@@ -85,14 +85,14 @@ export class newNote {
 
         let filePath:string = this.folder + fileTitle;
 
-        console.log(filePath);
+        // // console.log(filePath);
 
         const templateContenuCompile = Handlebars.compile(this.template, {noEscape: true});
         const noteContent = templateContenuCompile(this.dataNote);
 
         if (this.data.type == "jurisprudence" && "juridiction" in this.data) {
             if (this.app.vault.getFolderByPath(this.folder + this.data.juridiction) === null) {
-                console.log("Dossier inexistant alors dossier créé.");
+                // console.log("Dossier inexistant alors dossier créé.");
                 this.app.vault.createFolder(this.folder + this.data.juridiction);
             }
         }

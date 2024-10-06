@@ -1,4 +1,4 @@
-import { Sommaire, resumeDocument } from "abstracts/document"
+import { Sommaire, legalDocument, resumeDocument } from "abstracts/document"
 import {  } from "abstracts/document";
 import * as constants from "api/constants";
 import { ResearchTextView } from "views/researchText";
@@ -7,11 +7,13 @@ import { PopUpModal } from "modals/popUp";
 import { App, Notice } from "obsidian";
 import { dateFormat } from "lib/dateHandler";
 import { statuteArticles, statuteSections } from "./loi";
-import { codeJuridiction } from "./decisions";
-import { MontrerResultatsModal } from "modals/ShowModal";
+import { codeJuridiction, findLink } from "./decisions";
+import { entreeDocument, MontrerResultatsModal } from "modals/ShowModal";
 import { agentSearch } from "api/utilities";
-import LegifrancePlugin, { agentChercheur, globalSettings } from "main";
+import LegifrancePlugin from "main";
 import { WaitModal } from "modals/WaitModal";
+import { getAgentChercheur, getGlobalSettings, getResultatsVariable, setResultatsVariable, setValeurRecherche } from "globals/globals";
+import { SearchResultView } from "views/resultsView";
 
 // Création des interfaces pour construire une recherche avancée.
 
@@ -86,7 +88,8 @@ export interface resultatsRecherche {
 		text: string,
 		origin:string,
         date?:string
-	}
+	},
+  fond: string
 }
 
 export interface reponseDocument {
@@ -102,6 +105,53 @@ export interface reponseDocument {
     }
 }
 
+export class resultatsRechercheClass {
+  resultats:resultatsRecherche;
+  fond:string;
+
+  constructor(data:resultatsRecherche) {
+    this.resultats = data;
+  }
+
+  listeResultats() {
+    const resultsDic:legalDocument[] = [];
+		
+		let contenuTexte:string, origine:string, date:string, cid:string, nature:string, type:string;
+
+        if (this.resultats && this.resultats.results && Array.isArray(this.resultats.results)) {
+          this.resultats.results.forEach(result => {
+				// Process each search result here
+				contenuTexte = result.text;
+				origine = result.origin;
+				nature = result.nature;
+				type = constants.codeJurisprudence.includes(origine) ? "jurisprudence" : "document";
+				if (result.date) { date = result.date }
+				result.titles.forEach((entree:entreeDocument) => {
+					if (entree.cid) cid = entree.cid;
+						resultsDic.push({
+							fond: this.fond,
+							type: type,
+							titre: entree.title,
+							id: entree.id,
+							texte: contenuTexte,
+							lien: findLink(origine, entree.id),
+							origin:origine,
+							nature:nature,
+							date:date,
+							cid:cid
+						});
+					});
+			});
+		} else {
+			console.error('Réponse invalide ou manquante à la requête.');
+		}
+		return resultsDic
+  }
+
+}
+
+
+
 // Classes et fonctions pour mieux intégrer les recherches avancées dans les fonds. Les classes devraient disposer :
 // - D'une fonction de mise à jour automatique des champs en fonction des fonds selectionnées (donc renvoyer, par exemple, une liste avec les critères de tri applicables à chaque collection).
 
@@ -113,7 +163,7 @@ export class documentHandlerBase {
   constructor() {
     this.recherche = {
       filtres: [],
-      pageSize: globalSettings.maxResults,
+      pageSize: getGlobalSettings().maxResults,
       sort: "",
       // operateur: operateursRecherche.keys().next().value,
       typePagination: "DEFAUT",
@@ -260,11 +310,11 @@ export class documentHandlerBase {
     if (this.recherche.filtres.length > 0) {
       if (constants.codeJurisprudence.includes(this.fond)) this.recherche.filtres[0].facette = "DATE_DECISION";
       else if (this.recherche.sort.toLowerCase().includes("publication")) {
-        console.log("publication");
+        // console.log("publication");
         this.recherche.filtres[0].facette = "DATE_PUBLICATION";
       }
       else if (this.recherche.sort.toLowerCase().includes("signature") || this.fond == "ACCO") {
-        console.log("signature");
+        // console.log("signature");
         this.recherche.filtres[0].facette = "DATE_SIGNATURE";
       }
     }
@@ -275,7 +325,7 @@ export class documentHandlerBase {
   }
 
   showSearch() {
-    console.log(this.toString());
+    // console.log(this.toString());
     return
   }
 
@@ -296,19 +346,30 @@ export class documentHandlerBase {
     return 'true';
   }
 
+  async search() {
+    let valRecherche = ""
+
+    for (const elt of this.recherche.champs[0].criteres) {
+      valRecherche += elt.valeur;
+    }
+
+    setValeurRecherche(valRecherche);
+    setResultatsVariable(await getAgentChercheur().advanceSearchText(this.toObject()) as resultatsRecherche)
+  }
+
   async searchAndShowModal() {
     const pluginInstance = LegifrancePlugin.instance;
     const pluginApp = pluginInstance.app;
   
-    const searchResult = await agentChercheur.advanceSearchText(this.toObject()) as resultatsRecherche;
+    await this.search();
   
-    let valeurRecherche = "";
-  
-    for (const elt of this.recherche.champs[0].criteres) {
-      valeurRecherche += elt.valeur;
-    }
-  
-    new MontrerResultatsModal(pluginApp, pluginInstance, searchResult,valeurRecherche, agentChercheur, false, this.fond).open();
+    new MontrerResultatsModal(pluginApp, pluginInstance, false, this.fond).open();
+  }
+
+  async searchAndShowResults() {
+    const pluginInstance = LegifrancePlugin.instance;
+    await this.search();
+    pluginInstance.activateResultsView();
   }
 
   async launchSearch() {
@@ -321,8 +382,8 @@ export class documentHandlerBase {
     waitingModal.open();
 
     try {
-      this.searchAndShowModal();
-
+      if (pluginInstance.settings.pageResultats == true) this.searchAndShowResults();
+      else this.searchAndShowModal();
     } catch (error) {
         console.error('Error performing search:', error);
         new Notice('Une erreur est survenue durant la requête. Veuillez vérifier vos identifiants et réessayer.');
@@ -331,8 +392,6 @@ export class documentHandlerBase {
     }
 
   }
-
-
 }
 
 export class documentHandlerView extends documentHandlerBase {

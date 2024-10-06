@@ -19,7 +19,7 @@ export class agentSearch {
   }
 
   async advanceSearchText(search:rechercheAvStructure) {
-    console.log(search);
+    // console.log(search);
     const requestOptions = {
       path: "/search",
       method: "POST",
@@ -50,7 +50,7 @@ export class agentSearch {
 
   defineParamConsult(valeurRecherche:string, document:legalDocument | Decision | legalStatute, date?:string) {
     let result;
-    console.log(document.fond);
+    // console.log(document.fond);
 
     if (document.nature == "CODE") {
       result = {

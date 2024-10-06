@@ -28,7 +28,7 @@ export async function getStatuteInfo(document:legalStatute, valeurRecherche:stri
     infoDocument.titre = removeTags(infoDocument.titre);
     infoDocument.texteIntegral = "";
 
-    console.log(response);
+    // console.log(response);
 
     // Tri des sections en fonction du numéro des articles. Les réponses qui sortent de l'API sont mélangées.
     response.sections?.sort((a,b) => {

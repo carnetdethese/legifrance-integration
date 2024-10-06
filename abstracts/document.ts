@@ -31,10 +31,11 @@ export interface Sommaire {
 }
 
 export async function getDocumentInfo(document:legalDocument, valeurRecherche:string, apiClient:agentSearch) {
+
 	// objet Document qui récupère une copie de l'objet passé en argument
 	const infoDocument:legalDocument = document;
 
-	console.log(valeurRecherche);
+	// console.log(valeurRecherche);
 
 	if (codeJurisprudence.includes(document.origin)) {
 		return getDecisionInfo(document, valeurRecherche, apiClient);
@@ -48,7 +49,7 @@ export async function getDocumentInfo(document:legalDocument, valeurRecherche:st
 	// Variable qui contient la réponse de la requête
 	const response:reponseDocument = await apiClient.fetchText(document, valeurRecherche) as reponseDocument; // requête à l'API
 
-	console.log(response);
+	// console.log(response);
 	
 	return infoDocument
 }

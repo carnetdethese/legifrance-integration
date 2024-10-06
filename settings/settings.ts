@@ -13,6 +13,7 @@ export interface LegifranceSettings {
 	fileTitle:string;
 	maxResults:number;
 	dossierBase:string;
+	pageResultats:boolean;
 }
 
 export const DEFAULT_SETTINGS: LegifranceSettings = {
@@ -24,7 +25,8 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	templateDocument: `---\ndate: {{date}}\norigine: {{origine}}\nnom: {{titre}}\napport: \nnumero: {{numero}} \nlien: {{lien}}\ncontribution: {{contribution}}\ntags: \n---\n\n## Notes\n\n## Document\n\n{{texteIntegral}}`,
 	fileTitle: '{{id}}',
 	maxResults: 20,
-	dossierBase: "/"
+	dossierBase: "/",
+	pageResultats: false
 }
 
 
@@ -163,8 +165,20 @@ export class LegifranceSettingTab extends PluginSettingTab {
 				cb.onChange(async (value) => {
 					this.plugin.settings.dossierBase = value;
 					await this.plugin.saveSettings();
-					console.log(this.plugin.settings.dossierBase)
+					// console.log(this.plugin.settings.dossierBase)
 				})
             });
+
+		new Setting(containerEl)
+			.setName("Consulter les résultats sur une page dédiée (beta)")
+			.setDesc("Remplace la fenêtre temporaire de résultats par une nouvelle page permettant de prendre le temps de choisir le document.")
+			.addToggle((cb) => {
+				cb.setValue(this.plugin.settings.pageResultats);
+				cb.onChange(async (value) => {
+					this.plugin.settings.pageResultats = value;
+					await this.plugin.saveSettings();
+					console.log(this.plugin.settings.pageResultats);
+				})
+			})
 	}
 }

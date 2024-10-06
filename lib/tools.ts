@@ -1,5 +1,8 @@
-export async function replaceMark(texte:string, container:HTMLElement) {
+
+
+export function replaceMark(texte:string, container:HTMLElement) {
     if (texte !== null) {
+
         texte.split(/(<mark>.*?<\/mark>)/g).forEach(segment => {
             if (segment.startsWith('<mark>')) {
                 // Create <mark> element for each <mark> tag

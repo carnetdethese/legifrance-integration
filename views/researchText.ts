@@ -11,6 +11,7 @@ import { WaitModal } from "modals/WaitModal";
 import { dateHandler } from "lib/dateHandler";
 import { newExpression, fondField } from "lib/searchUtils";
 import { deleteDocEntry } from "./viewsData";
+import { documentsListe, getDocumentsListe } from "globals/globals";
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
@@ -62,8 +63,6 @@ export class ResearchTextView extends ItemView {
     const headerDiv = container.createDiv(); // creating header part
     // Header setting, always shown.
 
-
-
     new Setting(headerDiv) 
       .addButton(cb => {
         cb.setButtonText("Recherche simple")
@@ -108,7 +107,7 @@ export class ResearchTextView extends ItemView {
     const historiqueContainer = container.createDiv();
     this.historiqueView(historiqueContainer);
 
-    if (this.activeViewLeaf && this.plugin.document.length > 0) {
+    if (this.activeViewLeaf && documentsListe.length > 0) {
       creerUneNouvelleNote(this.activeViewLeaf, this.listResults);
     }  
   }
@@ -188,7 +187,7 @@ export class ResearchTextView extends ItemView {
           .setValue(this.document.recherche.champs[0].criteres[0].valeur)
           .onChange(() => {
             this.document.recherche.champs[0].criteres[0].valeur = text.getValue();
-            // console.log(this.document.recherche.champs[0].criteres[0].valeur)
+            // // console.log(this.document.recherche.champs[0].criteres[0].valeur)
               })
             .inputEl.addEventListener('keypress', (event) => {
               if (event.key === 'Enter') {
@@ -216,7 +215,7 @@ export class ResearchTextView extends ItemView {
 
           operateur.onChange((value) => {
             this.document.criteresTri.operateur = value;
-            console.log(this.document.criteresTri.operateur);
+            // console.log(this.document.criteresTri.operateur);
           })
         })
   
@@ -246,31 +245,32 @@ export class ResearchTextView extends ItemView {
   }
 
   historiqueView(container:HTMLElement) {
+    const pluginInstance = LegifrancePlugin.instance;
     let value:string = "-1";
     container.createEl("h5", {text: "Historique"});
 
-    if (this.plugin.document.length == 0) container.createEl("p", {text: "Rien à afficher. Et si vous faisiez une recherche ?"});
+    if (getDocumentsListe().length == 0) container.createEl("p", {text: "Rien à afficher. Et si vous faisiez une recherche ?"});
 
-      for (let doc of this.plugin.document) {
+      for (let doc of getDocumentsListe()) {
         new Setting(container)
           .setName(doc.data.id)
           .setDesc(`${doc.data.titre}`)
           .addExtraButton(cb => cb 
             .setIcon('external-link')
-            .onClick(() => {   
-              this.plugin.tabViewIdToShow = doc.id;
+            .onClick(() => {
+              pluginInstance.tabViewIdToShow = doc.id;
               doc.status = true;
-              this.plugin.activateTextReaderView();
+              pluginInstance.activateTextReaderView();
               this.onOpen();
             })
           )
           .addExtraButton(cb => cb
             .setIcon('x')
             .onClick(() => {
-              deleteDocEntry(doc.id, this.plugin.document);
+              deleteDocEntry(doc.id);
               this.plugin.saveSettings();
               this.onOpen();
-              // console.log(this.plugin.document.length);
+              // // console.log(documentsListe.length);
               this.plugin.instancesOfDocumentViews -= 1;
             })
           )

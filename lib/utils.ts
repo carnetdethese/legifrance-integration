@@ -5,7 +5,7 @@ import { dateFormat } from "./dateHandler";
 
 export function ajoutBouton(view:textReaderView, element:HTMLElement) {
   const ficheArretChamp = view.nouvelleNote.champFiche;
-  // console.log(ficheArretChamp);
+  // // console.log(ficheArretChamp);
 
   // Loop through each property of FicheArretChamp interface
   for (const property in ficheArretChamp) {
