@@ -1,9 +1,9 @@
 import { getDocumentInfo, legalDocument } from "abstracts/document";
-import { documentSearchFieldsClass, resultatsRecherche, resultatsRechercheClass } from "abstracts/searches";
-import { getAgentChercheur, getDocumentsListe, getResultatsVariable, getValeurRecherche } from "globals/globals";
+import { documentSearchFieldsClass, resultatsRechercheClass, sectionsResultats } from "abstracts/searches";
+import { getAgentChercheur, getResultatsVariable, getValeurRecherche } from "globals/globals";
 import { replaceMark } from "lib/tools";
 import { isArray } from "lodash";
-import { ItemView, Notice, Setting, WorkspaceLeaf } from "obsidian";
+import { ItemView, setIcon, Setting, WorkspaceLeaf } from "obsidian";
 import { addView } from "./viewsData";
 import LegifrancePlugin from "main";
 import { criteresTriGeneraux } from "api/constants";
@@ -62,17 +62,25 @@ export class SearchResultView extends ItemView {
 
         const titre = replaceMark(resultat.titre, document.createElement('b'));
         titre.classList.add('titre-document');
+        titre.addEventListener('click', () => {
+          console.log(resultat)
+          this.selectedDocument(resultat.id);
+        })
+        setIcon(resultatContainer, 'file-text');
         resultatContainer.appendChild(titre);
         resultatContainer.createEl('br');
 
-        const contenu = replaceMark(resultat.texte, document.createElement('small'));
-        resultatContainer.appendChild(contenu);
+        if (resultat.texte) {
+          const contenu = replaceMark(resultat.texte, document.createElement('p'));
+          contenu.classList.add('extraitContainer');
+          resultatContainer.appendChild(contenu);
+        }
+
+        if (resultat.sections) {
+          this.sectionsExtraits(resultat.sections, resultatContainer);
+        }
 
         resultatsContent.appendChild(resultatContainer);
-        resultatContainer.addEventListener('click', () => {
-          new Notice(resultat.titre);
-          this.selectedDocument(resultat.id);
-        })
 
       });
     }
@@ -88,6 +96,7 @@ export class SearchResultView extends ItemView {
   async selectedDocument(id:string) {
     const pluginInstance = LegifrancePlugin.instance;
     const selectedDocument = this.resultatsComplet.find(elt => elt.id == id) as legalDocument
+
     await getDocumentInfo(selectedDocument, getValeurRecherche(), getAgentChercheur());
 
     addView(this.resultatsComplet.find(elt => elt.id == id) as legalDocument);
@@ -97,8 +106,6 @@ export class SearchResultView extends ItemView {
 
 
   navigationPage(container:HTMLElement) {
-
-    const pluginInstance = LegifrancePlugin.instance;
     const pageNb = this.doc.getCurrentPageNumber();
     const totalResults = getResultatsVariable().totalResultNumber;
     const totalPageNb = Math.ceil(totalResults / this.doc.getPageSize())
@@ -133,6 +140,7 @@ export class SearchResultView extends ItemView {
         if (pageNb == 1) cb.setDisabled(true);
         cb
           .setButtonText("<")
+          .setIcon('arrow-big-left')
           .onClick(() => {
             if (pageNb == 1) return;
             else this.doc.updatePageNumber(pageNb - 1);
@@ -143,12 +151,33 @@ export class SearchResultView extends ItemView {
         if (pageNb == totalPageNb) cb.setDisabled(true);
         cb
           .setButtonText(">")
+          .setIcon('arrow-big-right')
           .onClick(() => {
             if (pageNb == totalPageNb) return;
             else this.doc.updatePageNumber(pageNb + 1);
             this.doc.launchSearch();
           })
       })
+  }
+
+  sectionsExtraits(sections:sectionsResultats[], container:HTMLElement) {
+
+    sections.forEach((section) => {
+      section.extracts.forEach((extract) => {
+        if (extract.type == "articles") {
+
+          const extrait = container.createDiv();
+          extrait.classList.add("extraitContainer");
+
+          if (!extract.num) extrait.createEl('b', { text: `Article`, cls: "lienArticle" })
+          else extrait.createEl('b', { text: `Article ${extract.num}`, cls: "lienArticle" })
+
+          extrait.createEl('br');
+          replaceMark(extract.values[0], extrait);
+          extrait.createEl('br');
+        }
+      })
+    })
   }
 
 }

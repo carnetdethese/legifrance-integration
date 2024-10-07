@@ -14,6 +14,7 @@ export interface LegifranceSettings {
 	maxResults:number;
 	dossierBase:string;
 	pageResultats:boolean;
+	fondSupp:boolean;
 }
 
 export const DEFAULT_SETTINGS: LegifranceSettings = {
@@ -26,7 +27,8 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	fileTitle: '{{id}}',
 	maxResults: 25,
 	dossierBase: "/",
-	pageResultats: false
+	pageResultats: false,
+	fondSupp:false
 }
 
 
@@ -175,6 +177,12 @@ export class LegifranceSettingTab extends PluginSettingTab {
 				})
             });
 
+
+		containerEl.createEl("h2", {text: "Zone de test"}).style.color = "red";
+
+		containerEl.createEl('p', {text: "N'activez ces options que si vous acceptez une dose (minimale) d'instabilité. L'ajout de fonds supplémentaires demande encore du travail, mais vous pouvez d'ores et déjà essayer (et me faire des retours 😄)"});
+
+
 		new Setting(containerEl)
 			.setName("Consulter les résultats sur une page dédiée (beta)")
 			.setDesc("Remplace la fenêtre temporaire de résultats par une nouvelle page permettant de prendre le temps de choisir le document.")
@@ -184,6 +192,18 @@ export class LegifranceSettingTab extends PluginSettingTab {
 					this.plugin.settings.pageResultats = value;
 					await this.plugin.saveSettings();
 					console.log(this.plugin.settings.pageResultats);
+				})
+			})
+
+		new Setting(containerEl)
+			.setName("Ajout de fonds supplémentaires (ALL, LODA_DATE, KALI, ACCO, JORF)")
+			.setDesc("Ajoute quelques fonds supplémentaires pour vos recherches (instable).")
+			.addToggle((cb) => {
+				cb.setValue(this.plugin.settings.fondSupp);
+				cb.onChange(async (value) => {
+					this.plugin.settings.fondSupp = value;
+					await this.plugin.saveSettings();
+					console.log(this.plugin.settings.fondSupp);
 				})
 			})
 	}

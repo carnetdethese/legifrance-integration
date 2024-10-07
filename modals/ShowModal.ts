@@ -1,15 +1,12 @@
 import { newNote } from "creation/newNote";
 import { App, SuggestModal, Notice } from "obsidian";
 import { legalDocument, getDocumentInfo } from "abstracts/document" ;
-import { findLink, Decision } from "abstracts/decisions";
 import LegifrancePlugin  from "main";
 import { replaceMark } from "lib/tools";
 import { agentSearch } from "api/utilities";
-import { resultatsRecherche, resultatsRechercheClass } from "abstracts/searches";
-import { legalStatute } from "abstracts/loi";
+import { resultatsRechercheClass } from "abstracts/searches";
 import { addView } from "views/viewsData";
-import { codeJurisprudence } from "api/constants";
-import { getAgentChercheur, getDocumentsListe, getResultatsVariable, getValeurRecherche } from "globals/globals";
+import { getAgentChercheur, getResultatsVariable, getValeurRecherche } from "globals/globals";
 
 export interface entreeDocument {
     title:string,
@@ -57,10 +54,10 @@ export class MontrerResultatsModal extends SuggestModal<legalDocument> {
 	async onChooseSuggestion(decision: legalDocument, evt: MouseEvent | KeyboardEvent) {
 
 		if (this.ALL_DOCUMENTS.find(elt => elt.id == decision.id) !== undefined) {
-			let documentContent:legalDocument | Decision | legalStatute;
-			let selectedDocument:legalDocument = this.ALL_DOCUMENTS.find(elt => elt.id == decision.id) as legalDocument;
+			let documentContent:legalDocument;
+			const selectedDocument:legalDocument = this.ALL_DOCUMENTS.find(elt => elt.id == decision.id) as legalDocument;
 
-			documentContent = await getDocumentInfo(selectedDocument, this.valeurRecherche, this.agentChercheur);
+			documentContent = await getDocumentInfo(selectedDocument, this.valeurRecherche, this.agentChercheur) as legalDocument;
 
 			if (this.createNote) {
 				new newNote(this.app, this.plugin.settings.templateDecision, this.plugin.settings.fileTitle, documentContent, this.plugin.settings.dossierBase).createNote();

@@ -1,19 +1,16 @@
-import { Sommaire, legalDocument, resumeDocument } from "abstracts/document"
+import { Attachment, Sommaire, legalDocument, resumeDocument, statuteArticles, statuteSections } from "abstracts/document"
 import {  } from "abstracts/document";
 import * as constants from "api/constants";
 import { ResearchTextView } from "views/researchText";
 import { getTodaysDate, startDateBeforeEndDate } from "lib/utils";
 import { PopUpModal } from "modals/popUp";
-import { App, Notice } from "obsidian";
+import { Notice } from "obsidian";
 import { dateFormat } from "lib/dateHandler";
-import { statuteArticles, statuteSections } from "./loi";
-import { codeJuridiction, findLink } from "./decisions";
 import { entreeDocument, MontrerResultatsModal } from "modals/ShowModal";
-import { agentSearch } from "api/utilities";
 import LegifrancePlugin from "main";
 import { WaitModal } from "modals/WaitModal";
-import { getAgentChercheur, getGlobalSettings, getResultatsVariable, setResultatsVariable, setValeurRecherche } from "globals/globals";
-import { SearchResultView } from "views/resultsView";
+import { getAgentChercheur, getGlobalSettings, setResultatsVariable, setValeurRecherche } from "globals/globals";
+import { findLink } from "./decisions";
 
 // Création des interfaces pour construire une recherche avancée.
 
@@ -61,16 +58,15 @@ export interface Criteres { // interface pour le champ : criteres. Peut y en avo
   typeRecherche:string
 }
 
-
 export interface noteDocumentChamp {
-  [key:string]:string | undefined | number | Sommaire[] | statuteArticles[] | statuteSections[ ],
+  [key:string]:string | undefined | number | Sommaire[] | statuteArticles[] | statuteSections[] | sectionsResultats[] | string[] | resumeDocument[] | Attachment,
   notes:string,
   interet: string,
   connexes:string
 }
 
 export interface ficheArretChamp {
-  [key:string]:string | undefined | number | Sommaire[] | statuteArticles[] | statuteSections[ ], 
+  [key:string]:string | undefined | number | Sommaire[] | statuteArticles[] | statuteSections[ ] | sectionsResultats[] | string[] | resumeDocument[] | Attachment, 
   faits:string,
   procedure:string,
   moyens:string,
@@ -80,31 +76,43 @@ export interface ficheArretChamp {
 
 export interface resultatsRecherche {
 	results: {
-        titles?: {
-            id?:string,
-            title?:string
-        }
-        nature?:string,
+      titles?: {
+          id?:string,
+          title?:string
+      }
+    nature?:string,
 		text: string,
 		origin:string,
-        date?:string
+    date?:string,
+    sections?:sectionsResultats[];
 	},
   totalResultNumber: number,
   fond: string
 }
 
 export interface reponseDocument {
-    text: {
-        texteHtml:string,
-        nature:string,
-        dateTexte:string,
-        natureJuridiction:string,
-        formation:string,
-        sommaire:resumeDocument[],
-        num:string,
-        urlCC:string
-    }
+    text?: legalDocument;
+    circulaire?: legalDocument;
 }
+
+// Les deux interfaces qui suivent servent à récupérer les différents extraits dans lesquels se trouvent les résultats à la recherche (dans le cas d'un code, texte législatif, etc.). Le premier contient le deuxième
+export interface sectionsResultats {
+  articles?:statuteArticles[];
+  dateVersion: string;
+  id:string;
+  title:string;
+  legalStatus:string;
+  extracts:extractsResultats[];
+}
+
+export interface extractsResultats {
+  id:string;
+  legalStatus:string;
+  num: number;
+  type:string;
+  values:string[];
+}
+
 
 export class resultatsRechercheClass {
   resultats:resultatsRecherche;
@@ -112,6 +120,7 @@ export class resultatsRechercheClass {
 
   constructor(data:resultatsRecherche) {
     this.resultats = data;
+    this.fond = "";
   }
 
   listeResultats() {
@@ -119,9 +128,11 @@ export class resultatsRechercheClass {
 		
 		let contenuTexte:string, origine:string, date:string, cid:string, nature:string, type:string;
 
-        if (this.resultats && this.resultats.results && Array.isArray(this.resultats.results)) {
-          this.resultats.results.forEach(result => {
+    if (this.resultats && this.resultats.results && Array.isArray(this.resultats.results)) {
+
+      this.resultats.results.forEach(result => {
 				// Process each search result here
+        
 				contenuTexte = result.text;
 				origine = result.origin;
 				nature = result.nature;
@@ -130,23 +141,26 @@ export class resultatsRechercheClass {
 				result.titles.forEach((entree:entreeDocument) => {
 					if (entree.cid) cid = entree.cid;
 						resultsDic.push({
-							fond: this.fond,
+							fond: origine,
 							type: type,
 							titre: entree.title,
 							id: entree.id,
 							texte: contenuTexte,
 							lien: findLink(origine, entree.id),
-							origin:origine,
-							nature:nature,
-							date:date,
-							cid:cid
+							origin: origine,
+							nature: nature,
+							date: date,
+							cid: cid,
+              sections: result.sections
 						});
 					});
-			});
+      });
 		} else {
 			console.error('Réponse invalide ou manquante à la requête.');
 		}
-		return resultsDic
+
+    console.log(resultsDic);
+		return resultsDic;
   }
 
 }
@@ -249,11 +263,12 @@ export class documentSearchFieldsClass {
     if (this.recherche.champs[champ].criteres[critere]) {
       this.recherche.champs[champ].criteres[critere].typeRecherche = type;
     }
-
     return this.recherche.champs[champ].criteres[critere].typeRecherche;
   }
 
-
+  getTypeRechercheChamp(champ:number, critere:number) {
+    return this.recherche.champs[champ].criteres[critere].typeRecherche;
+  }
 
   toObject() {
     if (this.recherche.filtres[0]){
@@ -284,7 +299,7 @@ export class documentSearchFieldsClass {
     this.fond = selection;
 
     // setting or resetting the date field according to the "fond"
-    if (["ALL", "CODE_ETAT", "CNIL"].includes(selection)) this.resetDate();
+    if (["ALL", "CODE_ETAT", "CNIL", "CIRC"].includes(selection)) this.resetDate();
     else if (["CETAT", "JURI", "CONSTIT"].includes(selection) || constants.codeLegalStatute.includes(selection)) this.updateDate();
     else this.updateDate();
 
@@ -345,10 +360,10 @@ export class documentSearchFieldsClass {
 
   async checkBeforeSearch() {
     const pluginInstance = LegifrancePlugin.instance;
-    let today = getTodaysDate();
-    let start = new dateFormat("1800", "1", "1");
+    const today = getTodaysDate();
+    const start = new dateFormat("1800", "1", "1");
 
-    if (this.fond != "ALL" && this.fond != "CODE_ETAT" && this.fond != "CNIL") {
+    if (this.fond != "ALL" && this.fond != "CODE_ETAT" && this.fond != "CNIL" && this.fond != "CIRC") {
       if (!this.recherche.filtres[0].dates.end.toString()) this.recherche.filtres[0].dates.end = today;
       if (!this.recherche.filtres[0].dates.start.toString()) this.recherche.filtres[0].dates.start = start.toString();
       
@@ -384,7 +399,7 @@ export class documentSearchFieldsClass {
 
   async searchAndShowResults() {
     const pluginInstance = LegifrancePlugin.instance;
-    console.log(this.recherche.pageNumber);
+    console.log(this.toObject());
     await this.search();
     pluginInstance.activateResultsView(this);
   }

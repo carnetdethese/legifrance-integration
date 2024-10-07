@@ -1,16 +1,13 @@
 import * as Handlebars from "handlebars";
-import { Decision } from "abstracts/decisions";
 import { App } from "obsidian";
-import { dataFiche  } from "api/utilities";
 import { legalDocument } from "abstracts/document";
-import { legalStatute } from "abstracts/loi";
 import { ficheArretChamp, noteDocumentChamp } from "abstracts/searches";
 
 // function isDecision(doc: legalDocument): doc is Decision {
 //     return (doc as Decision).juridiction !== undefined;
 // }
 
-export function isDecision(doc: any): doc is Decision {
+export function isDecision(doc: legalDocument): doc is legalDocument {
     return 'annee' in doc && 'juridiction' in doc && 'formation' in doc && 'urlCC' in doc && 'sommaires' in doc && 'abstract' in doc
 }
 
@@ -18,16 +15,16 @@ export class newNote {
     app:App;
     template:string;
     titreTemplate:string;
-    data:Decision | legalDocument | legalStatute;
+    data:legalDocument;
     folder:string;
     champFiche:ficheArretChamp | noteDocumentChamp;
     dataNote:Partial<ficheArretChamp> | Partial<noteDocumentChamp>;
 
 
-    constructor(app:App, template:string, templateTitre:string, data:Decision | legalDocument | legalStatute, dossierBase:string) {
+    constructor(app:App, template:string, templateTitre:string, data:legalDocument, dossierBase:string) {
         this.app = app;
         this.template = template;
-        this.data = data.type == "jurisprudence" ? data as Decision : data as legalStatute;
+        this.data = data.type == "jurisprudence" ? data as legalDocument : data as legalDocument;
         this.folder = this.folderSetting(dossierBase) || "";
         this.titreTemplate = templateTitre;
         

@@ -56,20 +56,26 @@ export const operateursRecherche = new Map<string, string>([ // Opérateur de ce
 
 // Pour l'instant, je bloque l'accès aux recherches des autres fonds le temps de finir le développement.
 
-export const codeFond = new Map<string, string>([ // Fond dans lequel la recherche sera effectuée
-	// ["ALL", "Tous les fonds"],
+export const codeFondBeta = new Map<string, string>([ // Fond dans lequel la recherche sera effectuée
+	["ALL", "Tous les fonds"],
 	// ["", ""],
-	["CETAT", "Juridictions administratives"],
+	["LODA_DATE", "Lois / Règlements"],
 	["CONSTIT", "Conseil constitutionnel"],
+	["CETAT", "Juridictions administratives"],
 	["JURI", "Juridictions judiciaires"],
 	// ["CODE_ETAT", "Codes"],
-	// ["JORF", "JORF"],
-	// ["CNIL", "CNIL"],
-	// ["LODA_ETAT", "LODA"],
 	// ["CIRC", "Circulaires"],
-	// ["ACCO", "Accords collectifs"],
 	// ["LEGI", "Législation"],
-	// ["KALI", "Conventions collectives"]
+	["CNIL", "CNIL"],
+	// ["ACCO", "Accords d'entreprise"],
+	["KALI", "Conventions collectives"],
+	["JORF", "Journal Officiel"]
+]);
+
+export const codeFond = new Map<string, string>([ // Fond dans lequel la 
+	["CONSTIT", "Conseil constitutionnel"],
+	["CETAT", "Juridictions administratives"],
+	["JURI", "Juridictions judiciaires"],
 ]);
 
 export const champRecherche = new Map<string, string>([ // Type du champ dans lequel chercher.

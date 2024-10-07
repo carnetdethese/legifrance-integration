@@ -72,6 +72,7 @@ export class DilaApiClient {
     }
 
     async fetch({ path, method = "POST", params, }: { path: string; method?: string; params?: object}):Promise<object> {
+
         const [routeName] = path.split("/").slice(-1);
         const token = await this.getAccessToken();
         const url = `${this.apiHost}/${path}`;
@@ -84,7 +85,7 @@ export class DilaApiClient {
             },
             method:method
         }
-        // console.log(`fetching route ${routeName} with ${RequestUrlParams.body}...`)
+        
         debug(`fetching route ${routeName} with ${RequestUrlParams.body}...`);
 
         const data = await requestUrl(RequestUrlParams).then((r:any)=> {

@@ -1,15 +1,20 @@
-import { documentSearchFieldsClass } from "abstracts/searches";
 import { Setting } from "obsidian";
 import * as constants from "api/constants"
 import { ResearchTextView } from "views/researchText";
+import LegifrancePlugin from "main";
 
 
 export function fondField(view:ResearchTextView, fond:HTMLElement) {
+  const pluginInstance = LegifrancePlugin.instance;
+  let codesFond = new Map<string, string>;
+
+  if (pluginInstance.settings.fondSupp) codesFond = constants.codeFondBeta;
+  else codesFond = constants.codeFond;
 
     new Setting(fond)
       .setName("Fond : ")
       .addDropdown((fondSelected) => {
-        constants.codeFond.forEach((value, key) => {
+        codesFond.forEach((value, key) => {
           fondSelected.addOption(key, value)
         });
         fondSelected
@@ -80,14 +85,16 @@ export function newExpression(view:ResearchTextView, container:HTMLElement, id:n
           }
         })
       );
-    
+  
     new Setting(container)
       .addDropdown((typeRechercheChamp) => {
         constants.typeRecherche.forEach((value, key) => {
-        typeRechercheChamp.addOption(key, value)
-        typeRechercheChamp.onChange((value) =>
-          view.documentFields.recherche.champs[0].criteres[id].typeRecherche = value
-        )});
+          typeRechercheChamp
+           .addOption(key, value)
+          typeRechercheChamp.onChange((value) =>
+            view.documentFields.updateTypeRechercheChamp(0, id, value)
+          )});
+        typeRechercheChamp.setValue(view.documentFields.getTypeRechercheChamp(0, id));
         })
       .addDropdown((operateur) => {
         constants.operateursRecherche.forEach((value, key) => {

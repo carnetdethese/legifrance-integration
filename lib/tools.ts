@@ -1,8 +1,6 @@
-
-
 export function replaceMark(texte:string, container:HTMLElement) {
-    if (texte !== null) {
 
+    if (texte !== null) {
         texte.split(/(<mark>.*?<\/mark>)/g).forEach(segment => {
             if (segment.startsWith('<mark>')) {
                 // Create <mark> element for each <mark> tag
@@ -33,4 +31,19 @@ export function replaceParaTags(str:string) {
     let newStr = str.replace(/(<p>)/ig, '\n')
     newStr = newStr.replace(/(<\/p>)/ig, '');
     return newStr;
+}
+
+export function addLineBreaks(str:string) {
+    const container = createEl('div');
+    // Split the string by newlines
+    const lines = str.split('\n');
+
+    // Create a <p> element for each line and append it to the container
+    lines.forEach(line => {
+        const p = document.createElement('p'); // Create a new <p> element
+        p.textContent = line; // Set the text content to the current line
+        container.appendChild(p); // Append the <p> to the container
+    });
+
+    return container
 }

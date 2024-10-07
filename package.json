@@ -1,6 +1,6 @@
 {
 	"name": "legifrance-integration",
-	"version": "1.2.1",
+	"version": "1.2.2",
 	"description": "Module d'intégration de l'API Légifrance dans l'environnement de travail Obsidian.",
 	"main": "main.js",
 	"scripts": {
@@ -18,8 +18,8 @@
 		"@types/react": "^18.3.0",
 		"@types/react-dom": "^18.3.0",
 		"@types/simple-oauth2": "^5.0.7",
-		"@typescript-eslint/eslint-plugin": "^5.29.0",
-		"@typescript-eslint/parser": "^5.29.0",
+		"@typescript-eslint/eslint-plugin": "^6.x",
+		"@typescript-eslint/parser": "^6.x",
 		"builtin-modules": "3.3.0",
 		"esbuild": "^0.17.3",
 		"obsidian": "latest",

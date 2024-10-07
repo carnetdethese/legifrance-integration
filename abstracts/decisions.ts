@@ -1,4 +1,4 @@
-import { Sommaire, legalDocument, resumeDocument } from "./document";
+import { legalDocument, resumeDocument } from "./document";
 import { reponseDocument } from "./searches";
 import { agentSearch } from "api/utilities";
 import { removeTags } from "lib/tools";
@@ -9,7 +9,10 @@ export const urlFond = new Map<string, string>([
 	["CONSTIT", "/cons/id/"],
 	["JURI", "/juri/id/"],
 	["LEGI", "/legi/id/"],
-	["JORF", "/jorf/id"]
+	["JORF", "/jorf/id"],
+	["ACCO", "/acco/id/"],
+	["CIRC", "/circulaire/id/"],
+	["KALI", "/conv_coll/id/"]
 ]);
 
 export const codeJuridiction = new Map<string, string>([
@@ -19,41 +22,36 @@ export const codeJuridiction = new Map<string, string>([
 	["COURS_APPEL", "Cour d'appel"]
 ]);
 
-export interface Decision extends legalDocument {
-	annee?:number;
-	juridiction?:string;
-	formation?: string;
-	urlCC?: string; // Lien vers le site du Conseil constitutionnel
-	sommaires?: Sommaire[];
-	abstract?:string;
-}
-
 const baseUrl = "https://www.legifrance.gouv.fr"
 
 export function findLink(origine:string, id:string) {
 	return baseUrl + urlFond.get(origine) + id	
 }
 
-export async function getDecisionInfo(document:Decision, valeurRecherche:string, apiClient:agentSearch):Promise<Decision> {
+export async function getDecisionInfo(document:legalDocument, valeurRecherche:string, apiClient:agentSearch):Promise<legalDocument | undefined> {
 	// objet Document qui récupère une copie de l'objet passé en argument
-	const infoDocument:Decision = document;
+	const infoDocument:legalDocument = document;
 
 	// Variable qui contient la réponse de la requête 
 	const response:reponseDocument = await apiClient.fetchText(document, valeurRecherche) as reponseDocument; // requête à l'API
 
-	// console.log(response);
+	console.log(response);
 
 	infoDocument.titre = removeTags(document.titre);
 	// Texte intégral au format markdown
 
-	infoDocument.texteIntegral = htmlToMarkdown(response.text.texteHtml);
+	if (!response.text) return;
+
+	if (response.text.texteHtml) infoDocument.texteIntegral = htmlToMarkdown(response.text.texteHtml);
 	infoDocument.texteIntegralHTML = response.text.texteHtml;
 
 	// Date au format YYYY-MM-DD
-	const dateDec = new Date(response.text.dateTexte)
-	const formattedDate = dateDec.toISOString().split('T')[0];
-	infoDocument.date = formattedDate;
-	infoDocument.annee = dateDec.getFullYear();
+	if (response.text.dateTexte) {
+		const dateDec = new Date(response.text.dateTexte)
+		const formattedDate = dateDec.toISOString().split('T')[0];
+		infoDocument.date = formattedDate;
+		infoDocument.annee = dateDec.getFullYear();
+	}
 
 	// Juridiction - je passe par une variable Map parce que certaines juridiction ne sont pas formattées comme je le veux !
 	if (response.text.natureJuridiction != null) {
@@ -77,11 +75,11 @@ export async function getDecisionInfo(document:Decision, valeurRecherche:string,
 
 	// Numéro de la décision. Si c'est le Conseil constitutionnel - on affiche "numéro natureContrôle".
 	if (document.origin == "CONSTIT") {
-		infoDocument.numero = `${removeTags(response.text.num)} ${response.text.nature}`;
+		if (response.text.num) infoDocument.numero = `${removeTags(response.text.num)} ${response.text.nature}`;
 		infoDocument.urlCC = response.text.urlCC;
 	}
 	else {
-		infoDocument.numero = removeTags(response.text.num);
+		if (response.text.num) infoDocument.numero = removeTags(response.text.num);
 	}
 
 	return infoDocument;

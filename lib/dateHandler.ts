@@ -46,7 +46,8 @@ export class dateHandler {
     }
 
     updateDate(dateObj: dateFormat, champ:string, valeur:string, type:string) {
-        let field = champ.toLowerCase() as keyof dateFormat;
+
+        const field = champ.toLowerCase() as keyof dateFormat;
        (dateObj[field] as string) = valeur.padStart(2, '0');
 
         if (!dateObj.annee && champ != "annee") new Notice("Veuillez définir une année de début.");
@@ -65,7 +66,7 @@ export class dateHandler {
             dateObj.mois = "";
             this.dropdownRef.get(`${type}jour`)?.setValue("");
             this.dropdownRef.get(`${type}mois`)?.setValue("");
-        };
+        }
 
         if (this.researchViewMod.documentFields.recherche.filtres[0]) {
             this.researchViewMod.documentFields.recherche.filtres[0].dates[type as keyof champDate] = dateObj;

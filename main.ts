@@ -8,9 +8,6 @@ import { documentSearchFieldsClass, resultatsRecherche } from 'abstracts/searche
 import { SEARCH_RESULT_VIEW, SearchResultView } from 'views/resultsView';
 import { documentsListe, getAgentChercheur, getDocumentsListe, globalSettings, setAgentChercheur, setDocumentsListe, setGlobalSettings } from 'globals/globals';
 
-
-
-
 interface dataJson {
 	data:documentDataStorage[];
 	settings:LegifranceSettings;

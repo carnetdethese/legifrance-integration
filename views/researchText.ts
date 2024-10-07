@@ -1,17 +1,16 @@
-import { ItemView, WorkspaceLeaf, Setting, Notice } from "obsidian";
-import { typeRecherche, operateursRecherche, codeLegalStatute, criteresTriGeneraux } from "api/constants";
+import { ItemView, WorkspaceLeaf, Setting } from "obsidian";
+import { typeRecherche, operateursRecherche } from "api/constants";
 import { agentSearch } from "api/utilities";
 import { champsRechercheAvancees } from "abstracts/searches";
 import { creerUneNouvelleNote } from "lib/utils";
-import { MontrerResultatsModal } from "modals/ShowModal";
 import LegifrancePlugin from "main";
 import { textReaderView } from "./viewText";
 import { documentHandlerView, resultatsRecherche } from "abstracts/searches";
-import { WaitModal } from "modals/WaitModal";
 import { dateHandler } from "lib/dateHandler";
 import { newExpression, fondField } from "lib/searchUtils";
 import { deleteDocEntry } from "./viewsData";
 import { documentsListe, getDocumentsListe } from "globals/globals";
+
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
@@ -125,11 +124,12 @@ export class ResearchTextView extends ItemView {
     this.activeResearchType = "advance";
 
     const fond = this.rechercheDiv.createEl("div");  
+    
     fondField(this, fond);
 
     if (this.documentFields.fond == "") return;
 
-    if (this.documentFields.fond != "ALL") {
+    if (this.documentFields.fond != "ALL" && this.documentFields.fond != "CIRC") {
       const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
       this.dateRecherche.champDate(dateDebut, "start");
   
@@ -164,6 +164,7 @@ export class ResearchTextView extends ItemView {
 
     if (this.documentFields.fond == "") return;
 
+
     if (this.documentFields.recherche.champs.length <= 0) {
       this.documentFields.recherche.champs[0].criteres.push({
         valeur: "", 
@@ -173,7 +174,7 @@ export class ResearchTextView extends ItemView {
       });
     }
 
-    if (this.documentFields.fond != "ALL" && this.documentFields.fond != "CODE_ETAT" && this.documentFields.fond != "CNIL" && this.documentFields.fond != "") {
+    if (this.documentFields.fond != "ALL" && this.documentFields.fond != "CODE_ETAT" && this.documentFields.fond != "CNIL" && this.documentFields.fond != "" && this.documentFields.fond != "CIRC") {
       const dateDebut = new Setting(this.rechercheDiv).setName("Date de début");
       this.dateRecherche.champDate(dateDebut, "start");
   
@@ -203,18 +204,18 @@ export class ResearchTextView extends ItemView {
     new Setting(this.rechercheDiv)
       .addDropdown((typeRechercheChamp) => {
         typeRecherche.forEach((value, key) => {
-          typeRechercheChamp.addOption(key, value)
+          typeRechercheChamp
+            .addOption(key, value)
+            .setValue(this.documentFields.getTypeRechercheChamp(0, 0))
         });
         typeRechercheChamp.onChange((value) => {
           this.documentFields.updateTypeRechercheChamp(0, 0, value);
         })
-        
         })
         .addDropdown((operateur) => {
           operateursRecherche.forEach((value, key) => {
             operateur.addOption(key, value)
           });
-
           operateur.onChange((value) => {
             this.documentFields.criteresTri.operateur = value;
             // console.log(this.documentFields.criteresTri.operateur);
@@ -242,12 +243,12 @@ export class ResearchTextView extends ItemView {
 
   historiqueView(container:HTMLElement) {
     const pluginInstance = LegifrancePlugin.instance;
-    let value:string = "-1";
+    // const value = "-1";
     container.createEl("h5", {text: "Historique"});
 
     if (getDocumentsListe().length == 0) container.createEl("p", {text: "Rien à afficher. Et si vous faisiez une recherche ?"});
 
-      for (let doc of getDocumentsListe()) {
+      for (const doc of getDocumentsListe()) {
         new Setting(container)
           .setName(doc.data.id)
           .setDesc(`${doc.data.titre}`)

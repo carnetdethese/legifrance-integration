@@ -1,19 +1,17 @@
-import { Decision } from "abstracts/decisions";
 import { legalDocument } from "abstracts/document";
-import { legalStatute } from "abstracts/loi";
 import { getDocumentsListe, popDocumentsList, pushDocumentsList, removeDocumentsList } from "globals/globals";
 
 export class documentDataStorage {
     id: number;
     status:boolean;
-    data: legalDocument | Decision | legalStatute;
+    data: legalDocument;
     template?:string;
 
-    constructor(id: number, data: legalDocument | Decision | legalStatute) {
+    constructor(id: number, data: legalDocument) {
         this.id = id;
         this.status = true;
-        if (data.type == "jurisprudence") this.data = data as Decision;
-        else this.data = data as legalStatute;
+        if (data.type == "jurisprudence") this.data = data as legalDocument;
+        else this.data = data as legalDocument;
     }
 }
 

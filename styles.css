@@ -20,15 +20,27 @@ If your plugin does not need CSS, delete this file.
     --result-background: var(--result-background-dark);
 }
 
-
 mark {
     background-color: beige;
     padding: 1px;
 }
 
+.view-text {
+    max-width: 700px;
+    width: 100%;
+    margin:auto;
+    
+}
+
 .showLine {
-    border: 1px;
-    border-color: black;
+    background-color: var(--background-primary); /* Use Obsidian's primary background color */
+    border: 2px solid var(--background-secondary); /* Subtle border */
+    border-radius: 8px; /* Rounded corners */
+    padding: 10px; /* Padding inside the box */
+    /* margin: 10px 0; /* Margin to separate from other elements */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+    transition: background-color 0.3s ease; /* Smooth transition for hover effect */
+    overflow-wrap: break-word;
 }
 
 .break {
@@ -50,6 +62,7 @@ mark {
 }
 
 .titre-document {
+    margin-left: 10px;
     cursor: pointer;
     margin-bottom: 5px;
 }
@@ -58,7 +71,16 @@ mark {
     text-decoration: underline;
 }
 
+.lienArticle {
+    color: black;
+}
 
-.side-buttons {
-    color: blue;
+.lienArticle:hover {
+    text-decoration: underline;
+    color: black;
+}
+
+.extraitContainer {
+    margin-top: 20px;
+    padding-left: 30px;
 }
