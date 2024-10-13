@@ -4,22 +4,22 @@ import { RESEARCH_TEXT_VIEW, ResearchTextView } from 'views/researchText';
 import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
 import { documentDataStorage } from 'views/viewsData';
 import { LegifranceSettings, DEFAULT_SETTINGS, LegifranceSettingTab } from 'settings/settings';
-import { documentSearchFieldsClass, resultatsRecherche } from 'abstracts/searches';
+import { documentSearchFieldsClass } from 'abstracts/searches';
 import { SEARCH_RESULT_VIEW, SearchResultView } from 'views/resultsView';
 import { documentsListe, getAgentChercheur, getDocumentsListe, globalSettings, setAgentChercheur, setDocumentsListe, setGlobalSettings } from 'globals/globals';
 
 interface dataJson {
-	data:documentDataStorage[];
-	settings:LegifranceSettings;
+	data: documentDataStorage[];
+	settings: LegifranceSettings;
 }
 
 export default class LegifrancePlugin extends Plugin {
 	static instance: LegifrancePlugin;
 	settings: LegifranceSettings;
-	searchTab:ResearchTextView|null = null;
-	instancesOfDocumentViews:number;
-	activeLeaves:Set<number>;
-	tabViewIdToShow:number;
+	searchTab: ResearchTextView | null = null;
+	instancesOfDocumentViews: number;
+	activeLeaves: Set<number>;
+	tabViewIdToShow: number;
 
 	async onload() {
 		LegifrancePlugin.instance = this;
@@ -65,15 +65,15 @@ export default class LegifrancePlugin extends Plugin {
 			id: "search-selection",
 			name: "Chercher la sélection",
 			editorCallback: (editor: Editor) => {
-			  const selection = editor.getSelection();
-			  const documentHandler = new documentSearchFieldsClass();
+				const selection = editor.getSelection();
+				const documentHandler = new documentSearchFieldsClass();
 
-			  documentHandler.updateValue(0, 0, selection);
-			  documentHandler.updateTypeRechercheChamp(0, 0, "EXACTE");
-			  documentHandler.updatingFond("ALL");
-			  documentHandler.launchSearch();
+				documentHandler.updateValue(0, 0, selection);
+				documentHandler.updateTypeRechercheChamp(0, 0, "EXACTE");
+				documentHandler.updatingFond("ALL");
+				documentHandler.launchSearch();
 			},
-		  });
+		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new LegifranceSettingTab(this.app, this));
@@ -89,37 +89,37 @@ export default class LegifrancePlugin extends Plugin {
 	}
 
 	handleLeafChange() {
-        const leaves = this.app.workspace.getLeavesOfType(TEXT_READER_VIEW);
+		const leaves = this.app.workspace.getLeavesOfType(TEXT_READER_VIEW);
 		const searchTab = this.getSearchTab();
-        const currentActiveLeafIds = new Set(leaves.map(l => {
+		const currentActiveLeafIds = new Set(leaves.map(l => {
 			const view = l.view as textReaderView;
 			return view.document.id;
 		}));
 
-        // Check for removed leaves
-        for (const id of this.activeLeaves) {
-            if (!currentActiveLeafIds.has(id)) {
-                // // console.log(`Leaf with ID ${id} has been closed`);
-                this.activeLeaves.delete(id);
+		// Check for removed leaves
+		for (const id of this.activeLeaves) {
+			if (!currentActiveLeafIds.has(id)) {
+				// // console.log(`Leaf with ID ${id} has been closed`);
+				this.activeLeaves.delete(id);
 				if (searchTab) {
 					searchTab.deleteActiveViewText();
 					searchTab.onOpen();
-				};
+				}
 				const view = documentsListe.find(l => l.id == id);
 				if (view) view.status = false;
-            }
-        }
+			}
+		}
 
-        // Update the active leaves set
-        this.activeLeaves = currentActiveLeafIds;
-    }
+		// Update the active leaves set
+		this.activeLeaves = currentActiveLeafIds;
+	}
 
 	onActiveLeafChange() {
 		const searchTab = this.getSearchTab();
 		const activeLeaf = this.app.workspace.getActiveViewOfType(textReaderView);
 
-		if (activeLeaf){
-			if (searchTab){
+		if (activeLeaf) {
+			if (searchTab) {
 				searchTab.setActiveViewText(activeLeaf);
 			}
 		}
@@ -129,9 +129,9 @@ export default class LegifrancePlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		const data:dataJson = await this.loadData();
+		const data: dataJson = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
-		if (data.data && data.data.length > 0)  setDocumentsListe(data.data);
+		if (data.data && data.data.length > 0) setDocumentsListe(data.data);
 		else setDocumentsListe([]);
 
 		if (getAgentChercheur()) {
@@ -139,15 +139,15 @@ export default class LegifrancePlugin extends Plugin {
 		}
 	}
 
-	updateApiAgent(settings:LegifranceSettings) {
+	updateApiAgent(settings: LegifranceSettings) {
 		getAgentChercheur().settings = settings;
 		getAgentChercheur().dilaApi.updateConfig(settings);
 	}
 
 	async saveSettings() {
-		const data:dataJson = {
-			data:documentsListe,
-			settings:this.settings
+		const data: dataJson = {
+			data: documentsListe,
+			settings: this.settings
 		}
 
 		await this.saveData(data);
@@ -159,10 +159,10 @@ export default class LegifrancePlugin extends Plugin {
 
 	async activateResearchTextView() {
 		const { workspace } = this.app;
-	
+
 		let leaf: WorkspaceLeaf | null = null;
 		const leaves = workspace.getLeavesOfType(RESEARCH_TEXT_VIEW);
-	
+
 		if (leaves.length > 0) {
 			// A leaf with our view already exists, use that
 			leaf = leaves[0];
@@ -170,7 +170,7 @@ export default class LegifrancePlugin extends Plugin {
 			// Our view could not be found in the workspace, create a new leaf
 			// in the right sidebar for it
 			leaf = workspace.getRightLeaf(false);
-			if (leaf) { await leaf.setViewState({ type: RESEARCH_TEXT_VIEW, active: true });  }
+			if (leaf) { await leaf.setViewState({ type: RESEARCH_TEXT_VIEW, active: true }); }
 		}
 		if (leaf) { workspace.revealLeaf(leaf); }
 	}
@@ -183,26 +183,26 @@ export default class LegifrancePlugin extends Plugin {
 		let leaf: WorkspaceLeaf | null = null;
 		// Our view could not be found in the workspace, create a new leaf
 		leaf = workspace.getLeaf(true);
-		if (leaf) { await leaf.setViewState({ type: TEXT_READER_VIEW, active: true });  }
+		if (leaf) { await leaf.setViewState({ type: TEXT_READER_VIEW, active: true }); }
 		if (leaf) { workspace.revealLeaf(leaf); }
 	}
 
-	async activateResultsView(searchFields:documentSearchFieldsClass) {
+	async activateResultsView(searchFields: documentSearchFieldsClass) {
 		const { workspace } = this.app;
-	
+
 		let leaf: WorkspaceLeaf | null = null;
 		const leaves = workspace.getLeavesOfType(SEARCH_RESULT_VIEW);
-	
+
 		if (leaves.length > 0) {
 			// A leaf with our view already exists, use that
 			leaf = leaves[0];
 		} else {
 			leaf = workspace.getLeaf(false);
-			if (leaf) { await leaf.setViewState({ type: SEARCH_RESULT_VIEW, active: true });  }
+			if (leaf) { await leaf.setViewState({ type: SEARCH_RESULT_VIEW, active: true }); }
 		}
 
-		if (leaf) { 
-			workspace.revealLeaf(leaf); 
+		if (leaf) {
+			workspace.revealLeaf(leaf);
 			const view = leaf.view as SearchResultView;
 			view.addDocument(searchFields);
 			view.onOpen();
@@ -210,9 +210,9 @@ export default class LegifrancePlugin extends Plugin {
 	}
 
 
-	getSearchTab():ResearchTextView | null {
+	getSearchTab(): ResearchTextView | null {
 		const leaves = this.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW);
-		let searchTab:ResearchTextView|null = null;
+		let searchTab: ResearchTextView | null = null;
 
 		if (leaves.length > 0) {
 			searchTab = leaves[0].view as ResearchTextView;

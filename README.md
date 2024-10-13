@@ -1,3 +1,5 @@
+# Légifrance Intégration - Module Obsidian
+
 Un tuto-vidéo est disponible ici :
 
 [![OBSIDIAN - Légifrance Intégration](https://img.youtube.com/vi/yfMnuPNtTqM/0.jpg)](https://www.youtube.com/watch?v=yfMnuPNtTqM)
@@ -31,23 +33,24 @@ Les captures d'écran peuvent différer de votre affichage en fonction du thème
 
 _Recherche simple :_
 
-<img src="./docs/images/recherche-simple.png" width=50% height=50%>
+<img src="./docs/images/recherche-simple.png" alt="recherche-simple" width=50% height=50%>
+
 
 _Historique :_
 
-<img src="./docs/images/historique.png" width=50% height=50%>
+<img src="./docs/images/historique.png" alt="" width=50% height=50%>
 
 _Affichage des résultats (mot recherché dans l'exemple : Constitution) :_
 
-<img src="./docs/images/affichage-resultats.png" width=50% height=50%>
+<img src="./docs/images/affichage-resultats.png" alt="" width=50% height=50%>
 
 _Affichage des résultats (bêta) :_
 
-<img src="./docs/images/resultats-nouveau.png" width=50% height=50%>
+<img src="./docs/images/resultats-nouveau.png" alt="" width=50% height=50%>
 
 _Création de la note automatiquement :_
 
-<img src="./docs/images/note-creee.png" width=50% height=50%>
+<img src="./docs/images/note-creee.png"  alt="" width=50% height=50%>
 
 ## Paramètres
 
@@ -61,7 +64,7 @@ _Création de la note automatiquement :_
     -   Modèle du titre des notes de jurisprudence ;
     -   Choix de nombre de résulats affichés (5 min, 50 max).
 
-<img src="./docs/images/parametres.png" width=50% height=50%>
+<img src="./docs/images/parametres.png"  alt="" width=50% height=50%>
 
 ### Les modèles
 
