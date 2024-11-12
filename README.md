@@ -127,9 +127,6 @@ Une fois le module validé par l'équipe d'Obsidian, il sera disponible directem
     -   [ ] _Parser_ de textes législatifs.
 -   [ ] Une prévisualisation des textes (peut-être sous la forme d'un pop-up lorsqu'on passe la souris au dessus d'un lien lié à Légifrance ?)
 
-## Discord
-
-Un serveur Discord vient d'ouvrir pour rassembler les juristes intéressés par la question du numérique de près ou de loin : https://discord.gg/nXavW4BTcW
 
 ## Soutien
 
