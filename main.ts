@@ -131,7 +131,7 @@ export default class LegifrancePlugin extends Plugin {
 
 	async loadSettings() {
 		const data: dataJson = await this.loadData();
-		console.log(data ? data : "No data yet."):
+		console.log(data ? data : "No data yet.");
 		
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data ? data.settings : data);
 
