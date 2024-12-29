@@ -1,4 +1,3 @@
-import { legalDocument } from "abstracts/document";
 import { resultatsRecherche } from "abstracts/searches";
 import { agentSearch } from "api/utilities";
 import { LegifranceSettings } from "settings/settings";

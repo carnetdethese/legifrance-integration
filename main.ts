@@ -26,6 +26,7 @@ export default class LegifrancePlugin extends Plugin {
 
 		// Assigning global variables 
 		setGlobalSettings(Object.assign({}, DEFAULT_SETTINGS, await this.loadData()))
+
 		setAgentChercheur(new agentSearch(globalSettings))
 
 		await this.loadSettings();
@@ -130,13 +131,18 @@ export default class LegifrancePlugin extends Plugin {
 
 	async loadSettings() {
 		const data: dataJson = await this.loadData();
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
+
+		if (!data) this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		else this.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
+
 		if (data.data && data.data.length > 0) setDocumentsListe(data.data);
 		else setDocumentsListe([]);
 
 		if (getAgentChercheur()) {
 			this.updateApiAgent(this.settings);
 		}
+
+
 	}
 
 	updateApiAgent(settings: LegifranceSettings) {
