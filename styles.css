@@ -84,3 +84,16 @@ mark {
     margin-top: 20px;
     padding-left: 30px;
 }
+
+
+.research-type {
+    display: flex;
+    justify-content: space-evenly;
+    gap: 1rem;
+
+    button {
+        padding: 1.5rem 0.5rem;
+        max-width: 10rem;
+        white-space: normal;
+    }
+}

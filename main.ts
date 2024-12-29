@@ -14,7 +14,7 @@ interface dataJson {
 }
 
 export default class LegifrancePlugin extends Plugin {
-	static instance: LegifrancePlugin;
+	static instance: LegifrancePlugin; 
 	settings: LegifranceSettings;
 	searchTab: ResearchTextView | null = null;
 	instancesOfDocumentViews: number;

@@ -15,8 +15,8 @@
 		"@types/lodash": "^4.17.0",
 		"@types/mustache": "^4.2.5",
 		"@types/node": "^16.11.6",
-		"@types/react": "^18.3.0",
-		"@types/react-dom": "^18.3.0",
+		"@types/react": "^18.3.18",
+		"@types/react-dom": "^18.3.5",
 		"@types/simple-oauth2": "^5.0.7",
 		"@typescript-eslint/eslint-plugin": "^6.x",
 		"@typescript-eslint/parser": "^6.x",
@@ -38,9 +38,9 @@
 		"lodash": "^4.17.21",
 		"mustache": "^4.2.0",
 		"node-fetch": "^3.3.2",
-		"react": "^18.3.0",
+		"react": "^18.3.1",
 		"react-datepicker": "^6.9.0",
-		"react-dom": "^18.3.0",
+		"react-dom": "^18.3.1",
 		"simple-oauth2": "^5.0.0"
 	}
 }
