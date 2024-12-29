@@ -131,9 +131,9 @@ export default class LegifrancePlugin extends Plugin {
 
 	async loadSettings() {
 		const data: dataJson = await this.loadData();
+		console.log(data.settings);
 
-		if (!data) this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-		else this.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings ? data.settings : data);
 
 		if (data.data && data.data.length > 0) setDocumentsListe(data.data);
 		else setDocumentsListe([]);
