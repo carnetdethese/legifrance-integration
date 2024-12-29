@@ -1,7 +1,7 @@
 {
 	"id": "legifrance-integration",
 	"name": "Légifrance Intégration",
-	"version": "1.2.5",
+	"version": "1.2.6",
 	"minAppVersion": "1.5.12",
 	"description": "Intégration de l'API Légifrance.",
 	"author": "hurj",
