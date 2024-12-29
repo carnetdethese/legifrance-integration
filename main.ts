@@ -135,7 +135,7 @@ export default class LegifrancePlugin extends Plugin {
 		
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data ? data.settings : data);
 
-		if (data.data && data.data.length > 0) setDocumentsListe(data.data);
+		if (data && data.data.length > 0) setDocumentsListe(data.data);
 		else setDocumentsListe([]);
 
 		if (getAgentChercheur()) {
