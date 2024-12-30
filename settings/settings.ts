@@ -27,7 +27,7 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	fileTitle: '{{id}}',
 	maxResults: 25,
 	dossierBase: "/",
-	pageResultats: false,
+	pageResultats: true,
 	fondSupp:false
 }
 
@@ -182,18 +182,6 @@ export class LegifranceSettingTab extends PluginSettingTab {
 
 		containerEl.createEl('p', {text: "N'activez ces options que si vous acceptez une dose (minimale) d'instabilité. L'ajout de fonds supplémentaires demande encore du travail, mais vous pouvez d'ores et déjà essayer (et me faire des retours 😄)"});
 
-
-		new Setting(containerEl)
-			.setName("Consulter les résultats sur une page dédiée (beta)")
-			.setDesc("Remplace la fenêtre temporaire de résultats par une nouvelle page permettant de prendre le temps de choisir le document.")
-			.addToggle((cb) => {
-				cb.setValue(this.plugin.settings.pageResultats);
-				cb.onChange(async (value) => {
-					this.plugin.settings.pageResultats = value;
-					await this.plugin.saveSettings();
-					console.log(this.plugin.settings.pageResultats);
-				})
-			})
 
 		new Setting(containerEl)
 			.setName("Ajout de fonds supplémentaires (ALL, LODA_DATE, KALI, ACCO, JORF)")
