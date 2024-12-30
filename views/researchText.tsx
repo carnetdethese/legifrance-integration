@@ -11,9 +11,9 @@ import { newExpression, fondField } from "lib/searchUtils";
 import { deleteDocEntry } from "./viewsData";
 import { documentsListe, getDocumentsListe } from "globals/globals";
 
-import { StrictMode } from 'react';
-import { Root, createRoot } from 'react-dom/client';
-import { ResearchView } from './components/ResearchView';
+import { StrictMode } from "react";
+import { Root, createRoot } from "react-dom/client";
+import { ResearchView } from "./components/ResearchView";
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
@@ -73,25 +73,6 @@ export class ResearchTextView extends ItemView {
 			</StrictMode>
 		);
 
-		// const baseContainer = this.containerEl.children[1];
-		// baseContainer.empty(); // making sure the view is refreshed everytime the function is called.
-
-		// const container = baseContainer.createDiv()
-		// container.style.maxWidth = "800px";
-		// container.style.width = "100%";
-		// container.style.margin = "auto"
-
-		// this.researchTypeButtons(container);
-
-		// this.rechercheDiv = container.createDiv(); // search div - alternating between simple or complex search
-
-		// if (this.activeResearchType == "simple") {
-		//   this.simpleSearchEngine();
-		// }
-		// else if (this.activeResearchType == "advance") {
-		//   this.advancedSearchEngine();
-		// }
-
 		// this.listResults = container.createDiv();
 		// const historiqueContainer = container.createDiv();
 		// this.historiqueView(historiqueContainer);
@@ -109,47 +90,17 @@ export class ResearchTextView extends ItemView {
 		this.root?.unmount();
 	}
 
-	advancedSearchEngine() {
-		this.rechercheDiv.empty();
-		this.activeResearchType = "advance";
-
-		const fond = this.rechercheDiv.createEl("div");
-
-		fondField(this, fond);
-
-		if (this.documentFields.fond == "") return;
-
-		if (
-			this.documentFields.fond != "ALL" &&
-			this.documentFields.fond != "CIRC"
-		) {
-			const dateDebut = new Setting(this.rechercheDiv).setName(
-				"Date de début"
-			);
-			this.dateRecherche.champDate(dateDebut, "start");
-
-			const dateFin = new Setting(this.rechercheDiv).setName(
-				"Date de fin"
-			);
-			this.dateRecherche.champDate(dateFin, "end");
-		}
-
-		const valuesRecherche = this.rechercheDiv.createEl("div");
-
-		for (let i = 0; i <= this.compteur; i++) {
-			newExpression(this, valuesRecherche, i);
-		}
-
-		new Setting(valuesRecherche).addButton((btn) =>
-			btn
-				.setButtonText("Valider")
-				.setCta()
-				.onClick(async () => {
-					this.documentFields.updatePageNumber(1);
-					await this.documentFields.launchSearch();
-				})
-		);
-	}
+	// So I have this thing that calls an updatePageNumber function but I have NO idea what for.
+	
+	// new Setting(valuesRecherche).addButton((btn) =>
+	// 	btn
+	// 		.setButtonText("Valider")
+	// 		.setCta()
+	// 		.onClick(async () => {
+	// 			this.documentFields.updatePageNumber(1);
+	// 			await this.documentFields.launchSearch();
+	// 		})
+	// );
 
 	simpleSearchEngine() {
 		this.rechercheDiv.empty();

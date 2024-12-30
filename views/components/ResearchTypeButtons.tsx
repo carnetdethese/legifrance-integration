@@ -3,19 +3,19 @@ import React from 'react';
 type ResearchType = 'simple' | 'avancee';
 
 interface ResearchTypeButtonsProps {
-    activeType: ResearchType;
+    type: ResearchType;
     handleClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+    activeType: ResearchType;
 }
 
-export const ResearchTypeButtons = ({ activeType, handleClick }: ResearchTypeButtonsProps) => {
+export const ResearchTypeButtons = ({ type, handleClick, activeType }: ResearchTypeButtonsProps) => {
 
     const researchTypes = {
         simple: "Recherche simple",
         avancee: "Recherche avancée",
     };
     return (
-        <button value={activeType} onClick={handleClick}>
-            {researchTypes[activeType]}
-        </button>
-    );
+        <button disabled={activeType === type} value={type} onClick={handleClick} className='button'>
+            {researchTypes[type]}
+        </button>)
 };
