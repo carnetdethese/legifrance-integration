@@ -141,8 +141,6 @@ export default class LegifrancePlugin extends Plugin {
 		if (getAgentChercheur()) {
 			this.updateApiAgent(this.settings);
 		}
-
-
 	}
 
 	updateApiAgent(settings: LegifranceSettings) {

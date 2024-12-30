@@ -25,7 +25,7 @@ export const ChampFond = () => {
 	return (
 		<>
 			<div className="search-criterium">
-				<label htmlFor="fond-field">Fond :</label>
+				<label htmlFor="fond-field">Fond</label>
 				<select
 					name="fond-field"
 					id="fond-field"
@@ -39,7 +39,7 @@ export const ChampFond = () => {
 				</select>
 			</div>
 			<div className="search-criterium">
-				<label>Opérateur général :</label>
+				<label>Opérateur général</label>
 				<select>
 					{Array.from(constants.operateursRecherche.entries()).map(
 						([k, v]) => (

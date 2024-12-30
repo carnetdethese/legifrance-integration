@@ -1,6 +1,7 @@
 import { act, useState } from "react";
 import { ResearchTypeButtons } from "./ResearchTypeButtons";
 import { ChampFond } from "./ChampFond";
+import { SimpleSearchEngine } from "./SimpleSearchEngine";
 
 export const ResearchView = () => {
 	const [activeResearchType, setActiveResearchType] = useState("simple");
@@ -24,6 +25,7 @@ export const ResearchView = () => {
 				</div>
 				
 				<ChampFond />
+				{activeResearchType == "simple" ? <SimpleSearchEngine /> : ""}
 			</div>
     
 		</>
