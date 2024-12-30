@@ -63,69 +63,42 @@ export class ResearchTextView extends ItemView {
 		this.activeViewLeaf = null;
 	}
 
-	researchTypeButtons(container) {
-		// console.log(e.target.value, this.activeResearchType);
-
-		// this.activeResearchType = e.target.value;
-
-		const headerDiv = container.createDiv(); // creating header part
-		// Header setting, always shown.
-
-		new Setting(headerDiv)
-			.addButton((cb) => {
-				cb.setButtonText("Recherche simple");
-				if (this.activeResearchType == "simple") cb.setDisabled(true);
-				cb.onClick(() => {
-					this.simpleSearchEngine();
-					this.onOpen();
-				});
-			})
-			.addButton((cb) => {
-				cb.setButtonText("Recherche avancée");
-				if (this.activeResearchType == "advance") cb.setDisabled(true);
-				cb.onClick(() => {
-					this.advancedSearchEngine();
-					this.onOpen();
-				});
-			});
-	}
-
 	async onOpen() {
 		// initializing the view
-		// this.root = createRoot(this.containerEl.children[1]);
+		this.root = createRoot(this.containerEl.children[1]);
 
-		// this.root.render(
-		// 	<StrictMode>
-		// 		<ResearchView />
-		// 	</StrictMode>
-		// );
+		this.root.render(
+			<StrictMode>
+				<ResearchView />
+			</StrictMode>
+		);
 
-		const baseContainer = this.containerEl.children[1];
-		baseContainer.empty(); // making sure the view is refreshed everytime the function is called.
+		// const baseContainer = this.containerEl.children[1];
+		// baseContainer.empty(); // making sure the view is refreshed everytime the function is called.
 
-		const container = baseContainer.createDiv()
-		container.style.maxWidth = "800px";
-		container.style.width = "100%";
-		container.style.margin = "auto"
+		// const container = baseContainer.createDiv()
+		// container.style.maxWidth = "800px";
+		// container.style.width = "100%";
+		// container.style.margin = "auto"
 
-		this.researchTypeButtons(container);
+		// this.researchTypeButtons(container);
 
-		this.rechercheDiv = container.createDiv(); // search div - alternating between simple or complex search
+		// this.rechercheDiv = container.createDiv(); // search div - alternating between simple or complex search
 
-		if (this.activeResearchType == "simple") {
-		  this.simpleSearchEngine();
-		}
-		else if (this.activeResearchType == "advance") {
-		  this.advancedSearchEngine();
-		}
+		// if (this.activeResearchType == "simple") {
+		//   this.simpleSearchEngine();
+		// }
+		// else if (this.activeResearchType == "advance") {
+		//   this.advancedSearchEngine();
+		// }
 
-		this.listResults = container.createDiv();
-		const historiqueContainer = container.createDiv();
-		this.historiqueView(historiqueContainer);
+		// this.listResults = container.createDiv();
+		// const historiqueContainer = container.createDiv();
+		// this.historiqueView(historiqueContainer);
 
-		if (this.activeViewLeaf && documentsListe.length > 0) {
-		  creerUneNouvelleNote(this.activeViewLeaf, this.listResults);
-		}
+		// if (this.activeViewLeaf && documentsListe.length > 0) {
+		//   creerUneNouvelleNote(this.activeViewLeaf, this.listResults);
+		// }
 	}
 
 	openViewText(id: string) {

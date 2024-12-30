@@ -9,6 +9,7 @@ export function fondField(view:ResearchTextView, fond:HTMLElement) {
   let codesFond = new Map<string, string>;
 
   if (pluginInstance.settings.fondSupp) codesFond = constants.codeFondBeta;
+  
   else codesFond = constants.codeFond;
 
     new Setting(fond)

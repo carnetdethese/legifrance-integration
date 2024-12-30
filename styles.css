@@ -85,15 +85,27 @@ mark {
     padding-left: 30px;
 }
 
+.search-criterium {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin: 5px;
+}
 
 .research-type {
     display: flex;
     justify-content: space-evenly;
     gap: 1rem;
+}
 
-    button {
-        padding: 1.5rem 0.5rem;
-        max-width: 10rem;
-        white-space: normal;
+.research-view-legifrance {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    select {
+        max-width: 15rem;
     }
 }
+
