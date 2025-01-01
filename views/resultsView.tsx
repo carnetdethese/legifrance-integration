@@ -10,6 +10,10 @@ import LegifrancePlugin from "main";
 import { criteresTriGeneraux } from "api/constants";
 import { testResults } from "api/testResults";
 
+import { StrictMode } from "react";
+import { Root, createRoot } from "react-dom/client";
+import { ResultsView } from "./components/results/ResultsView";
+
 export const SEARCH_RESULT_VIEW = "search-result-view";
 
 
@@ -18,10 +22,10 @@ export class SearchResultView extends ItemView {
   doc:documentSearchFieldsClass;
   fond:string;
   resultatsComplet:legalDocument[];
+  root: Root | null = null;
 
   constructor(leaf: WorkspaceLeaf) {
     super(leaf);
-    this.resultatsComplet = new resultatsRechercheClass(JSON.parse(testResults)).listeResultats();
   }
 
   addDocument(docu:documentSearchFieldsClass) {
@@ -42,62 +46,25 @@ export class SearchResultView extends ItemView {
   }
 
   async onOpen() {
+    const pageNb = this.doc.getCurrentPageNumber();
+    const totalResults = getResultatsVariable().totalResultNumber;
+    const totalPageNb = Math.ceil(totalResults / this.doc.getPageSize())
+    this.resultatsComplet = new resultatsRechercheClass(getResultatsVariable()).listeResultats();
+
+      this.root = createRoot(this.containerEl.children[1]);
+    
+        this.root.render(
+          <StrictMode>
+            <ResultsView results={this.resultatsComplet} totalResults={totalResults} totalPageNb={totalPageNb} />
+          </StrictMode>
+        );
+
     // if (!getResultatsVariable()) return;
-
-    const container = this.containerEl.children[1];
-    container.empty();
-
-    const titre = container.createEl("h2", { text: "Résultats" });
-    titre.style.textAlign = "center";
-    titre.style.marginBottom = "20px";
-
-    // this.resultatsComplet = new resultatsRechercheClass(getResultatsVariable()).listeResultats();
-    console.log(this.resultatsComplet);
-
-    const resultatsContent = container.createDiv();
-    resultatsContent.style.maxWidth = "700px";
-    resultatsContent.style.width = "100%";
-    resultatsContent.style.margin = "auto";
-
-    // this.navigationPage(resultatsContent);
-
-    if (this.resultatsComplet && this.resultatsComplet && isArray(this.resultatsComplet)) {
-      this.resultatsComplet.forEach(async (resultat, index) => {
-        const resultatContainer = createDiv();
-        resultatContainer.classList.add("resultat-document-container")
-
-        const titre = replaceMark(resultat.titre, document.createElement('b'));
-        titre.classList.add('titre-document');
-        titre.addEventListener('click', () => {
-          console.log(resultat)
-          this.selectedDocument(resultat.id);
-        })
-        setIcon(resultatContainer, 'file-text');
-        resultatContainer.appendChild(titre);
-        resultatContainer.createEl('br');
-
-        if (resultat.texte) {
-          const contenu = replaceMark(resultat.texte, document.createElement('p'));
-          contenu.classList.add('extraitContainer');
-          resultatContainer.appendChild(contenu);
-        }
-
-        if (resultat.sections) {
-          this.sectionsExtraits(resultat.sections, resultatContainer);
-        }
-
-        resultatsContent.appendChild(resultatContainer);
-
-      });
-    }
-
-    // this.navigationPage(resultatsContent);
   }
 
-  async onClose() {
-    // Nothing to clean up.
-
-  }
+	async onClose() {
+		this.root?.unmount();
+	}
 
   async selectedDocument(id:string) {
     const pluginInstance = LegifrancePlugin.instance;

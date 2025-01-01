@@ -3,14 +3,13 @@ import * as constants from "../../../api/constants";
 import { DatePicker } from "./DatePicker";
 import { SearchTerm } from "./SearchTerm";
 
-
-export const SimpleSearchEngine = ({ handleDateChange, handleSearchTermChange }) => {
+export const SimpleSearchEngine = ({ handleDateChange, handleSearchTermChange, handleKeyDown }) => {
 	const [counter, setCounter] = useState(0);
 
 	return (
 		<>
 			<DatePicker handleDateChange={handleDateChange} />
-			<SearchTerm key={0} handleSearchTermChange={handleSearchTermChange} />
+			<SearchTerm key={0} handleSearchTermChange={handleSearchTermChange} handleKeyDown={handleKeyDown}/>
 			<div className="setting-item">
 				<div className="setting-item-control">
 					<select className="dropdown">

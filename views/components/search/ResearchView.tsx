@@ -6,6 +6,8 @@ import { AdvancedSearchEngine } from "./AdvancedSearchEngine";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
 
 const SubmitButton = ({ handleLaunchSearchClick }) => {
+
+
 	return (
 		<div className="setting-item">
 			<div className="setting-item-control">
@@ -55,6 +57,10 @@ export const ResearchView = () => {
 		newSearch.updateValue(0,0,e.target.value);
 	}
 
+	function handleKeyDown(e) {
+		if (e.key == "Enter") handleLaunchSearchClick(); 
+	}
+
 	return (
 		<>
 			<div className="view-content">
@@ -75,7 +81,7 @@ export const ResearchView = () => {
 
 				<ChampFond handleFondSelect={handleFondSelect} />
 				{activeResearchType == "simple" ? (
-					<SimpleSearchEngine handleDateChange={handleDateChange} handleSearchTermChange={handleSearchTermChange} />
+					<SimpleSearchEngine handleDateChange={handleDateChange} handleSearchTermChange={handleSearchTermChange}handleKeyDown={handleKeyDown} />
 				) : (
 					<AdvancedSearchEngine handleDateChange={handleDateChange} />
 				)}
