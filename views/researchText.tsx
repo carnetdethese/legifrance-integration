@@ -2,18 +2,16 @@ import { ItemView, WorkspaceLeaf, Setting } from "obsidian";
 import { typeRecherche, operateursRecherche } from "api/constants";
 import { agentSearch } from "api/utilities";
 import { champsRechercheAvancees } from "abstracts/searches";
-import { creerUneNouvelleNote } from "lib/utils";
 import LegifrancePlugin from "main";
 import { textReaderView } from "./viewText";
-import { documentHandlerView, resultatsRecherche } from "abstracts/searches";
+import { resultatsRecherche } from "abstracts/searches";
+import { documentHandlerView } from "abstracts/searchHandler";
 import { dateHandler } from "lib/dateHandler";
-import { newExpression, fondField } from "lib/searchUtils";
 import { deleteDocEntry } from "./viewsData";
-import { documentsListe, getDocumentsListe } from "globals/globals";
 
 import { StrictMode } from "react";
 import { Root, createRoot } from "react-dom/client";
-import { ResearchView } from "./components/ResearchView";
+import { ResearchView } from "./components/search/ResearchView";
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
@@ -91,7 +89,7 @@ export class ResearchTextView extends ItemView {
 	}
 
 	// So I have this thing that calls an updatePageNumber function but I have NO idea what for.
-	
+
 	// new Setting(valuesRecherche).addButton((btn) =>
 	// 	btn
 	// 		.setButtonText("Valider")
@@ -106,8 +104,6 @@ export class ResearchTextView extends ItemView {
 		this.rechercheDiv.empty();
 		this.activeResearchType = "simple";
 		this.compteur = 0;
-
-		fondField(this, this.rechercheDiv);
 
 		if (this.documentFields.fond == "") return;
 

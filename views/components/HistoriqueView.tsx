@@ -1,5 +1,9 @@
+import { useEffect } from "react";
+import { getDocumentsListe } from "globals/globals";
+
 export const HistoriqueView = () => {
-    return <>
-        
-    </>
+    const documentsListe = getDocumentsListe();
+
+    return (<>
+    </>);
 }

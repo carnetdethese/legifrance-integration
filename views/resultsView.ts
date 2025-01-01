@@ -1,5 +1,6 @@
 import { getDocumentInfo, legalDocument } from "abstracts/document";
-import { documentSearchFieldsClass, resultatsRechercheClass, sectionsResultats } from "abstracts/searches";
+import { resultatsRechercheClass, sectionsResultats } from "abstracts/searches";
+import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import { getAgentChercheur, getResultatsVariable, getValeurRecherche } from "globals/globals";
 import { replaceMark } from "lib/tools";
 import { isArray } from "lodash";
@@ -7,8 +8,11 @@ import { ItemView, setIcon, Setting, WorkspaceLeaf } from "obsidian";
 import { addView } from "./viewsData";
 import LegifrancePlugin from "main";
 import { criteresTriGeneraux } from "api/constants";
+import { testResults } from "api/testResults";
 
 export const SEARCH_RESULT_VIEW = "search-result-view";
+
+
 
 export class SearchResultView extends ItemView {
   doc:documentSearchFieldsClass;
@@ -17,6 +21,7 @@ export class SearchResultView extends ItemView {
 
   constructor(leaf: WorkspaceLeaf) {
     super(leaf);
+    this.resultatsComplet = new resultatsRechercheClass(JSON.parse(testResults)).listeResultats();
   }
 
   addDocument(docu:documentSearchFieldsClass) {
@@ -37,7 +42,7 @@ export class SearchResultView extends ItemView {
   }
 
   async onOpen() {
-    if (!getResultatsVariable()) return; 
+    // if (!getResultatsVariable()) return;
 
     const container = this.containerEl.children[1];
     container.empty();
@@ -46,14 +51,15 @@ export class SearchResultView extends ItemView {
     titre.style.textAlign = "center";
     titre.style.marginBottom = "20px";
 
-    this.resultatsComplet = new resultatsRechercheClass(getResultatsVariable()).listeResultats();
+    // this.resultatsComplet = new resultatsRechercheClass(getResultatsVariable()).listeResultats();
+    console.log(this.resultatsComplet);
 
     const resultatsContent = container.createDiv();
     resultatsContent.style.maxWidth = "700px";
     resultatsContent.style.width = "100%";
     resultatsContent.style.margin = "auto";
 
-    this.navigationPage(resultatsContent);
+    // this.navigationPage(resultatsContent);
 
     if (this.resultatsComplet && this.resultatsComplet && isArray(this.resultatsComplet)) {
       this.resultatsComplet.forEach(async (resultat, index) => {
@@ -85,7 +91,7 @@ export class SearchResultView extends ItemView {
       });
     }
 
-    this.navigationPage(resultatsContent);
+    // this.navigationPage(resultatsContent);
   }
 
   async onClose() {
@@ -181,3 +187,6 @@ export class SearchResultView extends ItemView {
   }
 
 }
+
+
+

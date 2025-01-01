@@ -30,15 +30,14 @@ export class dateFormat {
 }
 
 // Classe qui permet d'assurer la manipulation de la date. 
-
 export class dateHandler {
     // Définitions des variables permettant de stocker la valeur de la date selectionnée.
     start: dateFormat;
     end: dateFormat;
-    researchViewMod:ResearchTextView; // Référence à la vue de recherche pour accéder à la valeur de la date et la mettre à jour.
+    researchViewMod?:ResearchTextView; // Référence à la vue de recherche pour accéder à la valeur de la date et la mettre à jour.
     dropdownRef: Map<string, DropdownComponent>;
 
-    constructor(researchView:ResearchTextView) {
+    constructor(researchView?:ResearchTextView) {
         this.researchViewMod = researchView;
         this.start = new dateFormat();
         this.end = new dateFormat();
@@ -68,11 +67,10 @@ export class dateHandler {
             this.dropdownRef.get(`${type}mois`)?.setValue("");
         }
 
-        if (this.researchViewMod.documentFields.recherche.filtres[0]) {
+        if (this.researchViewMod && this.researchViewMod.documentFields.recherche.filtres[0]) {
             this.researchViewMod.documentFields.recherche.filtres[0].dates[type as keyof champDate] = dateObj;
         }
     }
-
 
     handleDateChange(valeur:string, champ:string, type:string) {
         if (type == "start") {

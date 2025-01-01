@@ -1,5 +1,5 @@
-import LegifrancePlugin from "../../main";
-import * as constants from "../../api/constants";
+import LegifrancePlugin from "../../../main";
+import * as constants from "../../../api/constants";
 
 export const ChampFond = ({ handleFondSelect }) => {
 	const pluginInstance = LegifrancePlugin.instance;

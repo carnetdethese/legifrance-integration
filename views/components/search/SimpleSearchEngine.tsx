@@ -1,15 +1,11 @@
 import { React, useState } from "react";
-import * as constants from "../../api/constants";
+import * as constants from "../../../api/constants";
 import { DatePicker } from "./DatePicker";
 import { SearchTerm } from "./SearchTerm";
 
 
-export const SimpleSearchEngine = ({ handleDateChange }) => {
+export const SimpleSearchEngine = ({ handleDateChange, handleSearchTermChange }) => {
 	const [counter, setCounter] = useState(0);
-
-	function handleSearchTermChange(e) {
-		console.log(e.target.value);
-	}
 
 	return (
 		<>

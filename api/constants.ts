@@ -79,7 +79,7 @@ export const codeFond = new Map<string, string>([ // Fond dans lequel la
 ]);
 
 export const champRecherche = new Map<string, string>([ // Type du champ dans lequel chercher.
-	["ALL", "D"],
+	["ALL", ""],
 	["TITLE", ""],
 	["TABLE", ""],
 	["NOR", ""],
@@ -167,3 +167,23 @@ for (let i = currentYear+1; i >= 1899; i--) {
 	}
 }
 
+
+
+// Définition des filtres par fond
+
+export const filtresAll = {
+	origine: "FOND"
+}
+
+export const FiltresJorf = {
+	nature: "NATURE",
+	dateSignature: "DATE_SIGNATURE",
+	datePublication: "DATE_PUBLICATION",
+	ministere: "MINISTERE",
+	emetteur: "EMETTEUR",
+	nor: "NOR",
+	num: "NUM_TEXTE",
+	numArticle: "NUM_ARTICLE",
+	decoration: "DECORATION",
+	delegation: "DELEGATION"
+}

@@ -25,7 +25,6 @@ export class agentSearch {
 
     const result = await this.dilaApi.fetch(requestOptions);
 
-    // console.log(result);
     return result;
   }
 

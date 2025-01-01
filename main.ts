@@ -4,7 +4,7 @@ import { RESEARCH_TEXT_VIEW, ResearchTextView } from 'views/researchText';
 import { TEXT_READER_VIEW, textReaderView } from 'views/viewText';
 import { documentDataStorage } from 'views/viewsData';
 import { LegifranceSettings, DEFAULT_SETTINGS, LegifranceSettingTab } from 'settings/settings';
-import { documentSearchFieldsClass } from 'abstracts/searches';
+import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import { SEARCH_RESULT_VIEW, SearchResultView } from 'views/resultsView';
 import { documentsListe, getAgentChercheur, getDocumentsListe, globalSettings, setAgentChercheur, setDocumentsListe, setGlobalSettings } from 'globals/globals';
 
@@ -201,7 +201,7 @@ export default class LegifrancePlugin extends Plugin {
 			// A leaf with our view already exists, use that
 			leaf = leaves[0];
 		} else {
-			leaf = workspace.getLeaf(false);
+			leaf = workspace.getLeaf(true);
 			if (leaf) { await leaf.setViewState({ type: SEARCH_RESULT_VIEW, active: true }); }
 		}
 
