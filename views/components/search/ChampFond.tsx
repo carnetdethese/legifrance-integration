@@ -1,6 +1,8 @@
 import LegifrancePlugin from "../../../main";
 import * as constants from "../../../api/constants";
 
+
+
 export const ChampFond = ({ handleFondSelect }) => {
 	const pluginInstance = LegifrancePlugin.instance;
 	let codesFond = new Map<string, string>();

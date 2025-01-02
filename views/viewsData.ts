@@ -16,12 +16,12 @@ export class documentDataStorage {
 }
 
 // Function to add a new view and keep a reference to it.
-export async function addView(data: any): Promise<documentDataStorage> {
+export async function addView(data: legalDocument): Promise<documentDataStorage> {
+    
     const id = getDocumentsListe().length > 0 ? getDocumentsListe()[getDocumentsListe().length - 1].id + 1 : 1;
 
     const newView = new documentDataStorage(id, data);
     pushDocumentsList(newView);
-    // console.log(getDocumentsListe());
     return newView;
 }
 

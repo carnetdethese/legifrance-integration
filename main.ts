@@ -6,7 +6,7 @@ import { documentDataStorage } from 'views/viewsData';
 import { LegifranceSettings, DEFAULT_SETTINGS, LegifranceSettingTab } from 'settings/settings';
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import { SEARCH_RESULT_VIEW, SearchResultView } from 'views/resultsView';
-import { documentsListe, getAgentChercheur, getDocumentsListe, globalSettings, setAgentChercheur, setDocumentsListe, setGlobalSettings } from 'globals/globals';
+import { getAgentChercheur, globalSettings, setAgentChercheur, setGlobalSettings } from 'globals/globals';
 
 interface dataJson {
 	data: documentDataStorage[];
@@ -20,6 +20,7 @@ export default class LegifrancePlugin extends Plugin {
 	instancesOfDocumentViews: number;
 	activeLeaves: Set<number>;
 	tabViewIdToShow: number;
+	historiqueDocuments: documentDataStorage[];
 
 	async onload() {
 		LegifrancePlugin.instance = this;
@@ -31,13 +32,11 @@ export default class LegifrancePlugin extends Plugin {
 
 		await this.loadSettings();
 		this.activeLeaves = new Set();
-
-		this.instancesOfDocumentViews = getDocumentsListe().length;
-		this.tabViewIdToShow = -1;
+		this.instancesOfDocumentViews = this.historiqueDocuments.length;
 
 		this.registerView(
 			SEARCH_RESULT_VIEW,
-			(leaf) => new SearchResultView(leaf)
+			(leaf) => new SearchResultView(leaf, this)
 		);
 
 		this.registerView(
@@ -47,7 +46,7 @@ export default class LegifrancePlugin extends Plugin {
 
 		this.registerView(
 			TEXT_READER_VIEW,
-			(leaf) => new textReaderView(leaf)
+			(leaf) => new textReaderView(leaf, this)
 		);
 
 		this.addRibbonIcon('scale', 'Légifrance', async (evt: MouseEvent) => {
@@ -106,7 +105,7 @@ export default class LegifrancePlugin extends Plugin {
 					searchTab.deleteActiveViewText();
 					searchTab.onOpen();
 				}
-				const view = documentsListe.find(l => l.id == id);
+				const view = this.historiqueDocuments.find(l => l.id == id);
 				if (view) view.status = false;
 			}
 		}
@@ -131,12 +130,11 @@ export default class LegifrancePlugin extends Plugin {
 
 	async loadSettings() {
 		const data: dataJson = await this.loadData();
-		console.log(data ? data : "No data yet.");
 		
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data ? data.settings : data);
 
-		if (data && data.data.length > 0) setDocumentsListe(data.data);
-		else setDocumentsListe([]);
+		if (data && data.data.length > 0) this.historiqueDocuments = data.data;
+		else this.historiqueDocuments = [];
 
 		if (getAgentChercheur()) {
 			this.updateApiAgent(this.settings);
@@ -150,7 +148,7 @@ export default class LegifrancePlugin extends Plugin {
 
 	async saveSettings() {
 		const data: dataJson = {
-			data: documentsListe,
+			data: this.historiqueDocuments,
 			settings: this.settings
 		}
 
@@ -180,7 +178,7 @@ export default class LegifrancePlugin extends Plugin {
 	}
 
 	async activateTextReaderView() {
-		if (documentsListe.length == 0) return;
+		if (this.historiqueDocuments.length == 0) return;
 		this.saveSettings();
 
 		const { workspace } = this.app;

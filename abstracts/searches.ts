@@ -65,7 +65,7 @@ export interface resultatsRecherche {
 		origin: string,
 		date?: string,
 		sections?: sectionsResultats[];
-	},
+	}[],
 	totalResultNumber: number,
 	fond?: string
 }

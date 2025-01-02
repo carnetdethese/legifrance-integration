@@ -79,8 +79,6 @@ export async function getDocumentInfo(document:legalDocument, valeurRecherche:st
 	// objet Document qui récupère une copie de l'objet passé en argument
 	const infoDocument:legalDocument = document;
 
-	// console.log(valeurRecherche);
-
 	if (codeJurisprudence.includes(document.origin)) {
 		return getDecisionInfo(document, valeurRecherche, apiClient);
 	}

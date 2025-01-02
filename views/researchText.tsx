@@ -12,6 +12,8 @@ import { deleteDocEntry } from "./viewsData";
 import { StrictMode } from "react";
 import { Root, createRoot } from "react-dom/client";
 import { ResearchView } from "./components/search/ResearchView";
+import { getDocumentsListe } from "globals/globals";
+import { AppContext, PluginContext } from "./context"
 
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
@@ -67,17 +69,11 @@ export class ResearchTextView extends ItemView {
 
 		this.root.render(
 			<StrictMode>
-				<ResearchView />
+				<PluginContext.Provider value={this.plugin}>
+					<ResearchView />
+				</PluginContext.Provider>
 			</StrictMode>
 		);
-
-		// this.listResults = container.createDiv();
-		// const historiqueContainer = container.createDiv();
-		// this.historiqueView(historiqueContainer);
-
-		// if (this.activeViewLeaf && documentsListe.length > 0) {
-		//   creerUneNouvelleNote(this.activeViewLeaf, this.listResults);
-		// }
 	}
 
 	openViewText(id: string) {
@@ -87,18 +83,6 @@ export class ResearchTextView extends ItemView {
 	async onClose() {
 		this.root?.unmount();
 	}
-
-	// So I have this thing that calls an updatePageNumber function but I have NO idea what for.
-
-	// new Setting(valuesRecherche).addButton((btn) =>
-	// 	btn
-	// 		.setButtonText("Valider")
-	// 		.setCta()
-	// 		.onClick(async () => {
-	// 			this.documentFields.updatePageNumber(1);
-	// 			await this.documentFields.launchSearch();
-	// 		})
-	// );
 
 	simpleSearchEngine() {
 		this.rechercheDiv.empty();
@@ -193,37 +177,4 @@ export class ResearchTextView extends ItemView {
 		});
 	}
 
-	historiqueView(container: HTMLElement) {
-		const pluginInstance = LegifrancePlugin.instance;
-		// const value = "-1";
-		container.createEl("h5", { text: "Historique" });
-
-		if (getDocumentsListe().length == 0)
-			container.createEl("p", {
-				text: "Rien à afficher. Et si vous faisiez une recherche ?",
-			});
-
-		for (const doc of getDocumentsListe()) {
-			new Setting(container)
-				.setName(doc.data.id)
-				.setDesc(`${doc.data.titre}`)
-				.addExtraButton((cb) =>
-					cb.setIcon("external-link").onClick(() => {
-						pluginInstance.tabViewIdToShow = doc.id;
-						doc.status = true;
-						pluginInstance.activateTextReaderView();
-						this.onOpen();
-					})
-				)
-				.addExtraButton((cb) =>
-					cb.setIcon("x").onClick(() => {
-						deleteDocEntry(doc.id);
-						this.plugin.saveSettings();
-						this.onOpen();
-						// // console.log(documentsListe.length);
-						this.plugin.instancesOfDocumentViews -= 1;
-					})
-				);
-		}
-	}
 }

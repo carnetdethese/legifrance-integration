@@ -18,20 +18,22 @@ export class textReaderView extends ItemView {
 	id: number;
 	data: legalDocument;
 
-	constructor(leaf: WorkspaceLeaf) {
+	constructor(leaf: WorkspaceLeaf, plugin: LegifrancePlugin) {
 		super(leaf);
-		const pluginInstance = LegifrancePlugin.instance;
-
-
-		if (pluginInstance.tabViewIdToShow && pluginInstance.tabViewIdToShow != -1) {
-			this.id = pluginInstance.tabViewIdToShow;
-			pluginInstance.tabViewIdToShow = -1;
-			this.document = getDocumentsListe()[this.id];
+		this.plugin = plugin;
+		
+		if (this.plugin.tabViewIdToShow && this.plugin.tabViewIdToShow != -1) {
+			this.id = this.plugin.tabViewIdToShow;
+			this.plugin.tabViewIdToShow = -1;
+			this.document = this.plugin.historiqueDocuments[this.id];
 		}
-		else this.id = pluginInstance.instancesOfDocumentViews;
 
-		if (findViewById(this.id) != undefined) {
-			this.document = findViewById(this.id) as documentDataStorage;
+		else this.id = this.plugin.instancesOfDocumentViews;
+
+		const doc = this.plugin.historiqueDocuments.find(view => view.id === this.id)
+
+		if (doc != undefined) {
+			this.document = doc;
 			this.data = this.document.data;
 		}
 		else {
@@ -48,12 +50,12 @@ export class textReaderView extends ItemView {
 		}
 
 
-		this.document.template = this.document.data.type == "jurisprudence" ? pluginInstance.settings.templateDecision : pluginInstance.settings.templateDocument;
+		this.document.template = this.document.data.type == "jurisprudence" ? this.plugin.settings.templateDecision : this.plugin.settings.templateDocument;
 
-		if (this.document != undefined) this.nouvelleNote = new newNote(pluginInstance.app, this.document.template, pluginInstance.settings.fileTitle, this.document.data, pluginInstance.settings.dossierBase);
+		if (this.document != undefined) this.nouvelleNote = new newNote(this.plugin.app, this.document.template, this.plugin.settings.fileTitle, this.document.data, this.plugin.settings.dossierBase);
 
-		if (pluginInstance.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW).length > 0) {
-			this.researchTab = pluginInstance.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW)[0].view as ResearchTextView;
+		if (this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW).length > 0) {
+			this.researchTab = this.plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW)[0].view as ResearchTextView;
 		}
 	}
 

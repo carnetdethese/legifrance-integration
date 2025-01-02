@@ -49,7 +49,6 @@ export function getResultatsVariable() {
 
 export function setResultatsVariable(value:resultatsRecherche) {
 	resultats = value;
-	console.log(resultats);
 }
 
 export function getValeurRecherche() {

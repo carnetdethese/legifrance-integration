@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { ResearchTypeButtons } from "./ResearchTypeButtons";
+import { HistoriqueView } from './HistoriqueView';
 import { ChampFond } from "./ChampFond";
 import { SimpleSearchEngine } from "../search/SimpleSearchEngine";
 import { AdvancedSearchEngine } from "./AdvancedSearchEngine";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
+import LegifrancePlugin from "main";
+import { documentDataStorage } from "views/viewsData";
+import { useApp, usePlugin } from "../../hooks";
+import { App } from "obsidian";
+
 
 const SubmitButton = ({ handleLaunchSearchClick }) => {
-
-
 	return (
 		<div className="setting-item">
 			<div className="setting-item-control">
@@ -20,10 +24,12 @@ const SubmitButton = ({ handleLaunchSearchClick }) => {
 };
 
 export const ResearchView = () => {
+	const plugin = usePlugin() as LegifrancePlugin;
 	const [recherche, setRecherche] = useState<documentSearchFieldsClass>(
 		new documentSearchFieldsClass()
 	);
 	const [activeResearchType, setActiveResearchType] = useState("simple");
+
 
 	function handleResearchTypeClick(e) {
 		setActiveResearchType(e.target.value);
@@ -47,18 +53,18 @@ export const ResearchView = () => {
 		}
 	}
 
-	function handleLaunchSearchClick() {
-		console.log(recherche);
-		recherche.launchSearch();
+	async function handleLaunchSearchClick() {
+		const pluginInstance = LegifrancePlugin.instance;
+		pluginInstance.activateResultsView(recherche);
 	}
 
 	function handleSearchTermChange(e) {
 		const newSearch = recherche;
-		newSearch.updateValue(0,0,e.target.value);
+		newSearch.updateValue(0, 0, e.target.value);
 	}
 
 	function handleKeyDown(e) {
-		if (e.key == "Enter") handleLaunchSearchClick(); 
+		if (e.key == "Enter") handleLaunchSearchClick();
 	}
 
 	return (
@@ -81,13 +87,18 @@ export const ResearchView = () => {
 
 				<ChampFond handleFondSelect={handleFondSelect} />
 				{activeResearchType == "simple" ? (
-					<SimpleSearchEngine handleDateChange={handleDateChange} handleSearchTermChange={handleSearchTermChange}handleKeyDown={handleKeyDown} />
+					<SimpleSearchEngine
+						handleDateChange={handleDateChange}
+						handleSearchTermChange={handleSearchTermChange}
+						handleKeyDown={handleKeyDown}
+					/>
 				) : (
 					<AdvancedSearchEngine handleDateChange={handleDateChange} />
 				)}
 				<SubmitButton
 					handleLaunchSearchClick={handleLaunchSearchClick}
 				/>
+				<HistoriqueView historiqueDocuments={plugin.historiqueDocuments} />
 			</div>
 		</>
 	);

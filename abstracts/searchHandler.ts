@@ -9,7 +9,6 @@ import { dateFormat } from "lib/dateHandler";
 import { getTodaysDate, startDateBeforeEndDate } from "lib/utils";
 import LegifrancePlugin from "main";
 import { PopUpModal } from "modals/popUp";
-import { MontrerResultatsModal } from "modals/ShowModal";
 import { WaitModal } from "modals/WaitModal";
 import { Notice } from "obsidian";
 import { ResearchTextView } from "views/researchText";
@@ -106,8 +105,8 @@ export class documentSearchFieldsClass {
 	}
 
 	deleteCritere(champ: number, critere: number) {
-        // Supprime un critère au rang donné (critere) dans le champs donné.
-        if (this.recherche.champs[champ].criteres.length == 1) return;
+		// Supprime un critère au rang donné (critere) dans le champs donné.
+		if (this.recherche.champs[champ].criteres.length == 1) return;
 
 		if (
 			critere > -1 &&
@@ -172,14 +171,14 @@ export class documentSearchFieldsClass {
 
 		// setting or resetting the sorting criteria. The variable is used as a Record by the Obsidian dropdown component to show the criteria in the research view.
 
-        const triDecision = ["CETAT", "JURI", "CONSTIT", "ACCO"];
-        const jorfLoda = ["LODA_ETAT", "JORF"];
+		const triDecision = ["CETAT", "JURI", "CONSTIT", "ACCO"];
+		const jorfLoda = ["LODA_ETAT", "JORF"];
 
 		if (selection == "ALL")
 			this.criteresTri = constants.criteresTriGeneraux.pertinence;
 		else if (selection == "CNIL")
 			this.criteresTri = constants.criteresTriGeneraux.cnil;
-		else if ( triDecision.includes(selection) )
+		else if (triDecision.includes(selection))
 			this.criteresTri = constants.criteresTriGeneraux.decisionAcco;
 		else if (jorfLoda.includes(selection))
 			this.criteresTri = constants.criteresTriGeneraux.jorfLoda;
@@ -275,17 +274,18 @@ export class documentSearchFieldsClass {
 
 		setValeurRecherche(valRecherche);
 
-		setResultatsVariable(
-			(await getAgentChercheur().advanceSearchText(
-				this.toObject()
-			)) as resultatsRecherche
-		);
+		const data = (await getAgentChercheur().advanceSearchText(
+			this.toObject()
+		)) as resultatsRecherche;
+
+		setResultatsVariable(data);
+		return data;
 	}
 
 	async searchAndShowResults() {
 		const pluginInstance = LegifrancePlugin.instance;
 		await this.search();
-        
+
 		pluginInstance.activateResultsView(this);
 	}
 

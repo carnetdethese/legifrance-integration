@@ -4,19 +4,27 @@ import parse from "html-react-parser";
 
 interface ResultCardProps {
 	result: legalDocument;
-	index: number;
+	handleClickDocument: (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void;
 }
 
-export const ResultCard = ({ result, index }: ResultCardProps) => {
-	console.log(index);
+export const ResultCard = ({
+	result,
+	handleClickDocument,
+}: ResultCardProps) => {
 	return (
 		<>
 			<div className="resultat-document-container">
-				<a className="titre-document">{parse(result.titre)}</a>
+				<a
+					data-id={result.id}
+					className="titre-document"
+					onClick={(e) => handleClickDocument(e)}
+				>
+					{parse(result.titre)}
+				</a>
 				<div className="extraitContainer">
 					{result.texte ? parse(result.texte) : ""}
 					{result.sections ? (
-						<SectionsExtraits sections={result.sections} />
+						<SectionsExtraits sections={result.sections} handleClickDocument={handleClickDocument} />
 					) : (
 						""
 					)}
@@ -28,9 +36,10 @@ export const ResultCard = ({ result, index }: ResultCardProps) => {
 
 interface SectionsExtraitsProps {
 	sections: sectionsResultats[];
+    handleClickDocument: (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void;
 }
 
-const SectionsExtraits = ({ sections }: SectionsExtraitsProps) => {
+const SectionsExtraits = ({ sections, handleClickDocument }: SectionsExtraitsProps) => {
 	return (
 		<>
 			{sections.map((sect) => {
@@ -38,8 +47,13 @@ const SectionsExtraits = ({ sections }: SectionsExtraitsProps) => {
 					if (extract.type == "articles") {
 						return (
 							<div className="extraitContainer">
-								<a>Article {extract.num ? extract.num : ''}</a>
-                                <div>{parse(extract.values[0])}</div>
+								<a
+									data-id={extract.id}
+								>
+									Article {extract.num ? extract.num : ""}
+								</a>
+
+								<div>{parse(extract.values[0])}</div>
 							</div>
 						);
 					}
