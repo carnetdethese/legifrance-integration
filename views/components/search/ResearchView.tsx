@@ -6,9 +6,7 @@ import { SimpleSearchEngine } from "../search/SimpleSearchEngine";
 import { AdvancedSearchEngine } from "./AdvancedSearchEngine";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import LegifrancePlugin from "main";
-import { documentDataStorage } from "views/viewsData";
-import { useApp, usePlugin } from "../../hooks";
-import { App } from "obsidian";
+import { usePlugin } from "../../hooks";
 
 
 const SubmitButton = ({ handleLaunchSearchClick }) => {
@@ -88,9 +86,11 @@ export const ResearchView = () => {
 				<ChampFond handleFondSelect={handleFondSelect} />
 				{activeResearchType == "simple" ? (
 					<SimpleSearchEngine
+						fond={recherche.fond}
 						handleDateChange={handleDateChange}
 						handleSearchTermChange={handleSearchTermChange}
 						handleKeyDown={handleKeyDown}
+
 					/>
 				) : (
 					<AdvancedSearchEngine handleDateChange={handleDateChange} />
@@ -98,7 +98,7 @@ export const ResearchView = () => {
 				<SubmitButton
 					handleLaunchSearchClick={handleLaunchSearchClick}
 				/>
-				<HistoriqueView historiqueDocuments={plugin.historiqueDocuments} />
+				<HistoriqueView />
 			</div>
 		</>
 	);

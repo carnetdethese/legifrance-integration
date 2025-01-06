@@ -2,12 +2,13 @@ import * as constants from "../../../api/constants";
 import { DatePicker } from "./DatePicker";
 import { SearchTerm } from "./SearchTerm";
 
-export const SimpleSearchEngine = ({ handleDateChange, handleSearchTermChange, handleKeyDown }) => {
+export const SimpleSearchEngine = ({ fond, handleDateChange, handleSearchTermChange, handleKeyDown }) => {
 	// const [counter, setCounter] = useState(0);
+	const fondSansDate = ["ALL", "CODE_ETAT", "CNIL", "", "CIRC"];
 
 	return (
 		<>
-			<DatePicker handleDateChange={handleDateChange} />
+			{!fondSansDate.includes(fond) ? (<DatePicker handleDateChange={handleDateChange}  />) : (null)}
 			<SearchTerm rank={0} handleSearchTermChange={handleSearchTermChange} handleKeyDown={handleKeyDown}/>
 			<div className="setting-item">
 				<div className="setting-item-control">

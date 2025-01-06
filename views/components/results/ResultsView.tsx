@@ -68,8 +68,8 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 
 		const newView = new documentDataStorage(id, selectedDocument);
 		plugin.historiqueDocuments.push(newView)
-
-		plugin.instancesOfDocumentViews += 1;
+		plugin.docToShow = newView;
+		plugin.saveSettings();
 		plugin.activateTextReaderView();
 	}
 

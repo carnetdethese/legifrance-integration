@@ -5,7 +5,6 @@ import { ItemView, Plugin, WorkspaceLeaf } from "obsidian";
 import { addView, documentDataStorage } from "./viewsData";
 import LegifrancePlugin from "main";
 
-import { StrictMode } from "react";
 import { Root, createRoot } from "react-dom/client";
 import { ResultsView } from "./components/results/ResultsView";
 import { PluginContext } from "./context";
@@ -47,12 +46,12 @@ export class SearchResultView extends ItemView {
 		this.root = createRoot(this.containerEl.children[1]);
 
 		this.root.render(
-			<StrictMode>
+			<PluginContext.Provider value={this.plugin}>
 				<h2>Résultats</h2>
 				<PluginContext.Provider value={this.plugin}>
 					<ResultsView searchHandler={this.doc} />
 				</PluginContext.Provider>
-			</StrictMode>
+			</PluginContext.Provider>
 		);
 	}
 
@@ -68,8 +67,9 @@ export class SearchResultView extends ItemView {
 			getAgentChercheur()
 		);
 
-		const histoDocLength = this.plugin.historiqueDocuments.length
-		const docId = histoDocLength > 0 ? this.plugin.historiqueDocuments[-1].id + 1 : 1;
+		const histoDocLength = this.plugin.historiqueDocuments.length;
+		const docId =
+			histoDocLength > 0 ? this.plugin.historiqueDocuments[-1].id + 1 : 1;
 		const newView = new documentDataStorage(docId, selectedDocument);
 
 		this.plugin.historiqueDocuments.push(newView);
