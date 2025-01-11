@@ -5,7 +5,7 @@ type ResearchType = 'simple' | 'avancee';
 interface ResearchTypeButtonsProps {
     type: ResearchType;
     handleClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
-    activeType: ResearchType;
+    activeType: string;
 }
 
 export const ResearchTypeButtons = ({ type, handleClick, activeType }: ResearchTypeButtonsProps) => {

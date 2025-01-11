@@ -24,7 +24,7 @@ export class SearchResultView extends ItemView {
 	}
 
 	addDocument(docu: documentSearchFieldsClass) {
-		if (!this.doc) this.doc = docu;
+		this.doc = docu;
 		return;
 	}
 

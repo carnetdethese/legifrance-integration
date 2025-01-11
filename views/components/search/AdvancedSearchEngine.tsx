@@ -1,30 +1,49 @@
-import * as constants from '../../../api/constants';
-import React from 'react';
-import { DatePicker } from './DatePicker';
+import * as constants from "../../../api/constants";
+import React from "react";
+import { DatePicker } from "./DatePicker";
+import { SearchTerm } from "./SearchTerm";
+import { OperateursBooleens } from "./OperateursBooleens";
+import { ChampRecherche } from "./ChampRecherche";
 
-
-export const OperateurGeneral = () => {
-	return	(<div className="setting-item">
-		<div className="setting-item-info">
-			<label className="setting-item-name">Opérateur général</label>
-		</div>
-		<div className="setting-item-control">
-			<select className="dropdown">
-				{Array.from(constants.operateursRecherche.entries()).map(
-					([k, v]) => (
-						<option key={k} value={k}>
-							{v}
-						</option>
-					)
-				)}
-			</select>
-		</div>
-	</div>);
-};
-
-
-export const AdvancedSearchEngine = ({ handleDateChange }) => {
-	return <>
-		<DatePicker handleDateChange={handleDateChange} />
-	</>
+interface AdvancedSearchEngineProps {
+	fond: string;
+	handleDateChange: (
+		event: React.MouseEvent<HTMLInputElement, MouseEvent>
+	) => void;
+	handleSearchTermChange: (
+		event: React.MouseEvent<HTMLInputElement, MouseEvent>
+	) => void;
+	handleKeyDown: (
+		event: React.MouseEvent<HTMLInputElement, KeyboardEvent>
+	) => void;
+	handleTypeRechercheChange: (
+		event: React.MouseEvent<HTMLSelectElement, MouseEvent>
+	) => void;
+	handleOperateurRechercheChange: (
+		event: React.MouseEvent<HTMLSelectElement, MouseEvent>
+	) => void;
 }
+
+export const AdvancedSearchEngine = ({
+	fond,
+	handleDateChange,
+	handleSearchTermChange,
+	handleKeyDown,
+	handleTypeRechercheChange,
+	handleOperateurRechercheChange,
+}: AdvancedSearchEngineProps) => {
+	return (
+		<>
+			{!constants.fondSansDate.includes(fond) ? (
+				<DatePicker handleDateChange={handleDateChange} />
+			) : null}{" "}
+			
+			<ChampRecherche
+				handleKeyDown={handleKeyDown}
+				handleOperateurRechercheChange={handleOperateurRechercheChange}
+				handleSearchTermChange={handleSearchTermChange}
+				handleTypeRechercheChange={handleTypeRechercheChange}
+			/>
+		</>
+	);
+};

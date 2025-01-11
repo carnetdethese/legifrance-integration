@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ResearchTypeButtons } from "./ResearchTypeButtons";
-import { HistoriqueView } from './HistoriqueView';
+import { HistoriqueView } from "./HistoriqueView";
 import { ChampFond } from "./ChampFond";
 import { SimpleSearchEngine } from "../search/SimpleSearchEngine";
 import { AdvancedSearchEngine } from "./AdvancedSearchEngine";
@@ -8,7 +8,6 @@ import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import LegifrancePlugin from "main";
 import { usePlugin } from "../../hooks";
 import { Notice } from "obsidian";
-
 
 const SubmitButton = ({ handleLaunchSearchClick }) => {
 	return (
@@ -34,16 +33,27 @@ export const ResearchView = () => {
 
 	function handleFondSelect(e) {
 		const newFond = e.target.value;
-		const newSearch = recherche.updatingFond(newFond, true) as documentSearchFieldsClass;
+		const newSearch = recherche.updatingFond(
+			newFond,
+			true
+		) as documentSearchFieldsClass;
 		setRecherche(newSearch);
 	}
 
 	function handleDateChange(e) {
 		if (e.target.name == "start-date") {
-			const newSearch = recherche.setDate(e.target.value, "start", true) as documentSearchFieldsClass;
+			const newSearch = recherche.setDate(
+				e.target.value,
+				"start",
+				true
+			) as documentSearchFieldsClass;
 			setRecherche(newSearch);
 		} else if (e.target.name == "end-date") {
-			const newSearch = recherche.setDate(e.target.value, "end", true) as documentSearchFieldsClass;
+			const newSearch = recherche.setDate(
+				e.target.value,
+				"end",
+				true
+			) as documentSearchFieldsClass;
 			setRecherche(newSearch);
 		}
 	}
@@ -52,19 +62,34 @@ export const ResearchView = () => {
 		const pluginInstance = LegifrancePlugin.instance;
 		if (recherche.fond == "") {
 			new Notice("Ajoutez un fond !");
-			return
+			return;
 		}
 		pluginInstance.activateResultsView(recherche);
 	}
 
 	function handleSearchTermChange(e) {
-		const newSearch = recherche.updateValue(0, 0, e.target.value, true) as documentSearchFieldsClass;
+		const newSearch = recherche.updateValue(
+			0,
+			0,
+			e.target.value,
+			true
+		) as documentSearchFieldsClass;
 		setRecherche(newSearch);
 	}
 
 	function handleKeyDown(e) {
 		if (e.key == "Enter") handleLaunchSearchClick();
 	}
+
+	function handleTypeRechercheChange(e) {
+		return;
+	}
+
+	function handleOperateurRechercheChange(e) {
+		return;
+	}
+
+	console.log(recherche);
 
 	return (
 		<>
@@ -84,17 +109,32 @@ export const ResearchView = () => {
 					</div>
 				</div>
 
-				<ChampFond handleFondSelect={handleFondSelect} fond={recherche.fond} />
+				<ChampFond
+					handleFondSelect={handleFondSelect}
+					fond={recherche.fond}
+				/>
 				{activeResearchType == "simple" ? (
 					<SimpleSearchEngine
 						fond={recherche.fond}
 						handleDateChange={handleDateChange}
 						handleSearchTermChange={handleSearchTermChange}
 						handleKeyDown={handleKeyDown}
-
+						handleOperateurRechercheChange={
+							handleOperateurRechercheChange
+						}
+						handleTypeRechercheChange={handleTypeRechercheChange}
 					/>
 				) : (
-					<AdvancedSearchEngine handleDateChange={handleDateChange} />
+					<AdvancedSearchEngine
+						fond={recherche.fond}
+						handleDateChange={handleDateChange}
+						handleSearchTermChange={handleSearchTermChange}
+						handleKeyDown={handleKeyDown}
+						handleOperateurRechercheChange={
+							handleOperateurRechercheChange
+						}
+						handleTypeRechercheChange={handleTypeRechercheChange}
+					/>
 				)}
 				<SubmitButton
 					handleLaunchSearchClick={handleLaunchSearchClick}
