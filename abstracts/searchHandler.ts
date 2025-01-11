@@ -54,13 +54,19 @@ export class documentSearchFieldsClass {
 		};
 
 		this.fond = constants.codeFond.keys().next().value;
-		this.updatingFond(this.fond); // Appelle de cette fonction qui s'assure que l'objet contenant la recherche contient les informations pertinentes pour le fond sélectionné.
+
+		this.updatingFond(this.fond, false);
+
+		// Appelle de cette fonction qui s'assure que l'objet contenant la recherche contient les informations pertinentes pour le fond sélectionné.
 	}
 
 	// TODO : fonction permettant de mettre à jour la valeur du champ concerné. Permet d'éviter des appels directs aux propriétés de la classe. A terme, serait bien de rendre privées toutes les variables de document pour simplifier le code.
-	updateValue(champ: number, critere: number, valeur: string) {
+	updateValue(champ: number, critere: number, valeur: string, returnValue:boolean) {
 		// Champ et critere commencent à 0 - correspondent au rang dans l'Array correspondant.
 		this.recherche.champs[champ].criteres[critere].valeur = valeur;
+
+		if (returnValue) return this.newObject();
+		
 		return this.recherche.champs[champ].criteres[critere].valeur;
 	}
 
@@ -156,7 +162,7 @@ export class documentSearchFieldsClass {
 		};
 	}
 
-	updatingFond(selection: string) {
+	updatingFond(selection: string, returnValue: boolean) {
 		this.fond = selection;
 
 		// setting or resetting the date field according to the "fond"
@@ -186,6 +192,10 @@ export class documentSearchFieldsClass {
 			this.criteresTri = constants.criteresTriGeneraux.circ;
 
 		this.updateFacette(); // updating the date filter facet.
+
+		if (returnValue) {
+			return this.newObject();
+		}
 	}
 
 	resetDate() {
@@ -226,11 +236,24 @@ export class documentSearchFieldsClass {
 		return this.recherche.sort;
 	}
 
-	updateDate() {
+	updateDate(date?:string) {
 		this.recherche.filtres[0] = {
 			dates: { start: new dateFormat(), end: new dateFormat() },
 			facette: "DATE_PUBLICATION",
 		};
+	}
+
+	setDate(date:string, place:string, returnValue: boolean) {
+		if (place == "start") {
+			this.recherche.filtres[0].dates.start = date;
+		}
+		else if (place == "end") {
+			this.recherche.filtres[0].dates.end = date;
+		}
+
+		if (returnValue) {
+			return this.newObject();
+		}
 	}
 
 	async checkBeforeSearch() {
@@ -310,6 +333,15 @@ export class documentSearchFieldsClass {
 				waitingModal.close();
 			}, 1000);
 		}
+	}
+
+	newObject() {
+		const newSearch = new documentSearchFieldsClass();
+		newSearch.recherche = { ...this.recherche };
+		newSearch.criteresTri = { ...this.criteresTri };
+		newSearch.fond = this.fond;
+
+		return newSearch
 	}
 }
 

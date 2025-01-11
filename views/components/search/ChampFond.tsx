@@ -1,9 +1,12 @@
 import LegifrancePlugin from "../../../main";
 import * as constants from "../../../api/constants";
 
+interface ChampFondProps {
+	fond: string,
+	handleFondSelect: (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void;
+}
 
-
-export const ChampFond = ({ handleFondSelect }) => {
+export const ChampFond = ({ fond, handleFondSelect }: ChampFondProps) => {
 	const pluginInstance = LegifrancePlugin.instance;
 	let codesFond = new Map<string, string>();
 
@@ -25,6 +28,7 @@ export const ChampFond = ({ handleFondSelect }) => {
 						name="fond-field"
 						id="fond-field"
 						onChange={(e) => handleFondSelect(e)}
+						value={fond}
 					>
 						{Array.from(codesFond.entries()).map(([k, v]) => (
 							<option key={k} value={k}>

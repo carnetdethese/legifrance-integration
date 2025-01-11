@@ -7,6 +7,8 @@ export const typeRecherche = new Map<string, string>([ // Type de la recherche
 	["AUCUNE_CORRESPONDANCE_A_CETTE_EXPRESSION", "Exclure l'expression"]
 ]);
 
+export const fondSansDate = ["ALL", "CODE_ETAT", "CNIL", "", "CIRC"];
+
 
 export const criteresTriGeneraux = {
 	pertinence: {

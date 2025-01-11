@@ -1,14 +1,20 @@
+import { useEffect, useState } from "react";
 import * as constants from "../../../api/constants";
 import { DatePicker } from "./DatePicker";
 import { SearchTerm } from "./SearchTerm";
 
-export const SimpleSearchEngine = ({ fond, handleDateChange, handleSearchTermChange, handleKeyDown }) => {
-	// const [counter, setCounter] = useState(0);
-	const fondSansDate = ["ALL", "CODE_ETAT", "CNIL", "", "CIRC"];
+interface SimpleSearchEngineProps {
+	fond: string;
+	handleDateChange: (event: React.MouseEvent<HTMLInputElement, MouseEvent>) => void;
+	handleSearchTermChange: (event: React.MouseEvent<HTMLInputElement, MouseEvent>) => void;
+	handleKeyDown: (event: React.MouseEvent<HTMLInputElement, KeyboardEvent>) => void;
+}
+
+export const SimpleSearchEngine = ({ fond, handleDateChange, handleSearchTermChange, handleKeyDown }: SimpleSearchEngineProps) => {
 
 	return (
 		<>
-			{!fondSansDate.includes(fond) ? (<DatePicker handleDateChange={handleDateChange}  />) : (null)}
+			{!constants.fondSansDate.includes(fond) ? (<DatePicker handleDateChange={handleDateChange}  />) : (null)}
 			<SearchTerm rank={0} handleSearchTermChange={handleSearchTermChange} handleKeyDown={handleKeyDown}/>
 			<div className="setting-item">
 				<div className="setting-item-control">
