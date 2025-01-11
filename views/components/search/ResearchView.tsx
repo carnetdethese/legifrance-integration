@@ -68,9 +68,10 @@ export const ResearchView = () => {
 	}
 
 	function handleSearchTermChange(e) {
+		const rank = e.target.dataset.rank;
 		const newSearch = recherche.updateValue(
 			0,
-			0,
+			rank,
 			e.target.value,
 			true
 		) as documentSearchFieldsClass;
@@ -82,14 +83,50 @@ export const ResearchView = () => {
 	}
 
 	function handleTypeRechercheChange(e) {
+		const rank = e.target.dataset.rank;
+		const value = e.target.value;
+		const newSearch = recherche.updateTypeRechercheChamp(
+			0,
+			rank,
+			value,
+			true
+		) as documentSearchFieldsClass;
+		setRecherche(newSearch);
 		return;
 	}
 
 	function handleOperateurRechercheChange(e) {
+		const rank = e.target.dataset.rank;
+		const value = e.target.value;
+		const newSearch = recherche.updateOperateurCritereChamp(
+			0,
+			rank,
+			value,
+			true
+		) as documentSearchFieldsClass;
+		setRecherche(newSearch);
 		return;
 	}
 
-	console.log(recherche);
+	function handleCritereAddOrRemove(ope: string, critere: number) {
+		let newSearch = new documentSearchFieldsClass();
+		if (ope == "add") {
+			newSearch = recherche.createCritere(
+				0,
+				true
+			) as documentSearchFieldsClass;
+		} else if (ope == "remove") {
+			console.log(critere);
+			newSearch = recherche.deleteCritere(
+				0,
+				critere,
+				true
+			) as documentSearchFieldsClass;
+		}
+		setRecherche(newSearch);
+	}
+
+	console.log(recherche.recherche.champs[0].criteres);
 
 	return (
 		<>
@@ -115,7 +152,7 @@ export const ResearchView = () => {
 				/>
 				{activeResearchType == "simple" ? (
 					<SimpleSearchEngine
-						fond={recherche.fond}
+						recherche={recherche}
 						handleDateChange={handleDateChange}
 						handleSearchTermChange={handleSearchTermChange}
 						handleKeyDown={handleKeyDown}
@@ -126,7 +163,7 @@ export const ResearchView = () => {
 					/>
 				) : (
 					<AdvancedSearchEngine
-						fond={recherche.fond}
+						recherche={recherche}
 						handleDateChange={handleDateChange}
 						handleSearchTermChange={handleSearchTermChange}
 						handleKeyDown={handleKeyDown}
@@ -134,6 +171,7 @@ export const ResearchView = () => {
 							handleOperateurRechercheChange
 						}
 						handleTypeRechercheChange={handleTypeRechercheChange}
+						handleCritereAddOrRemove={handleCritereAddOrRemove}
 					/>
 				)}
 				<SubmitButton

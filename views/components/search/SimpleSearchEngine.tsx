@@ -1,9 +1,10 @@
 import * as constants from "../../../api/constants";
 import { DatePicker } from "./DatePicker";
 import { ChampRecherche } from "./ChampRecherche";
+import { documentSearchFieldsClass } from "abstracts/searchHandler";
 
 interface SimpleSearchEngineProps {
-	fond: string;
+	recherche: documentSearchFieldsClass;
 	handleDateChange: (
 		event: React.MouseEvent<HTMLInputElement, MouseEvent>
 	) => void;
@@ -22,7 +23,7 @@ interface SimpleSearchEngineProps {
 }
 
 export const SimpleSearchEngine = ({
-	fond,
+	recherche,
 	handleDateChange,
 	handleSearchTermChange,
 	handleKeyDown,
@@ -31,10 +32,12 @@ export const SimpleSearchEngine = ({
 }: SimpleSearchEngineProps) => {
 	return (
 		<>
-			{!constants.fondSansDate.includes(fond) ? (
+			{!constants.fondSansDate.includes(recherche.fond) ? (
 				<DatePicker handleDateChange={handleDateChange} />
 			) : null}
 			<ChampRecherche
+				rank={0}
+				recherche={recherche}
 				handleKeyDown={handleKeyDown}
 				handleOperateurRechercheChange={handleOperateurRechercheChange}
 				handleSearchTermChange={handleSearchTermChange}

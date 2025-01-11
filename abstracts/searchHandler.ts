@@ -90,15 +90,19 @@ export class documentSearchFieldsClass {
 	}
 
 	// Les quatres fonctions qui suivent permettent un meilleur contrôle de l'ajout ou la suppression d'un champ et d'un nouveau critère. Il faudra penser à implanter une logique de contrôle pour éviter que des champs requis soit supprimé, notamment.
-	createChamps() {}
+	createChamps() {
 
-	deleteChamps(champ: number) {}
+	}
 
-	createCritere(champ: number) {
+	deleteChamps(champ: number) {
+
+	}
+
+	createCritere(champ: number, returnValue: boolean) {
 		// Le paramètre "champ" correspond à l'index du champ dans lequel se trouve le critère à ajouter.
 		// La fonction pousse un nouveau critère en fin de liste.
 		// Possibilité d'ajouter jusque 3 critères par champs.
-		if (this.recherche.champs[champ].criteres.length < 3) {
+		if (this.recherche.champs[champ].criteres.length < 5) {
 			this.recherche.champs[champ].criteres.push({
 				operateur: constants.operateursRecherche.keys().next().value,
 				valeur: "",
@@ -107,10 +111,10 @@ export class documentSearchFieldsClass {
 			});
 		}
 
-		return;
+		if (returnValue) return this.newObject();
 	}
 
-	deleteCritere(champ: number, critere: number) {
+	deleteCritere(champ: number, critere: number, returnValue: boolean) {
 		// Supprime un critère au rang donné (critere) dans le champs donné.
 		if (this.recherche.champs[champ].criteres.length == 1) return;
 
@@ -120,14 +124,30 @@ export class documentSearchFieldsClass {
 		) {
 			this.recherche.champs[champ].criteres.splice(critere, 1); // Remove 1 element at the specified index
 		}
-		return;
+		
+		if (returnValue) return this.newObject();
 	}
 
-	updateTypeRechercheChamp(champ: number, critere: number, type: string) {
+	updateTypeRechercheChamp(champ: number, critere: number, type: string, returnValue?: boolean) {
+		
 		if (this.recherche.champs[champ].criteres[critere]) {
 			this.recherche.champs[champ].criteres[critere].typeRecherche = type;
 		}
+
+		if (returnValue) return this.newObject();
+
 		return this.recherche.champs[champ].criteres[critere].typeRecherche;
+	}
+
+	updateOperateurCritereChamp(champ: number, critere: number, operateur: string, returnValue?: boolean) {
+
+		if (this.recherche.champs[champ].criteres[critere]) {
+			this.recherche.champs[champ].criteres[critere].operateur = operateur;
+		}
+
+		if (returnValue) return this.newObject();
+
+		return this.recherche.champs[champ].criteres[critere].operateur;
 	}
 
 	getTypeRechercheChamp(champ: number, critere: number) {
