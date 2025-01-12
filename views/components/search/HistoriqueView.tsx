@@ -23,9 +23,9 @@ export const HistoriqueView = () => {
 		if (resultIndex !== -1) {
 			const newHistorique = [
 				...plugin.historiqueDocuments.slice(0, resultIndex),
-				...plugin.historiqueDocuments.slice(resultIndex + 1)
-			]
-			
+				...plugin.historiqueDocuments.slice(resultIndex + 1),
+			];
+
 			plugin.historiqueDocuments = newHistorique; // Remove the document
 			plugin.saveSettings();
 			setDocumentsListe(plugin.historiqueDocuments);
@@ -39,10 +39,13 @@ export const HistoriqueView = () => {
 	}
 
 	return (
-		<div ref={scrollRefElement} >
-			<h5 >Historique</h5>
+		<div ref={scrollRefElement}>
+			<h5>Historique</h5>
 			{documentsListe && documentsListe.length > 0
 				? documentsListe.map((elt, index) => {
+						const removeHtmlTags = /(<([^>]+)>)/gi;
+						const titre = elt.data.titre.replace(removeHtmlTags, "");
+
 						return (
 							<div key={index} className="setting-item">
 								<div className="setting-item-info">
@@ -50,7 +53,7 @@ export const HistoriqueView = () => {
 										{elt.data.id}
 									</div>
 									<div className="setting-item-description">
-										{elt.data.titre}
+										{titre}
 									</div>
 								</div>
 								<div className="setting-item-control">

@@ -1,4 +1,5 @@
 import { legalDocument } from "abstracts/document";
+import parse from "html-react-parser";
 
 interface InfoCardProps {
     data: legalDocument
@@ -11,12 +12,14 @@ export const InfoCard = ({ data }: InfoCardProps) => {
         lienPdf = `https://www.legifrance.gouv.fr/download/pdf/circ?id=${data.id}`
     }
 
-
+    const removeHtmlTags = /(<([^>]+)>)/gi;
+    const titre = data.titre.replace(removeHtmlTags, "");
 
     return <>
         <div className="info-box">
             <h3>Informations</h3>
             <div>
+                {data.titre ? <p>Titre : {titre}</p> : ''}
                 {data.juridiction ? <p>Juridiction : {data.juridiction}</p> : ''}
                 {data.auteur ? <p>Auteur : {data.auteur}</p> : ''}
                 {data.formation ? <p>Formation : {data.formation}</p> : ''}
