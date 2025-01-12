@@ -2,14 +2,13 @@ import { ExternalLink, X } from "lucide-react";
 import LegifrancePlugin from "main";
 import { documentDataStorage } from "views/viewsData";
 import { usePlugin } from "views/hooks";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 export const HistoriqueView = () => {
 	const plugin = usePlugin() as LegifrancePlugin;
 	const [documentsListe, setDocumentsListe] = useState<documentDataStorage[]>(
 		plugin.historiqueDocuments
 	);
-	const scrollRefElement = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
 		setDocumentsListe([...plugin.historiqueDocuments]);
@@ -39,7 +38,7 @@ export const HistoriqueView = () => {
 	}
 
 	return (
-		<div ref={scrollRefElement}>
+		<div>
 			<h5>Historique</h5>
 			{documentsListe && documentsListe.length > 0
 				? documentsListe.map((elt, index) => {

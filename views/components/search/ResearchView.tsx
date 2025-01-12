@@ -6,7 +6,6 @@ import { SimpleSearchEngine } from "../search/SimpleSearchEngine";
 import { AdvancedSearchEngine } from "./AdvancedSearchEngine";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import LegifrancePlugin from "main";
-import { usePlugin } from "../../hooks";
 import { Notice } from "obsidian";
 
 const SubmitButton = ({ handleLaunchSearchClick }) => {

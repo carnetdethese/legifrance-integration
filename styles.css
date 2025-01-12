@@ -29,10 +29,17 @@ mark {
     max-width: 700px;
     width: 100%;
     margin:auto;
-    
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.note-taking-box {
+
 }
 
 .info-box {
+    position: relative;
     background-color: var(--background-primary); /* Use Obsidian's primary background color */
     border: 2px solid var(--background-secondary); /* Subtle border */
     border-radius: 8px; /* Rounded corners */
@@ -41,16 +48,25 @@ mark {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
     transition: background-color 0.3s ease; /* Smooth transition for hover effect */
     overflow-wrap: break-word;
+    display: flex;
+    flex-direction: column;
+
+    .info-box__top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    button {
+        color: inherit;
+    }
+
 }
 
 .break {
     color: grey;
     position: relative;
     text-align: center;
-}
-
-.infoDecision {
-    font-weight: bold;
 }
 
 .resultat-document-container {

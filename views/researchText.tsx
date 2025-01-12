@@ -14,17 +14,10 @@ import { PluginContext } from "./context"
 export const RESEARCH_TEXT_VIEW = "research-text-view";
 
 export class ResearchTextView extends ItemView {
-	documentFields: documentHandlerView;
-	dateRecherche: dateHandler;
 	recherche: champsRechercheAvancees;
-	compteur: number;
 	agentChercheur: agentSearch;
 	searchResult: resultatsRecherche;
 	activeResearchType: string;
-	headerDiv: HTMLElement;
-	listResults: HTMLElement;
-	rechercheDiv: HTMLElement;
-	valeurRecherche: string;
 	plugin: LegifrancePlugin;
 	activeViewLeaf: textReaderView | null;
 	root: Root | null = null;
@@ -35,11 +28,8 @@ export class ResearchTextView extends ItemView {
 		agentChercheur: agentSearch
 	) {
 		super(leaf);
-		this.compteur = 0;
 		this.agentChercheur = agentChercheur;
 		this.plugin = plugin;
-		this.dateRecherche = new dateHandler(this);
-		this.documentFields = new documentHandlerView(this);
 	}
 
 	getViewType() {

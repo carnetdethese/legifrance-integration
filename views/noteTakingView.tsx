@@ -1,16 +1,19 @@
-import { StrictMode } from 'react';
-import { ItemView, WorkspaceLeaf } from 'obsidian';
-import { Root, createRoot } from 'react-dom/client';
-import { NoteTaking } from './components/notes/NoteTaking';
-import React from 'react';
+import { StrictMode } from "react";
+import { ItemView, WorkspaceLeaf } from "obsidian";
+import { Root, createRoot } from "react-dom/client";
+import { NoteTaking } from "./components/notes/NoteTaking";
+import LegifrancePlugin from "main";
+import { PluginContext } from "./context";
 
-const NOTE_TAKING_VIEW = 'note-taking-view';
+export const NOTE_TAKING_VIEW = "note-taking-view";
 
-class NoteTakingView extends ItemView {
+export class noteTakingView extends ItemView {
 	root: Root | null = null;
+	plugin: LegifrancePlugin;
 
-	constructor(leaf: WorkspaceLeaf) {
+	constructor(leaf: WorkspaceLeaf, plugin: LegifrancePlugin) {
 		super(leaf);
+		this.plugin = plugin;
 	}
 
 	getViewType() {
@@ -18,15 +21,17 @@ class NoteTakingView extends ItemView {
 	}
 
 	getDisplayText() {
-		return 'Notes';
+		return "Notes";
 	}
 
 	async onOpen() {
 		this.root = createRoot(this.containerEl.children[1]);
 		this.root.render(
 			<StrictMode>
-				<NoteTaking />,
-			</StrictMode>,
+				<PluginContext.Provider value={this.plugin}>
+					<NoteTaking />
+				</PluginContext.Provider>
+			</StrictMode>
 		);
 	}
 

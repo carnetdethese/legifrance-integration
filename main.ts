@@ -1,7 +1,8 @@
 import { agentSearch } from "api/utilities";
-import { Editor, Plugin, WorkspaceLeaf } from "obsidian";
+import { Editor, Notice, Plugin, WorkspaceLeaf } from "obsidian";
 import { RESEARCH_TEXT_VIEW, ResearchTextView } from "views/researchText";
 import { TEXT_READER_VIEW, textReaderView } from "views/viewText";
+import { NOTE_TAKING_VIEW, noteTakingView } from "views/noteTakingView";
 import { documentDataStorage } from "views/viewsData";
 import {
 	LegifranceSettings,
@@ -16,6 +17,7 @@ import {
 	setAgentChercheur,
 	setGlobalSettings,
 } from "globals/globals";
+import { legalDocument } from "abstracts/document";
 
 interface dataJson {
 	data: documentDataStorage[];
@@ -60,35 +62,28 @@ export default class LegifrancePlugin extends Plugin {
 			(leaf) => new textReaderView(leaf, this)
 		);
 
+		this.registerView(
+			NOTE_TAKING_VIEW,
+			(leaf) => new noteTakingView(leaf, this)
+		);
+
 		this.addRibbonIcon("scale", "Légifrance", async (evt: MouseEvent) => {
 			this.activateResearchTextView();
 		});
 
 		this.addCommand({
-			id: "lire-texte",
+			id: "nouvelle-recherche",
 			name: "Nouvelle recherche",
 			callback: () => {
 				this.activateResearchTextView();
 			},
 		});
 
-		this.addRibbonIcon("dice", "Print leaf types", () => {
-			this.app.workspace.iterateAllLeaves((leaf) => {
-				console.log(leaf.getViewState().type);
-			});
-		});
-
 		this.addCommand({
 			id: "search-selection",
 			name: "Chercher la sélection",
 			editorCallback: (editor: Editor) => {
-				const selection = editor.getSelection();
-				const documentHandler = new documentSearchFieldsClass();
-
-				documentHandler.updateValue(0, 0, selection);
-				documentHandler.updateTypeRechercheChamp(0, 0, "EXACTE");
-				documentHandler.updatingFond("ALL");
-				documentHandler.launchSearch();
+				new Notice("En maintenance.");
 			},
 		});
 
@@ -96,17 +91,19 @@ export default class LegifrancePlugin extends Plugin {
 		this.addSettingTab(new LegifranceSettingTab(this.app, this));
 
 		this.registerEvent(
-			this.app.workspace.on('active-leaf-change', this.handleLeafChange.bind(this))
+			this.app.workspace.on(
+				"active-leaf-change",
+				this.handleLeafChange.bind(this)
+			)
 		);
 
 		this.app.workspace.onLayoutReady(async () => {
 			this.app.workspace.detachLeavesOfType(TEXT_READER_VIEW);
 			this.app.workspace.detachLeavesOfType(SEARCH_RESULT_VIEW);
-		})
+		});
 	}
 
-	onunload() {
-	}
+	onunload() {}
 
 	async reopenTabs() {
 		for (const leaf of this.activeLeaves) {
@@ -124,7 +121,6 @@ export default class LegifrancePlugin extends Plugin {
 				this.activeLeaves.remove(leaf);
 			}
 		}
-
 	}
 
 	async loadSettings() {
@@ -139,7 +135,8 @@ export default class LegifrancePlugin extends Plugin {
 		if (data && data.data.length > 0) this.historiqueDocuments = data.data;
 		else this.historiqueDocuments = [];
 
-		if (data && data.activeLeaves.length > 0) this.activeLeaves = data.activeLeaves;
+		if (data && data.activeLeaves.length > 0)
+			this.activeLeaves = data.activeLeaves;
 		else this.activeLeaves = [];
 
 		console.log(data.activeLeaves);
@@ -158,7 +155,7 @@ export default class LegifrancePlugin extends Plugin {
 		const data: dataJson = {
 			data: this.historiqueDocuments,
 			settings: this.settings,
-			activeLeaves: this.activeLeaves
+			activeLeaves: this.activeLeaves,
 		};
 
 		await this.saveData(data);
@@ -205,7 +202,7 @@ export default class LegifrancePlugin extends Plugin {
 			const leafView = leaf.view as textReaderView;
 			if (leafView.document == this.docToShow) {
 				workspace.revealLeaf(leaf);
-				return
+				return;
 			}
 		}
 
@@ -219,6 +216,26 @@ export default class LegifrancePlugin extends Plugin {
 		}
 
 		this.saveSettings();
+	}
+
+	async activateNoteTakingView() {
+		const { workspace } = this.app;
+
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(NOTE_TAKING_VIEW);
+
+		if (leaves.length > 0) {
+			// A leaf with our view already exists, use that
+			leaf = leaves[0];
+		} else {
+			// Our view could not be found in the workspace, create a new leaf
+			// in the right sidebar for it
+			leaf = workspace.getLeaf('tab') as WorkspaceLeaf;
+			await leaf.setViewState({ type: NOTE_TAKING_VIEW, active: true });
+		}
+
+		// "Reveal" the leaf in case it is in a collapsed sidebar
+		workspace.revealLeaf(leaf);
 	}
 
 	async activateResultsView(searchFields: documentSearchFieldsClass) {
@@ -257,6 +274,4 @@ export default class LegifrancePlugin extends Plugin {
 			return searchTab;
 		} else return null;
 	}
-
-
 }

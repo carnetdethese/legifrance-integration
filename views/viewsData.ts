@@ -3,15 +3,14 @@ import { getDocumentsListe, popDocumentsList, pushDocumentsList, removeDocuments
 
 export class documentDataStorage {
     id: number;
-    status:boolean;
     data: legalDocument;
     template?:string;
 
-    constructor(id: number, data: legalDocument) {
+    constructor(id: number, data: legalDocument, template?: string) {
         this.id = id;
-        this.status = true;
         if (data.type == "jurisprudence") this.data = data as legalDocument;
         else this.data = data as legalDocument;
+        if (template) this.template = template;
     }
 }
 
