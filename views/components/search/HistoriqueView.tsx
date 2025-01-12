@@ -42,9 +42,9 @@ export const HistoriqueView = () => {
 		<div ref={scrollRefElement} >
 			<h5 >Historique</h5>
 			{documentsListe && documentsListe.length > 0
-				? documentsListe.map((elt) => {
+				? documentsListe.map((elt, index) => {
 						return (
-							<div key={elt.data.id} className="setting-item">
+							<div key={index} className="setting-item">
 								<div className="setting-item-info">
 									<div className="setting-item-name">
 										{elt.data.id}

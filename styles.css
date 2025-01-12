@@ -32,7 +32,7 @@ mark {
     
 }
 
-.showLine {
+.info-box {
     background-color: var(--background-primary); /* Use Obsidian's primary background color */
     border: 2px solid var(--background-secondary); /* Subtle border */
     border-radius: 8px; /* Rounded corners */
@@ -107,4 +107,3 @@ mark {
         max-width: 15rem;
     }
 }
-

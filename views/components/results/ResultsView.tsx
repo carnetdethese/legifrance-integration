@@ -46,7 +46,7 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		}
 	}
 
-	function handleClickDocument(e) {
+	async function handleClickDocument(e) {
 		if (!results) return;
 
 		const selectedDocument = results.find(
@@ -54,11 +54,13 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		) as legalDocument;
 
 		// TODO : Revoir la logique de cette fonction pour éliminer les variables globales.
-		getDocumentInfo(
+		const documentFinal = await getDocumentInfo(
 			selectedDocument,
 			getValeurRecherche(),
 			getAgentChercheur()
-		);
+		) as legalDocument;
+
+		console.log(documentFinal);
 
 		const historiqueLength = plugin.historiqueDocuments.length
 		const id =
@@ -66,7 +68,7 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 				? plugin.historiqueDocuments.slice(-1)[0].id + 1
 				: 1;
 
-		const newView = new documentDataStorage(id, selectedDocument);
+		const newView = new documentDataStorage(id, documentFinal);
 		plugin.historiqueDocuments.push(newView)
 		plugin.docToShow = newView;
 		plugin.saveSettings();

@@ -6,6 +6,9 @@ import { addLineBreaks, removeTags, replaceMark } from "lib/tools";
 import { documentDataStorage } from "./viewsData";
 import { legalDocument } from "abstracts/document";
 import { formatDate } from "lib/utils";
+import { createRoot, Root } from "react-dom/client";
+import { ReaderView } from "./components/reader/ReaderView";
+import { PluginContext } from "./context";
 
 export const TEXT_READER_VIEW = "text-reader-view";
 
@@ -16,6 +19,7 @@ export class textReaderView extends ItemView {
 	researchTab: ResearchTextView;
 	id: number;
 	data: legalDocument;
+	root: Root | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: LegifrancePlugin) {
 		super(leaf);
@@ -23,21 +27,23 @@ export class textReaderView extends ItemView {
 
 		const doc = this.plugin.docToShow;
 
-
 		if (doc != undefined) {
 			this.document = doc;
 			this.data = this.document.data;
 		} else {
-			this.data = {
-				fond: "",
-				titre: "",
-				id: "",
-				texte: "",
-				lien: "",
-				origin: "",
-				type: "",
-			};
-			this.document = new documentDataStorage(0, this.data);
+
+			// this.data = {
+			// 	fond: "",
+			// 	titre: "",
+			// 	id: "",
+			// 	texte: "",
+			// 	lien: "",
+			// 	origin: "",
+			// 	type: "",
+			// };
+
+
+			this.document = new documentDataStorage(0, this.plugin.historiqueDocuments[0].data);
 		}
 
 		this.document.template =
@@ -73,27 +79,17 @@ export class textReaderView extends ItemView {
 	}
 
 	async onOpen() {
-		const container = this.containerEl.children[1];
-		container.empty();
-		container.classList.add("view-text");
+		this.root = createRoot(this.containerEl.children[1]);
+		
+		this.root.render(
+			<PluginContext.Provider value={this.plugin}>
+				<ReaderView data={this.document.data} />
+			</PluginContext.Provider>
+		)
 
-		if (
-			this.document.data.origin == "CETAT" ||
-			this.document.data.origin == "JURI" ||
-			this.document.data.origin == "CONSTIT"
-		) {
-			this.viewDecision(container);
-		} else if (this.document.data.origin == "CIRC") {
-			this.viewCirc(container);
-		} else if (this.document.data.origin == "KALI") {
-			this.viewKali(container);
-		} else {
-			this.viewStatute(container);
-		}
-
-		if (this.researchTab) {
-			await this.researchTab.onOpen();
-		}
+		// if (this.researchTab) {
+		// 	await this.researchTab.onOpen();
+		// }
 	}
 
 	async onClose() {
@@ -101,32 +97,6 @@ export class textReaderView extends ItemView {
 		if (this.researchTab) {
 			await this.researchTab.onOpen();
 		}
-	}
-
-	viewKali(container: Element) {
-		container.createEl("h2", { text: this.document.data.titre });
-
-		const infoBox = container.createEl("div");
-		infoBox.classList.add("showLine");
-
-		infoBox.createEl("h3", { text: "Informations" });
-
-		if (this.document.data.date)
-			infoBox.createEl("p", {
-				text: `Date : ${formatDate(this.document.data.date)}`,
-				cls: "infoDecision",
-			});
-
-		infoBox.createEl("p", { text: "yo", cls: "infoDecision" });
-
-		const content = container.createDiv();
-
-		if (this.document.data.texteIntegral)
-			content.appendChild(
-				addLineBreaks(this.document.data.texteIntegral)
-			);
-
-		return;
 	}
 
 	viewCirc(container: Element) {
