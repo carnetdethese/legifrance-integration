@@ -89,6 +89,8 @@ export class newNote {
 			...(this.data.notes || null),
 		};
 
+		console.log(this.dataNote);
+
 		let fileTitle;
 
 		if (this.dataNote.titreNote) {
@@ -103,6 +105,7 @@ export class newNote {
 			noEscape: true,
 		});
 		const noteContent = templateContenuCompile(this.dataNote);
+		console.log(noteContent);
 
 		if (!this.app.vault.getFolderByPath(this.folder)) {
 			this.app.vault.createFolder(this.folder);
