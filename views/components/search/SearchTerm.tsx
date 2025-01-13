@@ -1,14 +1,13 @@
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
-import React from "react";
 
 interface SearchTermProps {
 	recherche: documentSearchFieldsClass;
 	rank: number;
 	handleSearchTermChange: (
-		event: React.MouseEvent<HTMLInputElement, MouseEvent>
+		event: React.ChangeEvent<HTMLInputElement>
 	) => void;
 	handleKeyDown: (
-		event: React.MouseEvent<HTMLInputElement, KeyboardEvent>
+		event: React.KeyboardEvent<HTMLInputElement>
 	) => void;
 }
 

@@ -375,7 +375,4 @@ export class documentHandlerView extends documentSearchFieldsClass {
 		super();
 	}
 
-	updatingFond(selection: string) {
-		super.updatingFond(selection);
-	}
 }

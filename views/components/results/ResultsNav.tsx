@@ -11,10 +11,10 @@ interface ResultsNavProps {
 		event: React.MouseEvent<HTMLButtonElement, MouseEvent>
 	) => void;
 	handleChangeItemsPerPage: (
-		event: React.MouseEvent<HTMLSelectElement, MouseEvent>
+		event: React.ChangeEvent<HTMLSelectElement>
 	) => void;
 	handleCriteresTriChange: (
-		event: React.MouseEvent<HTMLSelectElement, MouseEvent>
+		event: React.ChangeEvent<HTMLSelectElement>
 	) => void;
 }
 

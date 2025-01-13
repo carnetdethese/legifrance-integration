@@ -8,7 +8,7 @@ import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import LegifrancePlugin from "main";
 import { Notice } from "obsidian";
 
-const SubmitButton = ({ handleLaunchSearchClick }) => {
+const SubmitButton = ({ handleLaunchSearchClick }: { handleLaunchSearchClick: () => void;}) => {
 	return (
 		<div className="setting-item">
 			<div className="setting-item-control">
@@ -26,12 +26,14 @@ export const ResearchView = () => {
 	);
 	const [activeResearchType, setActiveResearchType] = useState("simple");
 
-	function handleResearchTypeClick(e) {
-		setActiveResearchType(e.target.value);
+	function handleResearchTypeClick(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+		const target = e.target as HTMLButtonElement;
+		setActiveResearchType(target.value);
 	}
 
-	function handleFondSelect(e) {
-		const newFond = e.target.value;
+	function handleFondSelect(e: React.ChangeEvent<HTMLSelectElement>) {
+		const target = e.target as HTMLSelectElement;
+		const newFond = target.value;
 		const newSearch = recherche.updatingFond(
 			newFond,
 			true
@@ -39,17 +41,18 @@ export const ResearchView = () => {
 		setRecherche(newSearch);
 	}
 
-	function handleDateChange(e) {
-		if (e.target.name == "start-date") {
+	function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+		const target = e.target as HTMLInputElement;
+		if (target.name == "start-date") {
 			const newSearch = recherche.setDate(
-				e.target.value,
+				target.value,
 				"start",
 				true
 			) as documentSearchFieldsClass;
 			setRecherche(newSearch);
-		} else if (e.target.name == "end-date") {
+		} else if (target.name == "end-date") {
 			const newSearch = recherche.setDate(
-				e.target.value,
+				target.value,
 				"end",
 				true
 			) as documentSearchFieldsClass;
@@ -66,27 +69,29 @@ export const ResearchView = () => {
 		pluginInstance.activateResultsView(recherche);
 	}
 
-	function handleSearchTermChange(e) {
-		const rank = e.target.dataset.rank;
+	function handleSearchTermChange(e: React.ChangeEvent<HTMLInputElement>) {
+		const target = e.target as HTMLInputElement;
+		const rank = target.dataset.rank;
 		const newSearch = recherche.updateValue(
 			0,
-			rank,
-			e.target.value,
+			parseInt(rank ? rank : ''),
+			target.value,
 			true
 		) as documentSearchFieldsClass;
 		setRecherche(newSearch);
 	}
 
-	function handleKeyDown(e) {
+	function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
 		if (e.key == "Enter") handleLaunchSearchClick();
 	}
 
-	function handleTypeRechercheChange(e) {
-		const rank = e.target.dataset.rank;
-		const value = e.target.value;
+	function handleTypeRechercheChange(e: React.ChangeEvent<HTMLSelectElement>) {
+		const target = e.target as HTMLSelectElement;
+		const rank = target.dataset.rank;
+		const value = target.value;
 		const newSearch = recherche.updateTypeRechercheChamp(
 			0,
-			rank,
+			parseInt(rank ? rank : ''),
 			value,
 			true
 		) as documentSearchFieldsClass;
@@ -94,12 +99,13 @@ export const ResearchView = () => {
 		return;
 	}
 
-	function handleOperateurRechercheChange(e) {
-		const rank = e.target.dataset.rank;
-		const value = e.target.value;
+	function handleOperateurRechercheChange(e:React.ChangeEvent<HTMLSelectElement>) {
+		const target = e.target as HTMLSelectElement;
+		const rank = target.dataset.rank;
+		const value = target.value;
 		const newSearch = recherche.updateOperateurCritereChamp(
 			0,
-			rank,
+			parseInt(rank ? rank : ''),
 			value,
 			true
 		) as documentSearchFieldsClass;
@@ -115,7 +121,6 @@ export const ResearchView = () => {
 				true
 			) as documentSearchFieldsClass;
 		} else if (ope == "remove") {
-			console.log(critere);
 			newSearch = recherche.deleteCritere(
 				0,
 				critere,
@@ -125,7 +130,6 @@ export const ResearchView = () => {
 		setRecherche(newSearch);
 	}
 
-	console.log(recherche.recherche.champs[0].criteres);
 
 	return (
 		<>

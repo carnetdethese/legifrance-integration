@@ -5,7 +5,6 @@ import { dateFormat } from "./dateHandler";
 
 export function ajoutBouton(view:textReaderView, element:HTMLElement) {
   const ficheArretChamp = view.nouvelleNote.champFiche;
-  // // console.log(ficheArretChamp);
 
   // Loop through each property of FicheArretChamp interface
   for (const property in ficheArretChamp) {
@@ -118,8 +117,7 @@ export function startDateBeforeEndDate(start:dateFormat, end:dateFormat) {
 
 
 export function getTodaysDate() {
-  const padZero = (num: number, pad: number) => num.toString().padStart(pad, '0');
-  let date = new Date();
+  const date = new Date();
   const todaysDate = new dateFormat(date.getFullYear().toString(), date.getMonth().toString(), date.getDate().toString());
   return todaysDate.toString();
 }

@@ -1,10 +1,10 @@
 import { DilaApiClient } from 'api/client'
 import { LegifranceSettings } from 'settings/settings';
 import { listRouteConsult } from './constants';
-import {ficheArretChamp, noteDocumentChamp, rechercheAvStructure } from 'abstracts/searches'
+import { rechercheAvStructure } from 'abstracts/searches'
 import { legalDocument } from 'abstracts/document';
 
-export interface dataFiche extends ficheArretChamp, noteDocumentChamp, legalDocument {}
+export interface dataFiche extends legalDocument {}
 
 export class agentSearch {
   
@@ -38,7 +38,6 @@ export class agentSearch {
     }
 
     const data = await this.dilaApi.fetch(requestOptions);
-    console.log(data);
 
     return data;
   }

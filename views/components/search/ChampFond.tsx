@@ -3,7 +3,7 @@ import * as constants from "../../../api/constants";
 
 interface ChampFondProps {
 	fond: string,
-	handleFondSelect: (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void;
+	handleFondSelect: (event: React.ChangeEvent<HTMLSelectElement>) => void;
 }
 
 export const ChampFond = ({ fond, handleFondSelect }: ChampFondProps) => {

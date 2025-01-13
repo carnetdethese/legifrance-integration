@@ -1,10 +1,8 @@
-import React from 'react';
-
 type ResearchType = 'simple' | 'avancee';
 
 interface ResearchTypeButtonsProps {
     type: ResearchType;
-    handleClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+    handleClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
     activeType: string;
 }
 

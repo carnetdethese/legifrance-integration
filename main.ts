@@ -17,7 +17,6 @@ import {
 	setAgentChercheur,
 	setGlobalSettings,
 } from "globals/globals";
-import { legalDocument } from "abstracts/document";
 
 interface dataJson {
 	data: documentDataStorage[];

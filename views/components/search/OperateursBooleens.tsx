@@ -1,4 +1,3 @@
-import React from "react";
 import * as constants from "../../../api/constants";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
 
@@ -6,10 +5,10 @@ interface OperateursBooleensProps {
 	rank: number;
 	recherche: documentSearchFieldsClass;
 	handleTypeRechercheChange: (
-		event: React.MouseEvent<HTMLSelectElement, MouseEvent>
+		event: React.ChangeEvent<HTMLSelectElement>
 	) => void;
 	handleOperateurRechercheChange: (
-		event: React.MouseEvent<HTMLSelectElement, MouseEvent>
+		event: React.ChangeEvent<HTMLSelectElement>
 	) => void;
 }
 

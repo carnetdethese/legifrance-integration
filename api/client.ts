@@ -1,4 +1,4 @@
-import { Notice, requestUrl } from "obsidian";
+import { Notice, requestUrl, RequestUrlResponse } from "obsidian";
 import { LegifranceSettings } from "settings/settings";
 
 interface ModuleOptions {
@@ -84,7 +84,6 @@ export class DilaApiClient {
 				body: `grant_type=client_credentials&client_id=${this.config.client.id}&client_secret=${this.config.client.secret}&scope=open_id`,
 			}).then((r) => r.text);
 
-			console.log(data);
 			const access_token = JSON.parse(data);
 			this.globalToken = access_token.access_token;
 		} catch (error) {
@@ -94,7 +93,6 @@ export class DilaApiClient {
 			throw error;
 		}
 
-		console.log(this.globalToken);
 		return this.globalToken;
 	}
 
@@ -107,7 +105,6 @@ export class DilaApiClient {
 		method?: string;
 		params?: object;
 	}): Promise<object> {
-		const [routeName] = path.split("/").slice(-1);
 		const token = await this.getAccessToken();
 		const url = `${this.apiHost}/${path}`;
 		const RequestUrlParams = {
@@ -120,8 +117,8 @@ export class DilaApiClient {
 			method: method,
 		};
 
-		const data = await requestUrl(RequestUrlParams).then((r: any) => {
-			if (!r.ok) {
+		const data = await requestUrl(RequestUrlParams).then((r: RequestUrlResponse ) => {
+			if (r.status != 200) {
 				if (r.status === 401 && this.globalToken) {
 					this.globalToken = undefined;
 					new Notice(
@@ -132,14 +129,10 @@ export class DilaApiClient {
 				new Error(`Erreur HTTP ! Statut : ${r.status}`);
 			}
 
-			return r.text;
-		});
-		if (data.error) {
-			new Notice("Erreur dans la récupération des informations.");
-			throw new Error(`Error on API fetch: ${JSON.stringify(data)}`);
-		}
+			return r;
+		}) as RequestUrlResponse;
 
 		new Notice("Données récupérées avec succès.");
-		return JSON.parse(data);
+		return JSON.parse(data.text);
 	}
 }

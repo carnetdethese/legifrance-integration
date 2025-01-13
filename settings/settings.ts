@@ -194,7 +194,6 @@ export class LegifranceSettingTab extends PluginSettingTab {
 				cb.onChange(async (value) => {
 					this.plugin.settings.dossierBase = value;
 					await this.plugin.saveSettings();
-					// console.log(this.plugin.settings.dossierBase)
 				})
             });
 
@@ -212,7 +211,6 @@ export class LegifranceSettingTab extends PluginSettingTab {
 				cb.onChange(async (value) => {
 					this.plugin.settings.fondSupp = value;
 					await this.plugin.saveSettings();
-					console.log(this.plugin.settings.fondSupp);
 				})
 			})
 	}

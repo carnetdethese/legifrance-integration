@@ -3,7 +3,7 @@ import { ResultCard } from "./ResultCard";
 import { getDocumentInfo, legalDocument } from "abstracts/document";
 import LegifrancePlugin from "main";
 import { getAgentChercheur, getValeurRecherche } from "globals/globals";
-import { addView, documentDataStorage } from "views/viewsData";
+import { documentDataStorage } from "views/viewsData";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import { useEffect, useState } from "react";
 import { Notice } from "obsidian";
@@ -46,11 +46,12 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		}
 	}
 
-	async function handleClickDocument(e) {
+	async function handleClickDocument(e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
+		const target = e.target as HTMLAnchorElement;
 		if (!results) return;
 
 		const selectedDocument = results.find(
-			(elt: legalDocument) => elt.id == e.target.dataset.id
+			(elt: legalDocument) => elt.id == target.dataset.id
 		) as legalDocument;
 
 		// TODO : Revoir la logique de cette fonction pour éliminer les variables globales.
@@ -60,7 +61,6 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 			getAgentChercheur()
 		) as legalDocument;
 
-		console.log(documentFinal);
 
 		const historiqueLength = plugin.historiqueDocuments.length
 		const id =
@@ -75,7 +75,7 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		plugin.activateTextReaderView();
 	}
 
-	async function handlePaginationClick(e) {
+	async function handlePaginationClick(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
 		const way = e.currentTarget.dataset.way;
 
 		// Check if way is defined and is either "previous" or "next"
@@ -98,13 +98,14 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		}
 	}
 
-	async function handleChangeItemsPerPage(e) {
-		searchHandler.updatePageSize(e.currentTarget.value);
+	async function handleChangeItemsPerPage(e: React.ChangeEvent<HTMLSelectElement>) {
+		const target = e.currentTarget as HTMLSelectElement;
+		searchHandler.updatePageSize(parseInt(target.value));
 		await fetchResults();
 	}
 
-	async function handleCriteresTriChange(e) {
-		console.log(e.target.value);
+	async function handleCriteresTriChange(e: React.ChangeEvent<HTMLSelectElement>) {
+
 		searchHandler.updateFacette(e.target.value);
 		await fetchResults();
 	}
@@ -131,7 +132,7 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 								handleClickDocument={handleClickDocument}
 							/>
 						);
-				  })
+				})
 				: "No data. Loading..."}
 		</>
 	);

@@ -4,8 +4,6 @@ import { champsRechercheAvancees } from "abstracts/searches";
 import LegifrancePlugin from "main";
 import { textReaderView } from "./viewText";
 import { resultatsRecherche } from "abstracts/searches";
-import { documentHandlerView } from "abstracts/searchHandler";
-import { dateHandler } from "lib/dateHandler";
 
 import { Root, createRoot } from "react-dom/client";
 import { ResearchView } from "./components/search/ResearchView";

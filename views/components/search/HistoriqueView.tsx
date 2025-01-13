@@ -32,7 +32,6 @@ export const HistoriqueView = () => {
 	}
 
 	function handleOpenClick(doc: documentDataStorage) {
-		doc.status = true;
 		plugin.docToShow = doc;
 		plugin.activateTextReaderView();
 	}
@@ -74,7 +73,7 @@ export const HistoriqueView = () => {
 								</div>
 							</div>
 						);
-				  })
+				})
 				: "Rien à afficher. Et si vous faisiez une recherche ?"}
 		</div>
 	);

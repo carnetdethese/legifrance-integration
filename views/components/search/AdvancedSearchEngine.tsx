@@ -1,5 +1,5 @@
 import * as constants from "../../../api/constants";
-import React, { useState } from "react";
+import { useState } from "react";
 import { DatePicker } from "./DatePicker";
 import { ChampRecherche } from "./ChampRecherche";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
@@ -7,19 +7,19 @@ import { documentSearchFieldsClass } from "abstracts/searchHandler";
 interface AdvancedSearchEngineProps {
 	recherche: documentSearchFieldsClass;
 	handleDateChange: (
-		event: React.MouseEvent<HTMLInputElement, MouseEvent>
+		event: React.ChangeEvent<HTMLInputElement>
 	) => void;
 	handleSearchTermChange: (
-		event: React.MouseEvent<HTMLInputElement, MouseEvent>
+		event: React.ChangeEvent<HTMLInputElement>
 	) => void;
 	handleKeyDown: (
-		event: React.MouseEvent<HTMLInputElement, KeyboardEvent>
+		event: React.KeyboardEvent<HTMLInputElement>
 	) => void;
 	handleTypeRechercheChange: (
-		event: React.MouseEvent<HTMLSelectElement, MouseEvent>
+		event: React.ChangeEvent<HTMLSelectElement>
 	) => void;
 	handleOperateurRechercheChange: (
-		event: React.MouseEvent<HTMLSelectElement, MouseEvent>
+		event: React.ChangeEvent<HTMLSelectElement>
 	) => void;
 	handleCritereAddOrRemove: (
 		ope: string,
@@ -51,14 +51,15 @@ export const AdvancedSearchEngine = ({
 		/>)
 	}
 
-	function handleClick(e) {
+	function handleClick(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
 		let newValue = 1;
-		if (e.target.value == "plus") {
+		const target = e.target as HTMLButtonElement;
+		if (target.value == "plus") {
 			newValue = counter + 1;
 			if (newValue > 4) return;
 			handleCritereAddOrRemove('add', newValue);
 		}
-		else if (e.target.value == "moins") {
+		else if (target.value == "moins") {
 			newValue = counter - 1;
 			if (newValue == 0) return;
 			handleCritereAddOrRemove('remove', newValue);

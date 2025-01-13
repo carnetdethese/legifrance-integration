@@ -6,19 +6,19 @@ import { documentSearchFieldsClass } from "abstracts/searchHandler";
 interface SimpleSearchEngineProps {
 	recherche: documentSearchFieldsClass;
 	handleDateChange: (
-		event: React.MouseEvent<HTMLInputElement, MouseEvent>
+		event: React.ChangeEvent<HTMLInputElement>
 	) => void;
 	handleSearchTermChange: (
-		event: React.MouseEvent<HTMLInputElement, MouseEvent>
+		event: React.ChangeEvent<HTMLInputElement>
 	) => void;
 	handleKeyDown: (
-		event: React.MouseEvent<HTMLInputElement, KeyboardEvent>
+		event: React.KeyboardEvent<HTMLInputElement>
 	) => void;
 	handleTypeRechercheChange: (
-		event: React.MouseEvent<HTMLSelectElement, MouseEvent>
+		event: React.ChangeEvent<HTMLSelectElement>
 	) => void;
 	handleOperateurRechercheChange: (
-		event: React.MouseEvent<HTMLSelectElement, MouseEvent>
+		event: React.ChangeEvent<HTMLSelectElement>
 	) => void;
 }
 

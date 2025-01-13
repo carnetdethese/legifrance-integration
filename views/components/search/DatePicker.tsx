@@ -1,6 +1,4 @@
-import { React, useState } from "react";
-
-export const DatePicker = ( { handleDateChange } ) => {
+export const DatePicker = ( { handleDateChange }: { handleDateChange: (e: React.ChangeEvent<HTMLInputElement>) => void;} ) => {
     return <>
         <div className="setting-item">
             <div className="setting-item-info">

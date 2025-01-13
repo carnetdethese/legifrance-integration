@@ -2,7 +2,7 @@ import { noteChampsPersonnalises } from "abstracts/document";
 import { newNote } from "creation/newNote";
 import { Rocket } from "lucide-react";
 import LegifrancePlugin from "main";
-import { useEffect, useState } from "react";
+import { ChangeEvent, MouseEvent, useEffect, useState } from "react";
 import { usePlugin } from "views/hooks";
 import { documentDataStorage } from "views/viewsData";
 
@@ -21,14 +21,16 @@ export const NoteTaking = () => {
 
 	const removeHtmlTags = /(<([^>]+)>)/gi;
 
-	function handleChangeDoc(e) {
+	function handleChangeDoc(e: ChangeEvent<HTMLSelectElement>) {
 		const doc = documentsListe.find((elt) => elt.data.id == e.target.value);
 		if (doc) {
 			setChosenDoc(doc);
 		}
 	}
 
-	function handleFieldClick(e) {
+	function handleFieldClick(
+		e: MouseEvent<HTMLButtonElement, globalThis.MouseEvent>
+	) {
 		// Ajoute ou supprime un champ pour la note finale en ajoutant un item dans la variable dédié de <legalDocument>.
 		const newDoc = new documentDataStorage(
 			chosenDoc.id,
@@ -36,12 +38,14 @@ export const NoteTaking = () => {
 			chosenDoc.template
 		);
 
-		if (e.target.value == "-") {
+		const target = e.target as HTMLButtonElement;
+
+		if (target.value == "-") {
 			if (newDoc.data.notes) {
 				if (newDoc.data.notes.length == 0) return;
 				newDoc.data.notes.pop();
 			}
-		} else if (e.target.value == "+") {
+		} else if (target.value == "+") {
 			const newChamp = {
 				titreChamp: "",
 				valeurChamp: "",
@@ -56,7 +60,7 @@ export const NoteTaking = () => {
 		plugin.saveSettings();
 	}
 
-	function HandleContributionChange(e) {
+	function HandleContributionChange(e: ChangeEvent<HTMLTextAreaElement>) {
 		const newContributionNote = e.target.value;
 		const newDoc = new documentDataStorage(
 			chosenDoc.id,
@@ -69,7 +73,9 @@ export const NoteTaking = () => {
 		plugin.saveSettings();
 	}
 
-	function handleNoteFieldChange(e) {
+	function handleNoteFieldChange(
+		e: ChangeEvent<HTMLTextAreaElement> | ChangeEvent<HTMLInputElement>
+	) {
 		const index = e.target.dataset.index;
 		const champ = e.target.dataset.field;
 
@@ -79,18 +85,27 @@ export const NoteTaking = () => {
 			chosenDoc.template
 		);
 
-		if (newDoc.data.notes) {
-			newDoc.data.notes[index][champ as keyof noteChampsPersonnalises] =
-				e.target.value;
+		if (newDoc.data.notes && index) {
+			newDoc.data.notes[parseInt(index)][
+				champ as keyof noteChampsPersonnalises
+			] = e.target.value;
 		}
 		setChosenDoc(newDoc);
 		plugin.saveSettings();
 	}
 
-	function handleClickCreateNoteButton(e) {
+	function handleClickCreateNoteButton(
+		e: MouseEvent<HTMLButtonElement, globalThis.MouseEvent>
+	) {
 		chosenDoc.template = plugin.settings.templateDecision;
 
-		const nouvelleNote = new newNote(plugin.app, chosenDoc.template, plugin.settings.fileTitle, chosenDoc.data, plugin.settings.dossierBase)
+		const nouvelleNote = new newNote(
+			plugin.app,
+			chosenDoc.template,
+			plugin.settings.fileTitle,
+			chosenDoc.data,
+			plugin.settings.dossierBase
+		);
 		nouvelleNote.createNote();
 	}
 
@@ -116,7 +131,7 @@ export const NoteTaking = () => {
 												: ""}
 										</option>
 									);
-							  })
+							})
 							: ""}
 					</select>
 				</div>
@@ -186,7 +201,7 @@ export const NoteTaking = () => {
 										</div>
 									</div>
 								);
-						  })
+						})
 						: ""}
 
 					<div className="setting-item">
@@ -218,7 +233,12 @@ export const NoteTaking = () => {
 						</div>
 					</div>
 					<div className="setting-item-control">
-						<button onClick={(e) => handleClickCreateNoteButton(e)} className="clickable-icon"><Rocket /></button>
+						<button
+							onClick={(e) => handleClickCreateNoteButton(e)}
+							className="clickable-icon"
+						>
+							<Rocket />
+						</button>
 					</div>
 				</div>
 			</div>

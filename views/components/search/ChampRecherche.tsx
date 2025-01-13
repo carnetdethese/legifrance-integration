@@ -5,10 +5,10 @@ import { documentSearchFieldsClass } from "abstracts/searchHandler";
 interface ChampRechercheProps {
     recherche: documentSearchFieldsClass;
     rank: number;
-	handleSearchTermChange: (event: React.MouseEvent<HTMLInputElement, MouseEvent>) => void;
-	handleKeyDown: (event: React.MouseEvent<HTMLInputElement, KeyboardEvent>) => void;
-	handleTypeRechercheChange: (event: React.MouseEvent<HTMLSelectElement, MouseEvent>) => void;
-	handleOperateurRechercheChange: (event: React.MouseEvent<HTMLSelectElement, MouseEvent>) => void;
+	handleSearchTermChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+	handleKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+	handleTypeRechercheChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+	handleOperateurRechercheChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
 }
 
 export const ChampRecherche = ({

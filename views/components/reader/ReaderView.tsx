@@ -1,8 +1,6 @@
 import { legalDocument } from "abstracts/document";
 import parse from "html-react-parser";
 import { InfoCard } from "./InfoCard";
-import { usePlugin } from "views/hooks";
-import LegifrancePlugin from "main";
 
 interface ReaderViewProps {
 	data: legalDocument;

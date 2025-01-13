@@ -1,8 +1,8 @@
 import { getDocumentInfo, legalDocument } from "abstracts/document";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import { getAgentChercheur, getValeurRecherche } from "globals/globals";
-import { ItemView, Plugin, WorkspaceLeaf } from "obsidian";
-import { addView, documentDataStorage } from "./viewsData";
+import { ItemView, WorkspaceLeaf } from "obsidian";
+import { documentDataStorage } from "./viewsData";
 import LegifrancePlugin from "main";
 
 import { Root, createRoot } from "react-dom/client";

@@ -14,7 +14,6 @@ export async function getConvCollInfo(doc: legalDocument, valeurRecherche: strin
 	infoDocument.texteIntegral += triArticles(response, infoDocument);
 	infoDocument.texteIntegral = replaceParaTags(infoDocument.texteIntegral);
 
-	console.log(infoDocument);
 
 	return infoDocument;
 }
@@ -31,7 +30,6 @@ export async function getCirculaireInfo(document: legalDocument, valeurRecherche
 
 	infoDocument.attachment = response.circulaire?.attachment
 
-	console.log(infoDocument);
 	return infoDocument;
 }
 
