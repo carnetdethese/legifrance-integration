@@ -10,6 +10,7 @@ export interface LegifranceSettings {
 	tokenHost: string;
 	templateDecision: string;
 	templateDocument:string;
+	templateAll: string;
 	fileTitle:string;
 	maxResults:number;
 	dossierBase:string;
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	tokenHost: 'https://oauth.piste.gouv.fr',
 	templateDecision: `---\ndate: {{date}}\njuridiction: {{juridiction}}\nformation: {{formation}}\nnom: {{titre}}\napport: \nnumero: {{numero}} \ncitation: {{citation}}\nlien: {{lien}}\ncontribution: {{contribution}}\ntags: \n---\n\n## Fiche et commentaire\n\n### Fiche d'arrêt \n\n{{ faits }}\n\n{{ procedure }}\n\n{{ moyens }}\n\n{{ question }}\n\n{{ solution }}\n\n### Commentaire\n\n## Décision \n\n{{texteIntegral}}`,
 	templateDocument: `---\ndate: {{date}}\norigine: {{origine}}\nnom: {{titre}}\napport: \nnumero: {{numero}} \nlien: {{lien}}\ncontribution: {{contribution}}\ntags: \n---\n\n## Notes\n\n## Document\n\n{{texteIntegral}}`,
+	templateAll: `---\ndate: {{date}}\njuridiction: {{juridiction}}\nformation: {{formation}}\nnom: {{titre}}\napport: \nnumero: {{numero}} \ncitation: {{citation}}\nlien: {{lien}}\ncontribution: {{contribution}}\ntags: \n---\n\n## Fiche et commentaire\n\n### Notes \n\n{{ #each notes }}\n\n#### {{ this.titreChamp }}\n\n{{ this.valeurChamp }}\n\n{{ /each }}\n\n### Commentaire\n\n## Décision \n\n{{texteIntegral}}`,
 	fileTitle: '{{id}}',
 	maxResults: 25,
 	dossierBase: "/",
@@ -100,8 +102,27 @@ export class LegifranceSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Personnalisation").setHeading();
 
 		new Setting(containerEl)
+		.setName('Modèle')
+		.setDesc('Note de travail')
+		.addTextArea(text => {text
+			.setPlaceholder("Définissez le modèle de fiches ici.")
+			.setValue(this.plugin.settings.templateAll)
+			.onChange(async (value) => {
+				this.plugin.settings.templateAll = value;
+				await this.plugin.saveSettings();
+			});
+			text.inputEl.style.width = "400px";
+			text.inputEl.style.height = "200px";
+		}
+		);
+
+				// Add a warning message with a custom class
+		const warningMessage = containerEl.createDiv("warning-message-template");
+		warningMessage.setText("⚠️ Attention: les deux modèles suivants seront supprimés à la prochaine mise à jour ! Pensez à sauvegarder ou adapter le modèle général !");
+
+		new Setting(containerEl)
 			.setName('Modèle de fiche d\'arrêt')
-			.setDesc('Note d\'arrêt')
+			.setDesc('Ce modèle disparaitra lors de la prochaine mise à jour ! Pensez à sauvegarder et mettre à jour le modèle général !')
 			.addTextArea(text => {text
 				.setPlaceholder("Définissez le modèle de fiches ici.")
 				.setValue(this.plugin.settings.templateDecision)

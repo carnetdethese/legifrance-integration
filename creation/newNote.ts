@@ -18,7 +18,7 @@ export class newNote {
     data:legalDocument;
     folder:string;
     champFiche:ficheArretChamp | noteDocumentChamp;
-    dataNote:Partial<ficheArretChamp> | Partial<noteDocumentChamp>;
+    dataNote:Partial<ficheArretChamp> | Partial<noteDocumentChamp> | Partial<legalDocument>;
 
 
     constructor(app:App, template:string, templateTitre:string, data:legalDocument, dossierBase:string) {
@@ -68,8 +68,10 @@ export class newNote {
     async createNote() {
         this.dataNote = {
             ...this.data,
-            ...this.champFiche
+            ...this.data.notes || null
         }
+
+        console.log(this.dataNote);
 
         let fileTitle;
 
@@ -82,10 +84,10 @@ export class newNote {
 
         let filePath:string = this.folder + fileTitle;
 
-        // // console.log(filePath);
-
         const templateContenuCompile = Handlebars.compile(this.template, {noEscape: true});
         const noteContent = templateContenuCompile(this.dataNote);
+
+        console.log(noteContent);
 
         if (this.data.type == "jurisprudence" && "juridiction" in this.data) {
             if (this.app.vault.getFolderByPath(this.folder + this.data.juridiction) === null) {

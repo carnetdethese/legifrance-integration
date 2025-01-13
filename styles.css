@@ -38,6 +38,8 @@ mark {
 
 }
 
+
+
 .info-box {
     position: relative;
     background-color: var(--background-primary); /* Use Obsidian's primary background color */
@@ -123,3 +125,14 @@ mark {
         max-width: 15rem;
     }
 }
+
+.warning-message-template {
+    color: orange;
+    font-weight: bold;
+    margin-top: 5px;
+    padding: 5px;
+    border: 1px solid orange;
+    background-color: rgba(255, 200, 0, 0.2); 
+    border-radius: 4px; 
+}
+

@@ -8,6 +8,11 @@ export interface resumeDocument {
 	resumePrincipal:string;
 }
 
+export interface noteChampsPersonnalises {
+	titreChamp: string;
+	valeurChamp: string;
+}
+
 export interface legalDocument {
 	fond:string;
 	dateTexte?:string;
@@ -44,6 +49,7 @@ export interface legalDocument {
 	motsCles?:string[];
 	motsClesLibres?:string;
 	attachment?: Attachment;
+	notes?: noteChampsPersonnalises[];
 }
 
 export interface Attachment {
