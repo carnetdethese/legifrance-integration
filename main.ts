@@ -133,7 +133,7 @@ export default class LegifrancePlugin extends Plugin {
 		if (data && data.data.length > 0) this.historiqueDocuments = data.data;
 		else this.historiqueDocuments = [];
 
-		if (data && data.activeLeaves.length > 0)
+		if (data && data.activeLeaves && data.activeLeaves.length > 0)
 			this.activeLeaves = data.activeLeaves;
 		else this.activeLeaves = [];
 
