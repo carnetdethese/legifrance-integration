@@ -140,7 +140,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			.setDesc('Autre document juridique')
 			.addTextArea(text => {
 				text
-				.setDisabled(true)
+				.setDisabled(false)
 				.setPlaceholder("Définissez le modèle de fiches ici.")
 				.setValue(this.plugin.settings.templateDocument)
 				.onChange(async (value) => {
