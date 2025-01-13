@@ -97,7 +97,7 @@ export const NoteTaking = () => {
 	function handleClickCreateNoteButton(
 		e: MouseEvent<HTMLButtonElement, globalThis.MouseEvent>
 	) {
-		chosenDoc.template = plugin.settings.templateDecision;
+		chosenDoc.template = plugin.settings.templateAll;
 
 		const nouvelleNote = new newNote(
 			plugin.app,
