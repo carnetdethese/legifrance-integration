@@ -1,3 +1,5 @@
+🚨 Si le module ne se lance plus après la mise à jour, désinstallez-le puis réinstallez-le ! 🚨
+
 # Légifrance Intégration - Module Obsidian
 
 Un tuto-vidéo est disponible ici :
@@ -40,11 +42,7 @@ _Historique :_
 
 <img src="./docs/images/historique.png" alt="" width=50% height=50%>
 
-_Affichage des résultats (mot recherché dans l'exemple : Constitution) :_
-
-<img src="./docs/images/affichage-resultats.png" alt="" width=50% height=50%>
-
-_Affichage des résultats (bêta) :_
+_Affichage des résultats :_
 
 <img src="./docs/images/resultats-nouveau.png" alt="" width=50% height=50%>
 
@@ -87,6 +85,7 @@ Voilà les variables accessibles :
 -   `{{ solution }}` - Solution de la décision
 -   `{{ urlCC }}` - Lien vers le site du Conseil constitutionnel pour les décisions du Conseil constitutionnel
 -   `{{ #sommaires }} {{ resume }} {{ /sommaires }}` (c'est une liste qui peut contenir plusieurs entrées. La syntaxe ici permet de faire une boucle et d'afficher toutes les entrées) - Liste des sommaires.
+- `{{ each #notes }} {{ this.titreChamp }} {{ this.valeurChamp }} {{ /each }}` (idem, avec une liste qui contient des objets avec une variable `titreChamp` et une autre `valeurChamp`).
 
 Pour aller plus loin, vous pouvez consulter la [documentation de Handlebars](https://handlebarsjs.com). Une fonctionnalité utile, peut être, par exemple, d'intégrer un affichage conditionnel lorsque vous ne souhaitez pas utiliser l'éditeur de note d'arrêt, en utilisant le bloc `{{#if variable}} {{variable}} {{/if}}`.
 
