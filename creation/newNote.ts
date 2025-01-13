@@ -8,104 +8,117 @@ import { ficheArretChamp, noteDocumentChamp } from "abstracts/searches";
 // }
 
 export function isDecision(doc: legalDocument): doc is legalDocument {
-    return 'annee' in doc && 'juridiction' in doc && 'formation' in doc && 'urlCC' in doc && 'sommaires' in doc && 'abstract' in doc
+	return (
+		"annee" in doc &&
+		"juridiction" in doc &&
+		"formation" in doc &&
+		"urlCC" in doc &&
+		"sommaires" in doc &&
+		"abstract" in doc
+	);
 }
 
 export class newNote {
-    app:App;
-    template:string;
-    titreTemplate:string;
-    data:legalDocument;
-    folder:string;
-    champFiche:ficheArretChamp | noteDocumentChamp;
-    dataNote:Partial<ficheArretChamp> | Partial<noteDocumentChamp> | Partial<legalDocument>;
+	app: App;
+	template: string;
+	titreTemplate: string;
+	data: legalDocument;
+	folder: string;
+	champFiche: ficheArretChamp | noteDocumentChamp;
+	dataNote:
+		| Partial<ficheArretChamp>
+		| Partial<noteDocumentChamp>
+		| Partial<legalDocument>;
 
+	constructor(
+		app: App,
+		template: string,
+		templateTitre: string,
+		data: legalDocument,
+		dossierBase: string
+	) {
+		this.app = app;
+		this.template = template;
+		this.data =
+			data.type == "jurisprudence"
+				? (data as legalDocument)
+				: (data as legalDocument);
+		this.folder = this.folderSetting(dossierBase) || "/";
+		this.titreTemplate = templateTitre;
 
-    constructor(app:App, template:string, templateTitre:string, data:legalDocument, dossierBase:string) {
-        this.app = app;
-        this.template = template;
-        this.data = data.type == "jurisprudence" ? data as legalDocument : data as legalDocument;
-        this.folder = this.folderSetting(dossierBase) || "";
-        this.titreTemplate = templateTitre;
-        
-        if (data.type == "jurisprudence") {
-            this.champFiche = {
-                faits: "",
-                procedure: "",
-                moyens: "",
-                question: "",
-                solution: ""       
-             }
-        }
-        else {
-            this.champFiche = {
-                notes: "",
-                interet: "",
-                connexes: "",
-             };
-        }
-    }
+		if (data.type == "jurisprudence") {
+			this.champFiche = {
+				faits: "",
+				procedure: "",
+				moyens: "",
+				question: "",
+				solution: "",
+			};
+		} else {
+			this.champFiche = {
+				notes: "",
+				interet: "",
+				connexes: "",
+			};
+		}
+	}
 
-    folderSetting(dossierBase:string) {
-        let filePath = "";
+	folderSetting(dossierBase: string) {
+		let filePath = "";
 
-        if (this.data.type == "jurisprudence" && "juridiction" in this.data) {
-            // // console.log(this.data.type);
-            filePath = `${dossierBase}/${this.data.juridiction}/`;
-        }
-        else {
-            filePath = `${dossierBase}`;
-        }
+		if (this.data.type == "jurisprudence" && "juridiction" in this.data) {
+			if (dossierBase == "/") filePath = `${this.data.juridiction}/`;
+			else filePath = `${dossierBase}/${this.data.juridiction}/`;
+		} else {
+			filePath = `${dossierBase}`;
+		}
 
-        return filePath
-    }
+		return filePath;
+	}
 
-    async renderFileTitle () {
-        const titreTemplateCompiled = Handlebars.compile(this.titreTemplate, {noEscape: true});
-        return titreTemplateCompiled(this.dataNote);
-    }
- 
-    async createNote() {
-        this.dataNote = {
-            ...this.data,
-            ...this.data.notes || null
-        }
+	async renderFileTitle() {
+		const titreTemplateCompiled = Handlebars.compile(this.titreTemplate, {
+			noEscape: true,
+		});
+		return titreTemplateCompiled(this.dataNote);
+	}
 
-        console.log(this.dataNote);
+	async createNote() {
+		this.dataNote = {
+			...this.data,
+			...(this.data.notes || null),
+		};
 
-        let fileTitle;
+		let fileTitle;
 
-        if (this.dataNote.titreNote) {
-            fileTitle = this.dataNote.titreNote;
-        }
-        else {
-            fileTitle = await this.renderFileTitle()
-        }
+		if (this.dataNote.titreNote) {
+			fileTitle = this.dataNote.titreNote;
+		} else {
+			fileTitle = await this.renderFileTitle();
+		}
 
-        let filePath:string = this.folder + fileTitle;
+		let filePath: string = this.folder + fileTitle;
 
-        const templateContenuCompile = Handlebars.compile(this.template, {noEscape: true});
-        const noteContent = templateContenuCompile(this.dataNote);
+		const templateContenuCompile = Handlebars.compile(this.template, {
+			noEscape: true,
+		});
+		const noteContent = templateContenuCompile(this.dataNote);
 
-        console.log(noteContent);
+		if (!this.app.vault.getFolderByPath(this.folder)) {
+			this.app.vault.createFolder(this.folder);
+		}
 
-        if (this.data.type == "jurisprudence" && "juridiction" in this.data) {
-            if (this.app.vault.getFolderByPath(this.folder + this.data.juridiction) === null) {
-                // console.log("Dossier inexistant alors dossier créé.");
-                this.app.vault.createFolder(this.folder + this.data.juridiction);
-            }
-        }
+		if (this.app.vault.getFileByPath(filePath + ".md")) {
+			// Ceci évite la suppression de notes déjà créées en ajoutant la date en millisecondes au nom du fichier s'il s'agit de la deuxième note.
+			filePath += `-${Date.now()}`;
+		}
 
-        if (this.app.vault.getFileByPath(filePath + ".md") !== null) {
-            filePath + Date.now();
-        }
+		filePath += ".md";
 
-        filePath += ".md";
-        await this.app.vault.create(filePath, noteContent);
-        const abstractFile = this.app.vault.getFileByPath(filePath);
-        if (abstractFile !== null) {
-            await this.app.workspace.getLeaf().openFile(abstractFile);
-        }
-    }
-    
+		await this.app.vault.create(filePath, noteContent);
+		const abstractFile = this.app.vault.getFileByPath(filePath);
+		if (abstractFile !== null) {
+			await this.app.workspace.getLeaf().openFile(abstractFile);
+		}
+	}
 }

@@ -45,7 +45,6 @@ export default class LegifrancePlugin extends Plugin {
 		setAgentChercheur(new agentSearch(globalSettings));
 
 		await this.loadSettings();
-		console.log(this.activeLeaves);
 
 		this.registerView(
 			SEARCH_RESULT_VIEW,
@@ -139,8 +138,6 @@ export default class LegifrancePlugin extends Plugin {
 			this.activeLeaves = data.activeLeaves;
 		else this.activeLeaves = [];
 
-		console.log(data.activeLeaves);
-
 		if (getAgentChercheur()) {
 			this.updateApiAgent(this.settings);
 		}
@@ -224,13 +221,15 @@ export default class LegifrancePlugin extends Plugin {
 		let leaf: WorkspaceLeaf | null = null;
 		const leaves = workspace.getLeavesOfType(NOTE_TAKING_VIEW);
 
+
 		if (leaves.length > 0) {
 			// A leaf with our view already exists, use that
 			leaf = leaves[0];
+
 		} else {
 			// Our view could not be found in the workspace, create a new leaf
 			// in the right sidebar for it
-			leaf = workspace.getLeaf('tab') as WorkspaceLeaf;
+			leaf = workspace.getLeaf('split') as WorkspaceLeaf;
 			await leaf.setViewState({ type: NOTE_TAKING_VIEW, active: true });
 		}
 

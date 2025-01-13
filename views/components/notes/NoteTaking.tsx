@@ -30,7 +30,6 @@ export const NoteTaking = () => {
 
 	function handleFieldClick(e) {
 		// Ajoute ou supprime un champ pour la note finale en ajoutant un item dans la variable dédié de <legalDocument>.
-		console.log(e.target.value);
 		const newDoc = new documentDataStorage(
 			chosenDoc.id,
 			chosenDoc.data,
@@ -108,7 +107,7 @@ export const NoteTaking = () => {
 						{documentsListe && documentsListe.length > 0
 							? documentsListe.map((elt, index) => {
 									return (
-										<option value={elt.data.id}>
+										<option key={index} value={elt.data.id}>
 											{elt.data.titre
 												.replace(removeHtmlTags, "")
 												.substring(0, 70)}
@@ -141,6 +140,7 @@ export const NoteTaking = () => {
 										: ""
 								}
 								rows={5}
+								cols={50}
 								id="contribution"
 								name="contribution"
 								onChange={(e) => HandleContributionChange(e)}
@@ -150,7 +150,7 @@ export const NoteTaking = () => {
 					{chosenDoc.data.notes && chosenDoc.data.notes.length > 0
 						? chosenDoc.data.notes.map((elt, index) => {
 								return (
-									<div className="setting-item">
+									<div key={index} className="setting-item">
 										<div className="setting-item-info">
 											<div className="setting-item-name">
 												<input

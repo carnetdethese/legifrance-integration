@@ -18,13 +18,17 @@ export const InfoCard = ({ data }: InfoCardProps) => {
 	const removeHtmlTags = /(<([^>]+)>)/gi;
 	const titre = data.titre.replace(removeHtmlTags, "");
 
+	function handleNoteTakingViewClick(e) {
+		plugin.activateNoteTakingView()
+	}
+
 	return (
 		<>
 			<div className="info-box">
 				<div className="info-box__top">
 					<h3>Informations</h3>
-					<button onClick={() => plugin.activateNoteTakingView()} className="clickable-icon" title="Editer une note">
-						<FilePlus />
+					<button data-doc={data.id} onClick={(e) => handleNoteTakingViewClick(e)} className="clickable-icon" title="Editer une note">
+						<FilePlus/>
 					</button>
 				</div>
 				<div>
