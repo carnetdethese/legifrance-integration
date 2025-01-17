@@ -159,7 +159,7 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 								handleClickDocument={handleClickDocument}
 							/>
 						);
-				  })
+				})
 				: "No data. Loading..."}
 		</>
 	);

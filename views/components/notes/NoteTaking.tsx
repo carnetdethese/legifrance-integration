@@ -146,7 +146,7 @@ export const NoteTaking = () => {
 												: ""}
 										</option>
 									);
-							  })
+							})
 							: ""}
 					</select>
 				</div>
@@ -233,7 +233,7 @@ export const NoteTaking = () => {
 										</div>
 									</div>
 								);
-						  })
+						})
 						: ""}
 
 					<div className="setting-item">
