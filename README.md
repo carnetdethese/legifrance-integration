@@ -101,6 +101,7 @@ Voilà les variables accessibles :
 -   `{{ formation }}` - Formation de la juridction
 -   `{{ solution }}` - Solution de la décision
 -   `{{ urlCC }}` - Lien vers le site du Conseil constitutionnel pour les décisions du Conseil constitutionnel
+- `{{ contributionNote }}` - Contribution ajoutée dans l'éditeur de note. Champ par défaut, qui permet d'ajouter une sorte de courte description du document consulté
 -   `{{#sommaires}} {{resume}} {{/sommaires}}` (c'est une liste qui peut contenir plusieurs entrées. La syntaxe ici permet de faire une boucle et d'afficher toutes les entrées) - Liste des sommaires.
 - `{{#each notes}} {{this.titreChamp}} {{this.valeurChamp}} {{/each}}` (idem, avec une liste qui contient des objets avec une variable `titreChamp` et une autre `valeurChamp`).
 
