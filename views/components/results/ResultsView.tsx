@@ -46,7 +46,9 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		}
 	}
 
-	async function handleClickDocument(e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
+	async function handleClickDocument(
+		e: React.MouseEvent<HTMLAnchorElement, MouseEvent>
+	) {
 		const target = e.target as HTMLAnchorElement;
 		if (!results) return;
 
@@ -55,27 +57,37 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		) as legalDocument;
 
 		// TODO : Revoir la logique de cette fonction pour éliminer les variables globales.
-		const documentFinal = await getDocumentInfo(
+		const documentFinal = (await getDocumentInfo(
 			selectedDocument,
 			getValeurRecherche(),
 			getAgentChercheur()
-		) as legalDocument;
+		)) as legalDocument;
 
-
-		const historiqueLength = plugin.historiqueDocuments.length
+		const historiqueLength = plugin.historiqueDocuments.length;
 		const id =
-		historiqueLength > 0
+			historiqueLength > 0
 				? plugin.historiqueDocuments.slice(-1)[0].id + 1
 				: 1;
 
-		const newView = new documentDataStorage(id, documentFinal);
-		plugin.historiqueDocuments.push(newView)
-		plugin.docToShow = newView;
+		const docAlreadyInHistorique = plugin.historiqueDocuments.find(
+			(elt) => elt.data.id == selectedDocument.id);
+
+		if (!docAlreadyInHistorique) {
+			const newView = new documentDataStorage(id, documentFinal);
+			plugin.historiqueDocuments.push(newView);
+			plugin.docToShow = newView;
+		}
+		else {
+			plugin.docToShow = docAlreadyInHistorique;
+		}
+		
 		plugin.saveSettings();
 		plugin.activateTextReaderView();
 	}
 
-	async function handlePaginationClick(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+	async function handlePaginationClick(
+		e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+	) {
 		const way = e.currentTarget.dataset.way;
 
 		// Check if way is defined and is either "previous" or "next"
@@ -98,14 +110,17 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		}
 	}
 
-	async function handleChangeItemsPerPage(e: React.ChangeEvent<HTMLSelectElement>) {
+	async function handleChangeItemsPerPage(
+		e: React.ChangeEvent<HTMLSelectElement>
+	) {
 		const target = e.currentTarget as HTMLSelectElement;
 		searchHandler.updatePageSize(parseInt(target.value));
 		await fetchResults();
 	}
 
-	async function handleCriteresTriChange(e: React.ChangeEvent<HTMLSelectElement>) {
-
+	async function handleCriteresTriChange(
+		e: React.ChangeEvent<HTMLSelectElement>
+	) {
 		searchHandler.updateFacette(e.target.value);
 		await fetchResults();
 	}
@@ -132,7 +147,7 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 								handleClickDocument={handleClickDocument}
 							/>
 						);
-				})
+				  })
 				: "No data. Loading..."}
 		</>
 	);

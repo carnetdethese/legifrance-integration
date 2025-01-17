@@ -86,14 +86,13 @@ export class newNote {
 	async createNote() {
 		this.dataNote = {
 			...this.data,
-			...(this.data.notes || null),
+			...(this.data.notes || []),
 		};
-
-		console.log(this.dataNote);
 
 		let fileTitle;
 
-		if (this.dataNote.titreNote) {
+		if (this.dataNote.titreNote || this.dataNote.titreNote != ''
+		) {
 			fileTitle = this.dataNote.titreNote;
 		} else {
 			fileTitle = await this.renderFileTitle();
@@ -105,7 +104,6 @@ export class newNote {
 			noEscape: true,
 		});
 		const noteContent = templateContenuCompile(this.dataNote);
-		console.log(noteContent);
 
 		if (!this.app.vault.getFolderByPath(this.folder)) {
 			this.app.vault.createFolder(this.folder);

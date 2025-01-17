@@ -30,7 +30,7 @@ export interface legalDocument {
 	texteHtml?:string;
 	texteIntegral?:string;
 	texteIntegralHTML?:string;
-	titreNote?:string;
+	titreNote:string;
 	contributionNote?:string;
 	visa?:string;
 	sections?:sectionsResultats[];

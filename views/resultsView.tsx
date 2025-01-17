@@ -67,14 +67,22 @@ export class SearchResultView extends ItemView {
 			getAgentChercheur()
 		);
 
-		const histoDocLength = this.plugin.historiqueDocuments.length;
+		const histoDocLength = pluginInstance.historiqueDocuments.length;
 		const docId =
-			histoDocLength > 0 ? this.plugin.historiqueDocuments[-1].id + 1 : 1;
-		const newView = new documentDataStorage(docId, selectedDocument);
+			histoDocLength > 0 ? pluginInstance.historiqueDocuments[-1].id + 1 : 1;
 
-		this.plugin.historiqueDocuments.push(newView);
+		const docAlreadyInHistorique = pluginInstance.historiqueDocuments.find(
+			(elt) => {
+				elt.data.id == selectedDocument.id;
+			}
+		);
 
-		pluginInstance.instancesOfDocumentViews += 1;
+		if (!docAlreadyInHistorique) {
+			const newView = new documentDataStorage(docId, selectedDocument);
+			pluginInstance.historiqueDocuments.push(newView);
+			pluginInstance.instancesOfDocumentViews += 1;
+		}
+
 		pluginInstance.activateTextReaderView();
 	}
 

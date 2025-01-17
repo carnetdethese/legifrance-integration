@@ -175,6 +175,7 @@ export class resultatsRechercheClass {
 							date: date,
 							cid: cid,
 							sections: result.sections,
+							titreNote: ''
 						});
 					});
 				}

@@ -44,7 +44,7 @@ export class textReaderView extends ItemView {
 			this.document = new documentDataStorage(0, this.plugin.historiqueDocuments[0].data);
 		}
 
-		this.document.template = this.plugin.settings.templateAll;
+		this.document.template = this.plugin.settings.templateDecision;
 
 		if (this.document != undefined)
 			this.nouvelleNote = new newNote(

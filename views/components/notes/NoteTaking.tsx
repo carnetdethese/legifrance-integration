@@ -109,6 +109,21 @@ export const NoteTaking = () => {
 		nouvelleNote.createNote();
 	}
 
+	function handleTitreNoteChange(e: ChangeEvent<HTMLInputElement>) {
+		const target = e.target as HTMLInputElement;
+		const newDoc = new documentDataStorage(
+			chosenDoc.id,
+			chosenDoc.data,
+			chosenDoc.template
+		);
+
+		newDoc.data.titreNote = target.value;
+		setChosenDoc(newDoc);
+		plugin.saveSettings();
+	}
+
+	console.log(chosenDoc.data.titreNote);
+
 	return (
 		<>
 			<div className="view-text">
@@ -131,13 +146,30 @@ export const NoteTaking = () => {
 												: ""}
 										</option>
 									);
-							})
+							  })
 							: ""}
 					</select>
 				</div>
 
 				<div className="note-taking-box">
-					<h2>{chosenDoc.data.titre}</h2>
+					<h4>{chosenDoc.data.titre}</h4>
+
+					<div className="setting-item">
+						<div className="setting-item-info">
+							<div className="setting-item-name">
+								Titre de la note
+							</div>
+						</div>
+						<div className="setting-item-control">
+							<input
+								value={chosenDoc.data.titreNote}
+								type="text"
+								name="titre-note"
+								id="titre-note"
+								onChange={(e) => handleTitreNoteChange(e)}
+							/>
+						</div>
+					</div>
 
 					<div className="setting-item">
 						<div className="setting-item-info">
@@ -201,7 +233,7 @@ export const NoteTaking = () => {
 										</div>
 									</div>
 								);
-						})
+						  })
 						: ""}
 
 					<div className="setting-item">

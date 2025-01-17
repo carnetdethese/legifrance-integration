@@ -14,26 +14,28 @@ export const HistoriqueView = () => {
 		setDocumentsListe([...plugin.historiqueDocuments]);
 	}, [plugin.historiqueDocuments]);
 
-	function handleCloseClick(doc: documentDataStorage) {
-		const resultIndex = plugin.historiqueDocuments.findIndex(
-			(l) => l === doc
-		);
+	function handleCloseClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+		const target = e.target as HTMLDivElement;
+		const docId = target.dataset.id as string;
 
-		if (resultIndex !== -1) {
-			const newHistorique = [
-				...plugin.historiqueDocuments.slice(0, resultIndex),
-				...plugin.historiqueDocuments.slice(resultIndex + 1),
-			];
+		const newHistorique = plugin.historiqueDocuments.filter(elt => elt.data.id != docId);
 
-			plugin.historiqueDocuments = newHistorique; // Remove the document
-			plugin.saveSettings();
-			setDocumentsListe(plugin.historiqueDocuments);
-		}
+		setDocumentsListe(newHistorique);
+		// plugin.historiqueDocuments = newHistorique;
+		plugin.saveSettings();
 	}
 
-	function handleOpenClick(doc: documentDataStorage) {
-		plugin.docToShow = doc;
-		plugin.activateTextReaderView();
+	function handleOpenClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+		const target = e.target as HTMLDivElement;
+		const docId = target.dataset.id as string;
+
+		const doc = plugin.historiqueDocuments.find((l) => l.data.id === docId);
+		console.log(doc);
+
+		if (doc) {
+			plugin.docToShow = doc;
+			plugin.activateTextReaderView();
+		}
 	}
 
 	return (
@@ -42,7 +44,10 @@ export const HistoriqueView = () => {
 			{documentsListe && documentsListe.length > 0
 				? documentsListe.map((elt, index) => {
 						const removeHtmlTags = /(<([^>]+)>)/gi;
-						const titre = elt.data.titre.replace(removeHtmlTags, "");
+						const titre = elt.data.titre.replace(
+							removeHtmlTags,
+							""
+						);
 
 						return (
 							<div key={index} className="setting-item">
@@ -56,8 +61,9 @@ export const HistoriqueView = () => {
 								</div>
 								<div className="setting-item-control">
 									<div
+										data-id={elt.data.id}
 										className="clickable-icon extra-setting-button"
-										onClick={(e) => handleOpenClick(elt)}
+										onClick={(e) => handleOpenClick(e)}
 									>
 										<ExternalLink
 											className="svg-icon"
@@ -65,8 +71,9 @@ export const HistoriqueView = () => {
 										/>
 									</div>
 									<div
+										data-id={elt.data.id}
 										className="clickable-icon extra-setting-button"
-										onClick={(e) => handleCloseClick(elt)}
+										onClick={(e) => handleCloseClick(e)}
 									>
 										<X className="svg-icon" />
 									</div>
