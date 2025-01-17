@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { Notice } from "obsidian";
 import { resultatsRechercheClass } from "abstracts/searches";
 import { usePlugin } from "views/hooks";
+import { RESEARCH_TEXT_VIEW, ResearchTextView } from "views/researchText";
 
 interface ResultsViewProps {
 	searchHandler: documentSearchFieldsClass;
@@ -26,6 +27,16 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		};
 		fetchData();
 	}, []);
+
+
+	function rerenderHistoriqueView() {
+		const leaves = plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW);
+		
+		if (leaves && leaves.length > 0) {
+			const view = leaves[0].view as ResearchTextView;
+			view.onOpen();
+		}
+	}
 
 	async function fetchResults() {
 		const check = await searchHandler.checkBeforeSearch();
@@ -83,6 +94,7 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		
 		plugin.saveSettings();
 		plugin.activateTextReaderView();
+		rerenderHistoriqueView();
 	}
 
 	async function handlePaginationClick(

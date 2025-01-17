@@ -7,6 +7,7 @@ interface ResultCardProps {
 	handleClickDocument: (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void;
 }
 
+
 export const ResultCard = ({
 	result,
 	handleClickDocument,

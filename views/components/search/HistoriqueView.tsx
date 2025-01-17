@@ -3,6 +3,7 @@ import LegifrancePlugin from "main";
 import { documentDataStorage } from "views/viewsData";
 import { usePlugin } from "views/hooks";
 import { useEffect, useState } from "react";
+import { TEXT_READER_VIEW, textReaderView } from "views/viewText";
 
 export const HistoriqueView = () => {
 	const plugin = usePlugin() as LegifrancePlugin;
@@ -15,18 +16,27 @@ export const HistoriqueView = () => {
 	}, [plugin.historiqueDocuments]);
 
 	function handleCloseClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
-		const target = e.target as HTMLDivElement;
+		const target = e.currentTarget as HTMLDivElement;
 		const docId = target.dataset.id as string;
 
 		const newHistorique = plugin.historiqueDocuments.filter(elt => elt.data.id != docId);
 
 		setDocumentsListe(newHistorique);
-		// plugin.historiqueDocuments = newHistorique;
+		plugin.historiqueDocuments = newHistorique;
+
+		const leaves = plugin.app.workspace.getLeavesOfType(TEXT_READER_VIEW);
+		console.log(leaves);
+		for (const leaf of leaves) {
+			const view = leaf.view as textReaderView;
+			if (view.data.id == docId) {
+				leaf.detach();
+			}
+		}
 		plugin.saveSettings();
 	}
 
 	function handleOpenClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
-		const target = e.target as HTMLDivElement;
+		const target = e.currentTarget as HTMLDivElement;
 		const docId = target.dataset.id as string;
 
 		const doc = plugin.historiqueDocuments.find((l) => l.data.id === docId);
