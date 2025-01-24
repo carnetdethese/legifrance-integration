@@ -2,6 +2,8 @@
 
 # MISE À JOUR ! A LIRE !
 
+Je recueille vos avis ! Ça se passe ici => https://framaforms.org/legifrance-integration-feedback-1737729191
+
 ## Nouveautés
 
 Préparation pour le futur de ce module :
