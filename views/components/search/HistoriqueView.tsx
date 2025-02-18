@@ -25,7 +25,6 @@ export const HistoriqueView = () => {
 		plugin.historiqueDocuments = newHistorique;
 
 		const leaves = plugin.app.workspace.getLeavesOfType(TEXT_READER_VIEW);
-		console.log(leaves);
 		for (const leaf of leaves) {
 			const view = leaf.view as textReaderView;
 			if (view.data.id == docId) {
@@ -40,7 +39,7 @@ export const HistoriqueView = () => {
 		const docId = target.dataset.id as string;
 
 		const doc = plugin.historiqueDocuments.find((l) => l.data.id === docId);
-		console.log(doc);
+
 
 		if (doc) {
 			plugin.docToShow = doc;

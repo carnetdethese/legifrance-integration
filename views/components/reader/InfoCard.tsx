@@ -19,6 +19,7 @@ export const InfoCard = ({ data }: InfoCardProps) => {
 	const titre = data.titre.replace(removeHtmlTags, "");
 
 	function handleNoteTakingViewClick(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+
 		plugin.activateNoteTakingView(e.metaKey)
 	}
 
@@ -28,6 +29,11 @@ export const InfoCard = ({ data }: InfoCardProps) => {
 				<div className="info-box__top">
 					<h3>Informations</h3>
 					<button data-doc={data.id} onClick={(e) => handleNoteTakingViewClick(e)} className="clickable-icon" title="Editer une note">
+						<FilePlus/>
+					</button>
+
+					{/* Nouveau bouton pour créer une fiche rapidement sans passer par l'éditeur. */}
+					<button data-doc={data.id} onClick={(e) => handleNoteTakingViewClick(e)} className="clickable-icon" title="Quick note">
 						<FilePlus/>
 					</button>
 				</div>

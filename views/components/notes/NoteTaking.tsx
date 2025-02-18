@@ -122,8 +122,6 @@ export const NoteTaking = () => {
 		plugin.saveSettings();
 	}
 
-	console.log(chosenDoc.data.titreNote);
-
 	return (
 		<>
 			<div className="view-text">
