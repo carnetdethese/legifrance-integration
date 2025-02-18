@@ -220,7 +220,6 @@ export default class LegifrancePlugin extends Plugin {
 		let leaf: WorkspaceLeaf | null = null;
 		const leaves = workspace.getLeavesOfType(NOTE_TAKING_VIEW);
 
-
 		if (leaves.length > 0) {
 			// A leaf with our view already exists, use that
 			leaf = leaves[0];
@@ -228,7 +227,7 @@ export default class LegifrancePlugin extends Plugin {
 		} else {
 			// Our view could not be found in the workspace, create a new leaf
 			// in the right sidebar for it
-			leaf = workspace.getLeaf(false) as WorkspaceLeaf;
+			leaf = workspace.getLeaf(modifierKey) as WorkspaceLeaf;
 			await leaf.setViewState({ type: NOTE_TAKING_VIEW, active: true });
 		}
 

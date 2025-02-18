@@ -106,6 +106,7 @@ export const NoteTaking = () => {
 			chosenDoc.data,
 			plugin.settings.dossierBase
 		);
+		
 		nouvelleNote.createNote();
 	}
 

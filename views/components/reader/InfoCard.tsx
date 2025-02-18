@@ -1,6 +1,8 @@
 import { legalDocument } from "abstracts/document";
-import { FilePlus } from "lucide-react";
+import { newNote } from "creation/newNote";
+import { FilePlus, Sparkles } from "lucide-react";
 import LegifrancePlugin from "main";
+import { Notice } from "obsidian";
 import { usePlugin } from "views/hooks";
 
 interface InfoCardProps {
@@ -8,7 +10,7 @@ interface InfoCardProps {
 }
 
 export const InfoCard = ({ data }: InfoCardProps) => {
-    const plugin = usePlugin() as LegifrancePlugin;
+	const plugin = usePlugin() as LegifrancePlugin;
 	let lienPdf;
 
 	if (data.origin == "CIRC") {
@@ -23,19 +25,49 @@ export const InfoCard = ({ data }: InfoCardProps) => {
 		plugin.activateNoteTakingView(e.metaKey)
 	}
 
+	function handleQuickNoteClick(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+		const chosenDoc = plugin.historiqueDocuments.find(elt => elt.data.id == data.id)
+
+		if (!chosenDoc) {
+			new Notice('Erreur dans la création rapide de la note.');
+			return
+		}
+
+		chosenDoc.template = plugin.settings.templateAll;
+
+		const nouvelleNote = new newNote(
+			plugin.app,
+			chosenDoc.template,
+			plugin.settings.fileTitle,
+			chosenDoc.data,
+			plugin.settings.dossierBase
+		);
+
+		nouvelleNote.createNote();
+	}
+
+
+
+
 	return (
 		<>
 			<div className="info-box">
 				<div className="info-box__top">
 					<h3>Informations</h3>
-					<button data-doc={data.id} onClick={(e) => handleNoteTakingViewClick(e)} className="clickable-icon" title="Editer une note">
-						<FilePlus/>
-					</button>
 
 					{/* Nouveau bouton pour créer une fiche rapidement sans passer par l'éditeur. */}
-					<button data-doc={data.id} onClick={(e) => handleNoteTakingViewClick(e)} className="clickable-icon" title="Quick note">
-						<FilePlus/>
-					</button>
+
+					<div style={{
+						display: 'flex',
+						flexDirection: 'row'
+					}}>
+						<button data-doc={data.id} onClick={(e) => handleQuickNoteClick(e)} className="clickable-icon" title="Quick note">
+							<Sparkles />
+						</button>
+						<button data-doc={data.id} onClick={(e) => handleNoteTakingViewClick(e)} className="clickable-icon" title="Editer une note">
+							<FilePlus />
+						</button>
+					</div>
 				</div>
 				<div>
 					{data.titre ? <p>Titre : {titre}</p> : ""}
