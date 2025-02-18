@@ -19,7 +19,7 @@ export const InfoCard = ({ data }: InfoCardProps) => {
 	const titre = data.titre.replace(removeHtmlTags, "");
 
 	function handleNoteTakingViewClick(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
-		plugin.activateNoteTakingView()
+		plugin.activateNoteTakingView(e.metaKey)
 	}
 
 	return (

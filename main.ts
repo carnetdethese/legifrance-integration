@@ -214,7 +214,7 @@ export default class LegifrancePlugin extends Plugin {
 		this.saveSettings();
 	}
 
-	async activateNoteTakingView() {
+	async activateNoteTakingView(modifierKey:boolean) {
 		const { workspace } = this.app;
 
 		let leaf: WorkspaceLeaf | null = null;
@@ -228,7 +228,7 @@ export default class LegifrancePlugin extends Plugin {
 		} else {
 			// Our view could not be found in the workspace, create a new leaf
 			// in the right sidebar for it
-			leaf = workspace.getLeaf('split') as WorkspaceLeaf;
+			leaf = workspace.getLeaf(false) as WorkspaceLeaf;
 			await leaf.setViewState({ type: NOTE_TAKING_VIEW, active: true });
 		}
 
