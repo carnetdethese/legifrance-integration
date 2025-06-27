@@ -1,8 +1,9 @@
+⚠️ [Obsidian Web Clipper](https://obsidian.md/clipper) a rendu ce plugin quelque peu obsolète. En effet, il permet d'enregister directement depuis son navigateur les informations que l'on veut. J'ai écrit un [petit billet de blog](https://carnetdethese.amimms.fr/posts/2025/03/fin-du-game/) pour faire la transition. Dans cette mesure, **je mets en suspens le développement de ce module**. ⚠️
+
+
+# MISE À JOUR !
+
 🚨 Si le module ne se lance plus après la mise à jour, désinstallez-le puis réinstallez-le ! 🚨
-
-# MISE À JOUR ! A LIRE !
-
-Je recueille vos avis ! Ça se passe ici => https://framaforms.org/legifrance-integration-feedback-1737729191
 
 ## Nouveautés
 
