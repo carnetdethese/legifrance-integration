@@ -5,6 +5,7 @@ import { ArticleModal } from "views/ArticleModal";
 import { canResolve } from "references/resolver";
 import { LegalRef, RefKind } from "references/parser";
 import { useNoteReferences, usePlugin } from "views/hooks";
+import LegifrancePlugin from "main";
 
 /** Rubriques d'affichage, dans l'ordre. */
 const GROUPS: { kind: RefKind; title: string }[] = [
@@ -52,6 +53,15 @@ export const ReferencesPanel = () => {
 				<p className="legifrance-empty">Aucune référence juridique détectée dans cette note.</p>
 			)}
 
+			{plugin.settings.debugRefs && (
+				<div className="legifrance-debug-bar">
+					<button disabled={busy} onClick={() => resolve(refs.filter((ref) => canResolve(ref)))}>
+						Relancer toutes les recherches
+					</button>
+					<button onClick={() => copyDiagnostic(plugin, file.path, refs)}>Copier le diagnostic</button>
+				</div>
+			)}
+
 			{missing.length > 0 && !plugin.settings.autoResolveRefs && (
 				<button disabled={busy} onClick={() => resolve(missing)}>
 					{busy ? "Recherche…" : `Retrouver ${missing.length} lien${missing.length > 1 ? "s" : ""} via l'API`}
@@ -75,6 +85,19 @@ export const ReferencesPanel = () => {
 	);
 };
 
+/** Diagnostic de la note (références, données, journal de recherche), copié dans le presse-papiers. */
+async function copyDiagnostic(plugin: LegifrancePlugin, path: string, refs: LegalRef[]) {
+	const lines = [`Note : ${path}`, `Identifiants PISTE : ${plugin.hasCredentials ? "renseignés" : "ABSENTS"}`, ""];
+	for (const ref of refs) {
+		const link = plugin.references.linkFor(ref);
+		lines.push(`## ${ref.label}`, `type : ${ref.kind} | données : ${JSON.stringify(ref.data)}`);
+		lines.push(`lien : ${link?.url ?? "aucun"} | repli : ${ref.fallbackUrl ?? plugin.getReferenceUrl(ref)}`);
+		lines.push(...(plugin.referenceTraces.get(ref.key) ?? ["(aucune recherche pendant cette session)"]), "");
+	}
+	await navigator.clipboard.writeText(lines.join("\n"));
+	new Notice("Diagnostic copié dans le presse-papiers.");
+}
+
 interface ReferenceItemProps {
 	reference: LegalRef;
 	disabled: boolean;
@@ -93,12 +116,19 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 	else if (missed) status = "Introuvable via l'API : lien de recherche.";
 
 	const texte = link?.texte;
+	const trace = plugin.settings.debugRefs ? plugin.referenceTraces.get(reference.key) : undefined;
 
 	return (
 		<div className="setting-item">
 			<div className="setting-item-info">
 				<div className="setting-item-name">{reference.label}</div>
 				<div className="setting-item-description">{status}</div>
+				{plugin.settings.debugRefs && (
+					<details className="legifrance-trace">
+						<summary>Diagnostic</summary>
+						<pre>{trace ? trace.join("\n") : "Aucune recherche pendant cette session (résultat en cache, ou recherche non lancée)."}</pre>
+					</details>
+				)}
 				{texte && link && (
 					<div
 						className="legifrance-excerpt"

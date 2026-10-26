@@ -17,6 +17,8 @@ export interface LegifranceSettings {
 	fondSupp: boolean;
 	/** Retrouve automatiquement, via l'API, les liens des références juridiques d'une note. */
 	autoResolveRefs: boolean;
+	/** Mode débogage : journal détaillé de la recherche des références, visible dans le panneau. */
+	debugRefs: boolean;
 }
 
 export const DEFAULT_SETTINGS: LegifranceSettings = {
@@ -29,7 +31,8 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	maxResults: 25,
 	dossierBase: "/",
 	fondSupp:false,
-	autoResolveRefs: true
+	autoResolveRefs: true,
+	debugRefs: false
 }
 
 
@@ -150,6 +153,18 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			.addToggle((toggle) =>
 				toggle.setValue(settings.autoResolveRefs).onChange(async (value) => {
 					settings.autoResolveRefs = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("Mode débogage des références")
+			.setDesc(
+				"Affiche sous chaque référence le journal de sa recherche (requêtes envoyées, réponses de l'API, erreurs) et ajoute un bouton pour copier ce diagnostic. Le journal est aussi écrit dans la console du développeur."
+			)
+			.addToggle((toggle) =>
+				toggle.setValue(settings.debugRefs).onChange(async (value) => {
+					settings.debugRefs = value;
 					await this.plugin.saveSettings();
 				})
 			);

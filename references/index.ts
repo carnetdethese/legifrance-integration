@@ -9,6 +9,8 @@ export const REFERENCE_DATA_VERSION = 4;
 
 /** Délai avant de relancer la recherche d'une référence introuvable (24 h). */
 const MISS_RETRY_MS = 24 * 60 * 60 * 1000;
+/** Délai après une erreur technique (réseau, service) : on réessaie plus vite (1 h). */
+export const ERROR_RETRY_MS = 60 * 60 * 1000;
 
 /** Contenu persisté dans `data.json` (clef `references`). */
 export interface ReferenceData {
@@ -78,10 +80,19 @@ export class ReferenceIndex {
 		this.onChange();
 	}
 
-	/** Mémorise qu'une référence n'a pas été trouvée, pour ne pas la rechercher à chaque ouverture. */
-	setMiss(ref: LegalRef) {
-		this.data.misses[ref.key] = Date.now();
+	/**
+	 * Mémorise qu'une référence n'a pas été trouvée, pour ne pas la rechercher à chaque ouverture de
+	 * la note. `retryAfterMs` raccourcit le délai avant un nouvel essai (erreur technique).
+	 */
+	setMiss(ref: LegalRef, retryAfterMs = MISS_RETRY_MS) {
+		this.data.misses[ref.key] = Date.now() - (MISS_RETRY_MS - retryAfterMs);
 		this.onChange();
+	}
+
+	/** Références déjà analysées d'une note si elle n'a pas changé depuis, sans rien lire. */
+	cached(path: string, mtime: number) {
+		const entry = this.data.files[path];
+		return entry?.mtime === mtime ? entry.refs : undefined;
 	}
 
 	/** Une recherche récente a-t-elle déjà échoué pour cette référence ? */

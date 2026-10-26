@@ -51,6 +51,8 @@ type Match = { url: string; titre: string; articleId?: string };
 interface Resolution {
 	queries: Query[];
 	read: (response: unknown) => Match | null;
+	/** Résumé lisible d'une réponse, pour le journal de débogage. */
+	describe?: (response: unknown) => string;
 	/** Recherche de dernier recours (autre service), si aucune requête n'a abouti. */
 	fallback?: () => Promise<Match | null>;
 }
@@ -91,6 +93,13 @@ function searchQuery(fond: string, champs: object[], filtres: object[] = []): Qu
 			recherche: { champs, filtres, pageNumber: 1, pageSize: 5, operateur: "ET", sort: "PERTINENCE", typePagination: "DEFAUT" },
 		},
 	};
+}
+
+/** Résumé générique d'une réponse de `/search` : nombre de résultats et premiers titres. */
+function describeSearch(response: SearchResponse) {
+	const results = response.results ?? [];
+	const titles = results.flatMap((r) => (r.titles ?? []).map((t) => t.title ?? t.id ?? "?")).slice(0, 3);
+	return `${results.length} résultat(s)${titles.length ? ` : ${titles.join(" | ")}` : ""}`;
 }
 
 /** Numéro d'article sans point ni espace : « L. 121-1 » et « L121-1 » se comparent égaux. */
@@ -222,31 +231,30 @@ function build(ref: LegalRef): Resolution | null {
 		if (LEGIFRANCE_TEXTS[data.code]) return buildTextArticle(ref);
 		if (!data.code.startsWith("Code ")) return null;
 		const number = compact(data.number);
+		const codeFilter = { facette: "NOM_CODE", valeurs: [data.code] };
+		/** Extraits (articles) de la réponse, à plat. */
+		const extractsOf = (response: SearchResponse) =>
+			(response.results ?? []).flatMap((r) => (r.sections ?? []).flatMap((sec) => sec.extracts ?? []));
 		return {
 			queries: [
-				searchQuery(
-					"CODE_DATE",
-					[field("NUM_ARTICLE", number)],
-					[
-						{ facette: "NOM_CODE", valeurs: [data.code] },
-						{ facette: "DATE_VERSION", singleDate: Date.now() },
-					]
-				),
+				// 1. Version en vigueur aujourd'hui (requête vérifiée par Marginalia).
+				searchQuery("CODE_DATE", [field("NUM_ARTICLE", number)], [codeFilter, { facette: "DATE_VERSION", singleDate: Date.now() }]),
+				// 2. Sans filtre de date, au cas où celui-ci écarte l'article.
+				searchQuery("CODE_DATE", [field("NUM_ARTICLE", number)], [codeFilter]),
 			],
-			// L'article est dans `results[].sections[].extracts[]` (`titles` ne nomme que le code).
+			// L'article est dans `results[].sections[].extracts[]` (`titles` ne nomme que le code). On préfère
+			// la version en vigueur ; à défaut, n'importe quelle version (article abrogé, toujours citable).
 			read: (raw) => {
-			const response = raw as SearchResponse;
-				for (const result of response.results ?? []) {
-					for (const section of result.sections ?? []) {
-						for (const extract of section.extracts ?? []) {
-							const inForce = !extract.legalStatus || extract.legalStatus === "VIGUEUR";
-							if (inForce && compact(extract.num ?? "") === number && extract.id?.startsWith("LEGIARTI")) {
-								return { url: `${BASE_URL}/codes/article_lc/${extract.id}`, titre: ref.label, articleId: extract.id };
-							}
-						}
-					}
-				}
-				return null;
+				const candidates = extractsOf(raw as SearchResponse).filter(
+					(e) => compact(e.num ?? "") === number && e.id?.startsWith("LEGIARTI")
+				);
+				const best = candidates.find((e) => !e.legalStatus || e.legalStatus === "VIGUEUR") ?? candidates[0];
+				return best ? { url: `${BASE_URL}/codes/article_lc/${best.id}`, titre: ref.label, articleId: best.id } : null;
+			},
+			describe: (raw) => {
+				const extracts = extractsOf(raw as SearchResponse);
+				const seen = extracts.slice(0, 8).map((e) => `${e.num ?? "?"} [${e.legalStatus ?? "?"}]`).join(", ");
+				return `${extracts.length} article(s) renvoyé(s)${seen ? ` : ${seen}` : ""}`;
 			},
 		};
 	}
@@ -318,18 +326,29 @@ interface ArticleBody {
  * @returns `null` si la référence n'est pas résoluble ou sans correspondance.
  * @throws ApiError si les identifiants sont refusés, le quota dépassé ou le service injoignable.
  */
-export async function resolveReference(agent: agentSearch, ref: LegalRef): Promise<ResolvedLink | null> {
+export async function resolveReference(
+	agent: agentSearch,
+	ref: LegalRef,
+	trace: (line: string) => void = () => undefined
+): Promise<ResolvedLink | null> {
 	const resolution = build(ref);
-	if (!resolution) return null;
+	if (!resolution) {
+		trace("Référence non résoluble par l'API.");
+		return null;
+	}
 
 	let match: Match | null = null;
 	let failure: ApiError | undefined;
 	let answered = false;
 	for (const query of resolution.queries) {
+		trace(`→ POST ${query.path} ${JSON.stringify(query.body)}`);
 		try {
-			match = resolution.read(await agent.dilaApi.fetch<SearchResponse>({ path: query.path, params: query.body }));
+			const response = await agent.dilaApi.fetch<SearchResponse>({ path: query.path, params: query.body });
+			match = resolution.read(response);
 			answered = true;
+			trace(`← ${resolution.describe?.(response) ?? describeSearch(response)}${match ? " → correspondance trouvée" : " → aucune correspondance"}`);
 		} catch (error) {
+			trace(`← erreur : ${error instanceof Error ? error.message : String(error)}`);
 			// 400 (requête refusée) ou 404 : on passe à la requête suivante.
 			if (!(error instanceof ApiError) || ![400, 404].includes(error.status ?? 0)) throw error;
 			failure = error;
@@ -337,12 +356,20 @@ export async function resolveReference(agent: agentSearch, ref: LegalRef): Promi
 		if (match) break;
 	}
 	// Aucune requête n'a abouti : service de dernier recours (ArianeWeb), jamais bloquant.
-	if (!match && resolution.fallback) match = await resolution.fallback().catch(() => null);
+	if (!match && resolution.fallback) {
+		trace("→ recours à ArianeWeb");
+		match = await resolution.fallback().catch((error) => {
+			trace(`← erreur ArianeWeb : ${error instanceof Error ? error.message : String(error)}`);
+			return null;
+		});
+		if (match) trace(`← ArianeWeb : ${match.titre}`);
+	}
 	if (!match) {
 		if (failure && !answered) throw failure;
 		return null;
 	}
 
 	const texte = match.articleId ? await fetchArticleText(agent, match.articleId).catch(() => undefined) : undefined;
+	trace(`✔ ${match.url}${texte ? " (texte récupéré)" : match.articleId ? " (texte de l'article indisponible)" : ""}`);
 	return { url: match.url, titre: match.titre, texte };
 }

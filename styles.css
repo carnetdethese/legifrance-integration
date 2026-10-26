@@ -209,3 +209,25 @@
 	overflow-y: auto;
 	margin-bottom: var(--size-4-3);
 }
+
+/* Mode débogage : barre d'actions et journal de recherche d'une référence. */
+.legifrance-debug-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-2);
+}
+
+.legifrance-trace {
+	margin-top: var(--size-2-2);
+	font-size: var(--font-ui-smaller);
+}
+
+.legifrance-trace pre {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	margin: var(--size-2-2) 0 0;
+	padding: var(--size-2-2);
+	background-color: var(--background-primary-alt);
+	border-radius: var(--radius-s);
+	user-select: text;
+}

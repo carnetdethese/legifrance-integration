@@ -7,6 +7,7 @@ import { ReferenceData, ReferenceIndex, loadReferenceData } from "references";
 import { LegalRef, searchUrl } from "references/parser";
 import { canResolve, resolveReference } from "references/resolver";
 import { ApiError } from "api/client";
+import { ERROR_RETRY_MS } from "references";
 import {
 	DEFAULT_SETTINGS,
 	LegifranceSettings,
@@ -174,6 +175,8 @@ export default class LegifrancePlugin extends Plugin {
 
 	/** Références en cours de recherche ; évite les requêtes en double entre deux analyses. */
 	readonly pendingReferences = new Set<string>();
+	/** Journal de la dernière recherche de chaque référence (mode débogage), par clef. Non persisté. */
+	readonly referenceTraces = new Map<string, string[]>();
 	/** Identifiants refusés : une seule notification par session, puis on cesse d'interroger l'API. */
 	private referenceAuthFailed = false;
 	private lastCredentials = "";
@@ -196,20 +199,30 @@ export default class LegifrancePlugin extends Plugin {
 		const todo = refs.filter(
 			(ref) =>
 				canResolve(ref) &&
-				!this.references.linkFor(ref) &&
+				(force || !this.references.linkFor(ref)) &&
 				!this.pendingReferences.has(ref.key) &&
-				(force || !this.references.isRecentMiss(ref))
+				(force || this.settings.debugRefs || !this.references.isRecentMiss(ref))
 		);
 		if (todo.length === 0) return; // rien à faire : surtout pas d'événement (les vues relanceraient l'appel)
 		todo.forEach((ref) => this.pendingReferences.add(ref.key));
 		this.events.trigger(REFERENCES_EVENT);
 
 		for (const ref of todo) {
+			const trace: string[] = [];
+			const log = (line: string) => {
+				trace.push(line);
+				if (this.settings.debugRefs) console.debug(`[Légifrance] ${ref.label} ${line}`);
+			};
 			try {
-				const link = this.referenceAuthFailed ? null : await resolveReference(this.agent, ref);
+				const link = this.referenceAuthFailed ? null : await resolveReference(this.agent, ref, log);
 				if (link) this.references.setLink(ref, link);
 				else if (!this.referenceAuthFailed) this.references.setMiss(ref);
 			} catch (error) {
+				log(`✘ ${error instanceof Error ? error.message : String(error)}`);
+				// Autre erreur (réseau, service) : on réessaiera, mais pas à chaque ouverture de la note.
+				if (!(error instanceof ApiError && [400, 401, 403, 404, 429].includes(error.status ?? 0))) {
+					this.references.setMiss(ref, ERROR_RETRY_MS);
+				}
 				// Requête refusée partout (400/404) : on la traite comme introuvable, sans réessayer à chaque ouverture.
 				if (error instanceof ApiError && [400, 404].includes(error.status ?? 0)) this.references.setMiss(ref);
 				if (error instanceof ApiError && [401, 403, 429].includes(error.status ?? 0)) {
@@ -218,6 +231,7 @@ export default class LegifrancePlugin extends Plugin {
 				}
 				console.error(error);
 			}
+			if (this.settings.debugRefs) this.referenceTraces.set(ref.key, trace);
 			this.pendingReferences.delete(ref.key);
 			this.events.trigger(REFERENCES_EVENT);
 		}

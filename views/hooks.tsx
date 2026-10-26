@@ -39,7 +39,9 @@ export const useNoteReferences = () => {
 	const plugin = usePlugin();
 	const { workspace, vault } = plugin.app;
 	const [file, setFile] = useState<TFile | null>(() => workspace.getActiveFile());
-	const [refs, setRefs] = useState<LegalRef[]>([]);
+	/** Références en cache, lues sans attendre : évite d'afficher une liste vide à chaque ouverture. */
+	const cachedRefs = (f: TFile | null) => (f ? plugin.references.cached(f.path, f.stat.mtime) : undefined) ?? [];
+	const [refs, setRefs] = useState<LegalRef[]>(() => cachedRefs(file));
 	/** Incrémenté pour relancer l'analyse après une modification de la note. */
 	const [version, setVersion] = useState(0);
 	const reparse = () => setVersion((v) => v + 1);
@@ -74,6 +76,7 @@ export const useNoteReferences = () => {
 			setRefs([]);
 			return;
 		}
+		setRefs(cachedRefs(file));
 		plugin.getReferences(file).then((found) => {
 			if (cancelled) return;
 			setRefs(found);
