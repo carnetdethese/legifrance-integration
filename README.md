@@ -143,6 +143,7 @@ Vous pouvez installer le module directement depuis le store de l'application. C'
 -   [ ] Un _parser_ permettant de lister facilement tous les textes juridiques présents dans le coffre ;
     -   [ ] _Parser_ de décisions.
     -   [ ] _Parser_ de textes législatifs.
+-   [ ] Un _parser_ des documents ouverts : extraire la liste des textes, décisions et actes juridiques cités, retrouver automatiquement leurs liens Légifrance et les présenter dans un onglet dédié, pour lister les références et aller les consulter facilement ;
 -   [ ] Une prévisualisation des textes (peut-être sous la forme d'un pop-up lorsqu'on passe la souris au dessus d'un lien lié à Légifrance ?)
 
 ## Discord
