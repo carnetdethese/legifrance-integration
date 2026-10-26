@@ -5,17 +5,20 @@
  * citation s'inspirent de ceux de Marginalia.
  */
 import { CODE_PATTERN, officialCodeName } from "./codes";
+import { FULL_DATE_PATTERN, MONTH_PATTERN, plain } from "./dates";
 
 export type RefKind = "decision" | "texte" | "article" | "identifiant";
 
 /** Juridiction d'une décision. */
-export type Court = "cassation" | "ce" | "cc";
+export type Court = "cassation" | "ce" | "cc" | "tc";
 
 /**
  * Référence juridique détectée dans une note. `data` garde ce qu'il faut pour
  * la retrouver via l'API :
- * - `decision` : `court` et `number` ;
- * - `texte` : `nature` (loi, ordonnance…) et `number` ;
+ * - `decision` : `court` et `number` ; ou, pour une décision citée par ses parties,
+ *   `court`, `name` et `decided` (date ou année citée) ;
+ * - `texte` : `nature` (loi, ordonnance…) et `number` ; ou `nature` et `date` pour une loi
+ *   citée par sa seule date (« la loi du 6 janvier 1978 ») ;
  * - `article` : `code` (nom officiel) et `number`.
  */
 export interface LegalRef {
@@ -71,16 +74,34 @@ const CODE_THEN_ARTICLE = new RegExp(
 );
 const NUMBER_ITEM = new RegExp(NUMBER, "g");
 
-const LAW =
-	/(?<nature>loi\s+organique|loi\s+constitutionnelle|loi\s+de\s+finances|loi|ordonnance|décret-loi|décret|arrêté)\s+(?:n\s?[°ºo]\s*)?(?<number>\d{2,4}-\d+)(?:\s+(?:du|en date du)\s+\d{1,2}(?:er)?\s+\p{L}+\s+\d{4})?/giu;
+const NATURES = "loi\\s+organique|loi\\s+constitutionnelle|loi\\s+de\\s+finances|loi|ordonnance|décret-loi|décret";
+const LAW = new RegExp(
+	`(?<nature>${NATURES}|arrêté)\\s+(?:n\\s?[°ºo]\\s*)?(?<number>\\d{2,4}-\\d+)(?:\\s+(?:du|en date du)\\s+(?<date>${FULL_DATE_PATTERN}))?`,
+	"giu"
+);
+/** Texte cité par sa seule date (« la loi du 6 janvier 1978 »), rattaché à sa citation complète s'il y en a une. */
+const SHORT_LAW = new RegExp(`(?<nature>${NATURES})\\s+du\\s+(?<date>${FULL_DATE_PATTERN})`, "giu");
 
 const CASSATION = new RegExp(
 	`(?:\\bCass\\.|\\bCour de cassation|\\b(?:Civ|Soc|Com|Crim)\\.|\\bAss\\. plén\\.|\\bCh\\. mixte)${PAYLOAD}(?:pourvoi\\s+)?n\\s?[°º]\\s*(?<number>\\d{2}-\\d{2}[.\\s]?\\d{3})`,
 	"g"
 );
-const CONSEIL_ETAT = new RegExp(
-	`(?:\\bCE\\b|\\bConseil d['’]État)${PAYLOAD}n\\s?[°º]\\s*(?<number>\\d{5,7})\\b`,
-	"g"
+/** Conseil d'État ou Tribunal des conflits, sous leurs désignations usuelles. */
+const COURT_CE = "\\bC\\.\\s?E\\.|\\bCE\\b|\\bConseil d['’]État|\\bT\\.\\s?C\\.|\\bTC\\b|\\bTribunal des conflits";
+const CONSEIL_ETAT = new RegExp(`(?:${COURT_CE})${PAYLOAD}n\\s?[°º]\\s*(?<number>\\d{5,7})\\b`, "g");
+/** Formation de jugement facultative (« Ass. », « Sect. », « 9e et 10e ch. réunies »). */
+const FORMATION =
+	"(?:\\s*,\\s*(?:[Aa]ss(?:emblée)?\\.?|[Ss]ect(?:ion)?\\.?|(?:\\d{1,2}(?:e|ème|ᵉ)?(?:\\s*(?:et|-)\\s*\\d{1,2}(?:e|ème|ᵉ)?)?\\s*)?(?:ss?\\.?-?\\s?sect\\.?(?:ions)?|ch\\.)(?:\\s*réunies)?)(?=\\s*,))?";
+/**
+ * Décision citée par ses parties : « CE, Ass., 8 déc. 1978, Ordre des avocats », « C.E., 21 décembre 2001,
+ * M. Hoffmann - art. 34 », ou avec la seule année (« CE, 2006, Ordre des avocats au barreau de Paris »).
+ * Le nom commence par une majuscule et s'arrête à la virgule, au tiret entouré d'espaces, à une
+ * parenthèse ou à la fin de la ligne ; le recueil Lebon n'est pas exigé.
+ */
+const CITED_BY_NAME = new RegExp(
+	`(?:${COURT_CE})${FORMATION}[,.]?\\s*,?\\s*(?<date>${FULL_DATE_PATTERN}|(?:(?:${MONTH_PATTERN})\\s+)?\\d{4})\\s*,?\\s*` +
+		"(?<name>\\p{Lu}(?:(?!\\s[-–—]\\s|\\s(?:Rec|Lebon)\\b)[^,;()\\n]){1,59})",
+	"gu"
 );
 const CC_SUFFIX = "(?:QPC|DC|LOM|LP|L|AN|SEN|ELEC|FNR|PDR|ORGA|AUTO|AR16|I|D)";
 const CONSEIL_CONSTITUTIONNEL = new RegExp(
@@ -135,10 +156,20 @@ function scan(text: string): Candidate[] {
 		}
 	}
 
+	// Lois citées en entier avec leur date : elles servent à rattacher les citations par la date seule.
+	const lawNumbers = new Map<string, string>();
 	for (const match of text.matchAll(LAW)) {
 		const nature = clean(match.groups!.nature).toLowerCase();
 		const number = match.groups!.number;
+		if (match.groups!.date) lawNumbers.set(`${nature}|${plain(match.groups!.date.replace(/\b1er\b/, "1"))}`, number);
 		add(match, "texte", clean(match[0]), `${nature} n° ${number}`, { nature, number });
+	}
+	for (const match of text.matchAll(SHORT_LAW)) {
+		const nature = clean(match.groups!.nature).toLowerCase();
+		const date = clean(match.groups!.date);
+		const number = lawNumbers.get(`${nature}|${plain(date.replace(/\b1er\b/, "1"))}`);
+		const data: Record<string, string> = number ? { nature, number } : { nature, date };
+		add(match, "texte", clean(match[0]), number ? `${nature} n° ${number}` : `${nature} du ${date}`, data);
 	}
 
 	const decisions: [Court, RegExp][] = [
@@ -152,6 +183,13 @@ function scan(text: string): Candidate[] {
 			if (court === "cassation") number = number.replace(/^(\d{2}-\d{2})[.\s]?(\d{3})$/, "$1.$2");
 			add(match, "decision", clean(match[0]), number, { court, number });
 		}
+	}
+
+	for (const match of text.matchAll(CITED_BY_NAME)) {
+		const court = /^(?:T\.?\s?C\.?|Tribunal)/.test(match[0]) ? "tc" : "ce";
+		const name = clean(match.groups!.name);
+		const decided = clean(match.groups!.date);
+		add(match, "decision", clean(match[0]), `${name} ${decided}`, { court, name, decided });
 	}
 
 	for (const match of text.matchAll(ID_REGEX)) {

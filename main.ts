@@ -210,6 +210,8 @@ export default class LegifrancePlugin extends Plugin {
 				if (link) this.references.setLink(ref, link);
 				else if (!this.referenceAuthFailed) this.references.setMiss(ref);
 			} catch (error) {
+				// Requête refusée partout (400/404) : on la traite comme introuvable, sans réessayer à chaque ouverture.
+				if (error instanceof ApiError && [400, 404].includes(error.status ?? 0)) this.references.setMiss(ref);
 				if (error instanceof ApiError && [401, 403, 429].includes(error.status ?? 0)) {
 					if (!this.referenceAuthFailed) new Notice(error.message);
 					this.referenceAuthFailed = error.status !== 429;

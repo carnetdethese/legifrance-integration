@@ -8,6 +8,8 @@
 import { htmlToMarkdown } from "obsidian";
 import { ApiError } from "api/client";
 import { agentSearch } from "api/utilities";
+import { findAriaDecision } from "./ariane";
+import { FULL_DATE_PATTERN, isoDay, matchesDate, parseCitedDate, plain, significantWords, titleDates } from "./dates";
 import { LegalRef } from "./parser";
 
 const BASE_URL = "https://www.legifrance.gouv.fr";
@@ -32,10 +34,13 @@ interface Query {
 
 /** Réponse de `/search`, réduite à ce que l'on lit. */
 interface SearchResponse {
-	results?: {
-		titles?: { id?: string; cid?: string; title?: string }[];
-		sections?: { extracts?: { id?: string; num?: string; legalStatus?: string }[] }[];
-	}[];
+	results?: SearchResult[];
+}
+
+interface SearchResult {
+	text?: string;
+	titles?: { id?: string; cid?: string; title?: string }[];
+	sections?: { extracts?: { id?: string; num?: string; legalStatus?: string; values?: string[] }[] }[];
 }
 
 /** Ce que l'on tire d'une réponse : adresse, titre, identifiant d'article éventuel. */
@@ -45,6 +50,8 @@ type Match = { url: string; titre: string; articleId?: string };
 interface Resolution {
 	queries: Query[];
 	read: (response: SearchResponse) => Match | null;
+	/** Recherche de dernier recours (autre service), si aucune requête n'a abouti. */
+	fallback?: () => Promise<Match | null>;
 }
 
 /** Fond, page Légifrance, préfixe d'identifiant et champs essayés (dans l'ordre) par juridiction. */
@@ -54,6 +61,9 @@ const COURTS: Record<string, { fond: string; page: string; prefix: string; field
 	// Le fond du Conseil constitutionnel n'indexe pas le suffixe (« DC ») du numéro.
 	cc: { fond: "CONSTIT", page: "cons", prefix: "CONSTEXT", fields: [["NUM_DEC", "number"], ["NUM_DEC", "bare"], ["ALL", "number"]] },
 };
+
+// Le Tribunal des conflits est jugé avec le Conseil d'État (même fond, mêmes pages).
+COURTS.tc = COURTS.ce;
 
 /** Nature d'un texte → valeur de la facette `NATURE`. */
 const LAW_NATURES: Record<string, string> = {
@@ -89,6 +99,82 @@ const compact = (number: string) => number.replace(/[.\s]/g, "");
 const cites = (title: string, number: string) =>
 	new RegExp(`(?<![\\w.-])${number.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w-])`).test(title.replace(/\s+/g, " "));
 
+/** Le résultat mentionne-t-il toutes les parties citées (titre, texte ou extraits surlignés) ? */
+function mentionsParties(result: SearchResult, name: string) {
+	const extracts = (result.sections ?? []).flatMap((s) => (s.extracts ?? []).flatMap((e) => e.values ?? []));
+	const haystack = plain([result.text ?? "", ...extracts, ...(result.titles ?? []).map((t) => t.title ?? "")].join(" "));
+	return significantWords(name).every((word) => haystack.includes(word));
+}
+
+/**
+ * Décision citée par ses parties et sa date : recherche plein texte du nom (d'abord limitée à la
+ * date si elle est complète) ; un résultat n'est retenu que si la date de son titre est celle de la
+ * citation et s'il mentionne les parties. Au Conseil d'État, ArianeWeb prend le relais : Légifrance
+ * n'a pas les décisions anciennes.
+ */
+function buildNamed(ref: LegalRef): Resolution | null {
+	const court = COURTS[ref.data.court];
+	const cited = parseCitedDate(ref.data.decided);
+	if (!court || !cited) return null;
+
+	const fields = [field("ALL", ref.data.name)];
+	const day = isoDay(cited);
+	const queries = [
+		...(day ? [searchQuery(court.fond, fields, [{ facette: "DATE_DECISION", dates: { start: day, end: day } }])] : []),
+		searchQuery(court.fond, fields),
+	];
+	return {
+		queries,
+		read: (response) => {
+			for (const result of response.results ?? []) {
+				for (const title of result.titles ?? []) {
+					if (
+						title.id?.startsWith(court.prefix) &&
+						titleDates(title.title ?? "").some((d) => matchesDate(cited, d)) &&
+						mentionsParties(result, ref.data.name)
+					) {
+						return { url: `${BASE_URL}/${court.page}/id/${title.id}`, titre: title.title ?? ref.label };
+					}
+				}
+			}
+			return null;
+		},
+		fallback: ["ce", "tc"].includes(ref.data.court) ? () => findAriaDecision(ref.data.court, ref.data.name, cited) : undefined,
+	};
+}
+
+/**
+ * Loi, ordonnance ou décret cité par sa seule date (« la loi du 6 janvier 1978 ») : recherche
+ * filtrée sur la nature, d'abord limitée à la date de signature, puis en texte libre ; le titre du
+ * résultat doit commencer par la nature et porter la date citée.
+ */
+function buildDated(ref: LegalRef): Resolution | null {
+	const cited = parseCitedDate(ref.data.date);
+	if (!cited?.day) return null;
+	const nature = LAW_NATURES[ref.data.nature];
+	const natureFilter = nature ? [{ facette: "NATURE", valeurs: [nature] }] : [];
+	const day = isoDay(cited)!;
+	const text = ref.data.date.match(new RegExp(FULL_DATE_PATTERN))?.[0] ?? ref.data.date;
+	return {
+		queries: [
+			searchQuery("LODA_DATE", [field("ALL", `${ref.data.nature} du ${text}`)], [...natureFilter, { facette: "DATE_SIGNATURE", dates: { start: day, end: day } }]),
+			searchQuery("LODA_DATE", [field("ALL", `du ${text}`)], natureFilter),
+		],
+		read: (response) => {
+			for (const result of response.results ?? []) {
+				for (const title of result.titles ?? []) {
+					const label = title.title ?? "";
+					const id = title.cid || title.id;
+					if (id && plain(label).startsWith(ref.data.nature) && titleDates(label).some((d) => matchesDate(cited, d))) {
+						return { url: `${BASE_URL}/loda/id/${id}`, titre: label };
+					}
+				}
+			}
+			return null;
+		},
+	};
+}
+
 function build(ref: LegalRef): Resolution | null {
 	const { data } = ref;
 
@@ -123,6 +209,7 @@ function build(ref: LegalRef): Resolution | null {
 	}
 
 	if (ref.kind === "texte") {
+		if (!data.number) return buildDated(ref);
 		const nature = LAW_NATURES[data.nature];
 		return {
 			queries: [searchQuery("LODA_DATE", [field("NUM", data.number)], nature ? [{ facette: "NATURE", valeurs: [nature] }] : [])],
@@ -139,6 +226,7 @@ function build(ref: LegalRef): Resolution | null {
 	}
 
 	if (ref.kind === "decision") {
+		if (!data.number) return buildNamed(ref);
 		const court = COURTS[data.court];
 		if (!court) return null;
 		const values = { number: data.number, bare: data.number.split(" ")[0] };
@@ -203,6 +291,8 @@ export async function resolveReference(agent: agentSearch, ref: LegalRef): Promi
 		}
 		if (match) break;
 	}
+	// Aucune requête n'a abouti : service de dernier recours (ArianeWeb), jamais bloquant.
+	if (!match && resolution.fallback) match = await resolution.fallback().catch(() => null);
 	if (!match) {
 		if (failure && !answered) throw failure;
 		return null;
