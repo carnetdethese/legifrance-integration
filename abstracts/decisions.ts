@@ -9,7 +9,7 @@ export const urlFond = new Map<string, string>([
 	["CONSTIT", "/cons/id/"],
 	["JURI", "/juri/id/"],
 	["LEGI", "/legi/id/"],
-	["JORF", "/jorf/id"],
+	["JORF", "/jorf/id/"],
 	["ACCO", "/acco/id/"],
 	["CIRC", "/circulaire/id/"],
 	["KALI", "/conv_coll/id/"]

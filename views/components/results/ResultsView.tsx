@@ -1,166 +1,102 @@
-import { ResultsNav } from "./ResultsNav";
-import { ResultCard } from "./ResultCard";
-import { getDocumentInfo, legalDocument } from "abstracts/document";
-import LegifrancePlugin from "main";
-import { getAgentChercheur, getValeurRecherche } from "globals/globals";
-import { documentDataStorage } from "views/viewsData";
-import { documentSearchFieldsClass } from "abstracts/searchHandler";
-import { useEffect, useState } from "react";
 import { Notice } from "obsidian";
+import { useEffect, useState } from "react";
+import { getDocumentInfo, legalDocument } from "abstracts/document";
+import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import { resultatsRechercheClass } from "abstracts/searches";
 import { usePlugin } from "views/hooks";
-import { RESEARCH_TEXT_VIEW, ResearchTextView } from "views/researchText";
+import { ResultCard } from "./ResultCard";
+import { ResultsNav } from "./ResultsNav";
 
 interface ResultsViewProps {
 	searchHandler: documentSearchFieldsClass;
 }
 
+type Status = "loading" | "done" | "error";
+
+/** Résultats d'une recherche : requête, pagination et ouverture des documents. */
 export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
-	const plugin = usePlugin() as LegifrancePlugin;
-	const [results, setResults] = useState<legalDocument[]>();
+	const plugin = usePlugin();
+	const [results, setResults] = useState<legalDocument[]>([]);
 	const [totalResults, setTotalResults] = useState(0);
-	const [totalPages, setTotalPages] = useState(0);
+	const [status, setStatus] = useState<Status>("loading");
 
-	useEffect(() => {
-		const fetchData = async () => {
-			await fetchResults();
-		};
-		fetchData();
-	}, []);
+	const pageSize = searchHandler.getPageSize();
+	const totalPages = Math.ceil(totalResults / pageSize);
 
-
-	function rerenderHistoriqueView() {
-		const leaves = plugin.app.workspace.getLeavesOfType(RESEARCH_TEXT_VIEW);
-		
-		if (leaves && leaves.length > 0) {
-			const view = leaves[0].view as ResearchTextView;
-			view.onOpen();
-		}
-	}
-
+	/** Exécute la recherche avec l'état courant de `searchHandler`. */
 	async function fetchResults() {
-		const check = await searchHandler.checkBeforeSearch();
+		if (!searchHandler.checkBeforeSearch()) {
+			setStatus("done"); // dates invalides : la notification suffit
+			return;
+		}
 
-		if (check == "false") return;
-
+		setStatus("loading");
 		try {
 			const data = await searchHandler.search();
-			const totalRes = data.totalResultNumber;
 			setTotalResults(data.totalResultNumber);
-			setTotalPages(Math.ceil(totalRes / searchHandler.getPageSize()));
 			setResults(new resultatsRechercheClass(data).listeResultats());
+			setStatus("done");
 		} catch (error) {
-			console.error("Error performing search:", error);
-			new Notice(
-				"Une erreur est survenue durant la requête. Veuillez vérifier vos identifiants et réessayer."
-			);
+			console.error("Erreur lors de la recherche :", error);
+			new Notice("Une erreur est survenue durant la requête. Vérifiez vos identifiants et réessayez.");
+			setStatus("error");
 		}
 	}
 
-	async function handleClickDocument(
-		e: React.MouseEvent<HTMLAnchorElement, MouseEvent>
-	) {
-		const target = e.target as HTMLAnchorElement;
-		if (!results) return;
+	useEffect(() => {
+		fetchResults();
+	}, []);
 
-		const selectedDocument = results.find(
-			(elt: legalDocument) => elt.id == target.dataset.id
-		) as legalDocument;
-
-		// TODO : Revoir la logique de cette fonction pour éliminer les variables globales.
-		const documentFinal = (await getDocumentInfo(
-			selectedDocument,
-			getValeurRecherche(),
-			getAgentChercheur()
-		)) as legalDocument;
-
-		const historiqueLength = plugin.historiqueDocuments.length;
-		const id =
-			historiqueLength > 0
-				? plugin.historiqueDocuments.slice(-1)[0].id + 1
-				: 1;
-
-		const docAlreadyInHistorique = plugin.historiqueDocuments.find(
-			(elt) => elt.data.id == selectedDocument.id);
-
-		if (!docAlreadyInHistorique) {
-			const newView = new documentDataStorage(id, documentFinal);
-			plugin.historiqueDocuments.push(newView);
-			plugin.docToShow = newView;
-		}
-		else {
-			plugin.docToShow = docAlreadyInHistorique;
-		}
-		
-		plugin.saveSettings();
-		plugin.activateTextReaderView();
-		rerenderHistoriqueView();
+	/** Applique une modification de la recherche puis relance la requête. */
+	function updateAndFetch(update: () => void) {
+		update();
+		fetchResults();
 	}
 
-	async function handlePaginationClick(
-		e: React.MouseEvent<HTMLButtonElement, MouseEvent>
-	) {
-		const way = e.currentTarget.dataset.way;
-
-		// Check if way is defined and is either "previous" or "next"
-		if (way) {
-			const currentPage = searchHandler.getCurrentPageNumber();
-
-			// Determine the new page number based on the direction
-			const newPageNumber =
-				way === "previous" ? currentPage - 1 : currentPage + 1;
-
-			// Validate the new page number
-			if (way === "previous" && currentPage > 0) {
-				searchHandler.updatePageNumber(newPageNumber);
-			} else if (way === "next" && currentPage < totalPages) {
-				searchHandler.updatePageNumber(newPageNumber);
-			}
-
-			// Fetch results after updating the page number
-			await fetchResults();
+	async function openDocument(selected: legalDocument) {
+		try {
+			const full = await getDocumentInfo(selected, searchHandler.getSearchedString(), plugin.agent);
+			if (!full) throw new Error("Document vide");
+			await plugin.openDocument(await plugin.addToHistory(full));
+		} catch (error) {
+			console.error("Erreur lors de l'ouverture du document :", error);
+			new Notice("Impossible de récupérer ce document.");
 		}
-	}
-
-	async function handleChangeItemsPerPage(
-		e: React.ChangeEvent<HTMLSelectElement>
-	) {
-		const target = e.currentTarget as HTMLSelectElement;
-		searchHandler.updatePageSize(parseInt(target.value));
-		await fetchResults();
-	}
-
-	async function handleCriteresTriChange(
-		e: React.ChangeEvent<HTMLSelectElement>
-	) {
-		searchHandler.updateFacette(e.target.value);
-		await fetchResults();
 	}
 
 	return (
 		<>
-			<h2>Résulats</h2>
+			<h2>Résultats</h2>
 			<ResultsNav
 				totalResults={totalResults}
 				totalPageNumber={totalPages}
 				currentPage={searchHandler.getCurrentPageNumber()}
-				handlePaginationClick={handlePaginationClick}
-				resultsPerPage={searchHandler.getPageSize()}
+				resultsPerPage={pageSize}
+				sort={searchHandler.getFacette()}
 				critereTri={searchHandler.criteresTri}
-				handleChangeItemsPerPage={handleChangeItemsPerPage}
-				handleCriteresTriChange={handleCriteresTriChange}
+				onPageChange={(page) => updateAndFetch(() => searchHandler.updatePageNumber(page))}
+				onPageSizeChange={(size) =>
+					updateAndFetch(() => {
+						searchHandler.updatePageSize(size);
+						searchHandler.updatePageNumber(1);
+					})
+				}
+				onSortChange={(sort) =>
+					updateAndFetch(() => {
+						searchHandler.updateFacette(sort);
+						searchHandler.updatePageNumber(1);
+					})
+				}
 			/>
-			{results
-				? results.map((value) => {
-						return (
-							<ResultCard
-								key={value.id}
-								result={value}
-								handleClickDocument={handleClickDocument}
-							/>
-						);
-				})
-				: "No data. Loading..."}
+			{status === "loading" && <p className="legifrance-empty">Recherche en cours…</p>}
+			{status === "error" && <p className="legifrance-empty">La recherche a échoué.</p>}
+			{status === "done" && results.length === 0 && (
+				<p className="legifrance-empty">Aucun résultat.</p>
+			)}
+			{status === "done" &&
+				results.map((result) => (
+					<ResultCard key={result.id} result={result} onOpen={openDocument} />
+				))}
 		</>
 	);
 };

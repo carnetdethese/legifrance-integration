@@ -1,21 +1,20 @@
-import { PluginSettingTab, TAbstractFile, Setting, App } from "obsidian";
+import { App, PluginSettingTab, Setting } from "obsidian";
 import { FolderSuggest } from "lib/folderSugget";
 import LegifrancePlugin from "main";
 
 
+/** Réglages persistés du plugin (`data.json`, clef `settings`). */
 export interface LegifranceSettings {
 	clientId: string;
 	clientSecret: string;
 	apiHost: string;
 	tokenHost: string;
-	templateDecision: string;
-	templateDocument:string;
 	templateAll: string;
 	fileTitle:string;
 	maxResults:number;
 	dossierBase:string;
-	pageResultats:boolean;
-	fondSupp:boolean;
+	/** Active les fonds supplémentaires (instables) dans la recherche. */
+	fondSupp: boolean;
 }
 
 export const DEFAULT_SETTINGS: LegifranceSettings = {
@@ -23,195 +22,133 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	clientSecret: '',
 	apiHost: 'https://api.piste.gouv.fr/dila/legifrance/lf-engine-app',
 	tokenHost: 'https://oauth.piste.gouv.fr',
-	templateDecision: `---\ndate: {{date}}\njuridiction: {{juridiction}}\nformation: {{formation}}\nnom: {{titre}}\napport: \nnumero: {{numero}} \ncitation: {{citation}}\nlien: {{lien}}\ncontribution: {{contributionNote}}\ntags: \n---\n\n## Fiche et commentaire\n\n### Fiche d'arrêt \n\n{{ faits }}\n\n{{ procedure }}\n\n{{ moyens }}\n\n{{ question }}\n\n{{ solution }}\n\n### Commentaire\n\n## Décision \n\n{{texteIntegral}}`,
-	templateDocument: `---\ndate: {{date}}\norigine: {{origine}}\nnom: {{titre}}\napport: \nnumero: {{numero}} \nlien: {{lien}}\ncontribution: {{contributionNote}}\ntags: \n---\n\n## Notes\n\n## Document\n\n{{texteIntegral}}`,
 	templateAll: `---\ndate: {{date}}\njuridiction: {{juridiction}}\nformation: {{formation}}\nnom: {{titre}}\napport: \nnumero: {{numero}} \ncitation: {{citation}}\nlien: {{lien}}\ncontribution: {{contributionNote}}\ntags: \n---\n\n## Fiche et commentaire\n\n### Notes \n\n{{#each notes}}\n\n#### {{this.titreChamp}}\n\n{{this.valeurChamp}}\n\n{{/each}}\n\n### Commentaire\n\n## Décision \n\n{{texteIntegral}}`,
 	fileTitle: '{{id}}',
 	maxResults: 25,
 	dossierBase: "/",
-	pageResultats: true,
 	fondSupp:false
 }
 
 
 export class LegifranceSettingTab extends PluginSettingTab {
-
-	plugin: LegifrancePlugin;
-	filesFolders:Array<TAbstractFile>;
-	app:App;
-
-	constructor(app: App, plugin: LegifrancePlugin) {
+	constructor(app: App, private plugin: LegifrancePlugin) {
 		super(app, plugin);
-		this.plugin = plugin;
-		this.app = app;
+	}
+
+	/**
+	 * Ajoute un champ texte lié à la clef `key` des réglages, enregistré à
+	 * chaque modification.
+	 */
+	private addTextSetting(
+		name: string,
+		desc: string,
+		key: "clientId" | "clientSecret" | "apiHost" | "tokenHost" | "fileTitle",
+		{ secret = false } = {}
+	) {
+		return new Setting(this.containerEl)
+			.setName(name)
+			.setDesc(desc)
+			.addText((text) => {
+				if (secret) text.inputEl.type = "password";
+				text.setValue(this.plugin.settings[key]).onChange(async (value) => {
+					this.plugin.settings[key] = value.trim();
+					await this.plugin.saveSettings();
+				});
+			});
 	}
 
 	display(): void {
-		const {containerEl} = this;
-
+		const { containerEl } = this;
+		const { settings } = this.plugin;
 		containerEl.empty();
 
-		new Setting(containerEl)
-			.setName('Identifiant client (Client ID)')
-			.setDesc('Client ID - créez un compte PISTE.')
-			.addText(text => text
-				.setPlaceholder('Entrez votre identifiant PISTE.')
-				.setValue(this.plugin.settings.clientId)
-				.onChange(async (value) => {
-					this.plugin.settings.clientId = value;
-					process.env.OAUTH_CLIENT_ID = value;
-					await this.plugin.saveSettings();
-				}));
+		new Setting(containerEl).setName("Connexion à PISTE").setHeading();
 
-		new Setting(containerEl)
-			.setName('Clef secrète (Client secret)')
-			.setDesc('Clef secrète (Client secret)')
-			.addText(text => text
-				.setPlaceholder('Entrez votre clef secrète PISTE.')
-				.setValue(this.plugin.settings.clientSecret)
-				.onChange(async (value) => {
-					this.plugin.settings.clientSecret = value;
-					process.env.OAUTH_CLIENT_SECRET = value;
-					await this.plugin.saveSettings();
-				}));
-		
-		new Setting(containerEl)
-			.setName('Hôte API (API Host)')
-			.setDesc('Hôte API (API Host)')
-			.addText(text => text
-				.setPlaceholder("Set API Host")
-				.setValue(this.plugin.settings.apiHost)
-				.onChange(async (value) => {
-					this.plugin.settings.apiHost = value;
-					process.env.API_HOST = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Hôte Token (Token Host)')
-			.setDesc('Hôte Token (Token Host)')
-			.addText(text => text
-				.setPlaceholder("Set Token Host")
-				.setValue(this.plugin.settings.tokenHost)
-				.onChange(async (value) => {
-					this.plugin.settings.tokenHost = value;
-					process.env.TOKEN_HOST = value;
-					await this.plugin.saveSettings();
-				}));
-		
-		new Setting(containerEl).setName("Personnalisation").setHeading();
-
-		new Setting(containerEl)
-		.setName('Modèle')
-		.setDesc('Note de travail')
-		.addTextArea(text => {text
-			.setPlaceholder("Définissez le modèle de fiches ici.")
-			.setValue(this.plugin.settings.templateAll)
-			.onChange(async (value) => {
-				this.plugin.settings.templateAll = value;
-				await this.plugin.saveSettings();
-			});
-			text.inputEl.style.width = "400px";
-			text.inputEl.style.height = "200px";
-		}
+		this.addTextSetting(
+			"Identifiant client",
+			"Client ID de votre application sur piste.gouv.fr (compte gratuit).",
+			"clientId"
+		);
+		this.addTextSetting(
+			"Clef secrète",
+			"Client secret de la même application. Il est stocké en clair dans les données du plugin.",
+			"clientSecret",
+			{ secret: true }
+		);
+		this.addTextSetting(
+			"Hôte de l'API",
+			"À modifier uniquement si PISTE change d'adresse.",
+			"apiHost"
+		);
+		this.addTextSetting(
+			"Hôte d'authentification",
+			"À modifier uniquement si PISTE change d'adresse.",
+			"tokenHost"
 		);
 
-				// Add a warning message with a custom class
-		const warningMessage = containerEl.createDiv("warning-message-template");
-		warningMessage.setText("⚠️ Attention: les deux modèles suivants seront supprimés à la prochaine mise à jour ! Pensez à sauvegarder ou adapter le modèle général !");
+		new Setting(containerEl).setName("Notes").setHeading();
 
 		new Setting(containerEl)
-			.setName('Modèle de fiche d\'arrêt')
-			.setDesc('Ce modèle disparaitra lors de la prochaine mise à jour ! Pensez à sauvegarder et mettre à jour le modèle général !')
-			.addTextArea(text => {text
-				.setPlaceholder("Définissez le modèle de fiches ici.")
-				.setValue(this.plugin.settings.templateDecision)
-				.onChange(async (value) => {
-					this.plugin.settings.templateDecision = value;
-					await this.plugin.saveSettings();
-				});
-				text.inputEl.style.width = "400px";
-				text.inputEl.style.height = "200px";
-			}
-			);
-
-		new Setting(containerEl)
-			.setName('Modèle de note de document (en développement)')
-			.setDesc('Autre document juridique')
-			.addTextArea(text => {
-				text
-				.setDisabled(false)
-				.setPlaceholder("Définissez le modèle de fiches ici.")
-				.setValue(this.plugin.settings.templateDocument)
-				.onChange(async (value) => {
-					this.plugin.settings.templateDocument = value;
-					await this.plugin.saveSettings();
-				});
-
-				text.inputEl.style.width = "400px";
-				text.inputEl.style.height = "200px";
-			}
-			);
-
-		new Setting(containerEl)
-			.setName('Nom du fichier')
-			.setDesc('Nom du fichier')
-			.addText(text => text
-				.setPlaceholder("Set Token Host")
-				.setValue(this.plugin.settings.fileTitle)
-				.onChange(async (value) => {
-					this.plugin.settings.fileTitle = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Nombre de résultats maximum')
-			.setDesc('Nombre de résultats maximum')
-			.addDropdown(cb => {
-				cb
-					.addOptions({
-						"10": "10",
-						"25": "25",
-						"50": "50",
-						"100": "100"
-						})
-					.setValue(this.plugin.settings.maxResults.toString())
+			.setName("Modèle de note")
+			.setDesc(
+				"Modèle Handlebars appliqué aux documents : {{titre}}, {{date}}, {{texteIntegral}}, {{#each notes}}…"
+			)
+			.addTextArea((text) => {
+				text.inputEl.addClass("legifrance-template-input");
+				text.setPlaceholder("Définissez le modèle de note ici.")
+					.setValue(settings.templateAll)
 					.onChange(async (value) => {
-						this.plugin.settings.maxResults = Number(value);
+						settings.templateAll = value;
 						await this.plugin.saveSettings();
-					})
-			})
-			
+					});
+			});
 
-		containerEl.createEl("h2", {text: "Dossiers"});
+		this.addTextSetting(
+			"Nom du fichier",
+			"Modèle Handlebars du nom des notes, par exemple {{id}}.",
+			"fileTitle"
+		);
 
 		new Setting(containerEl)
 			.setName("Dossier de base")
-			.addSearch((cb) => {
-                new FolderSuggest(cb.inputEl);
-                cb.setPlaceholder("Ex. \"Décisions\"")
-                cb.setValue(this.plugin.settings.dossierBase)
-				cb.onChange(async (value) => {
-					this.plugin.settings.dossierBase = value;
-					await this.plugin.saveSettings();
-				})
-            });
+			.setDesc("Les notes de jurisprudence sont classées par juridiction dans ce dossier.")
+			.addSearch((search) => {
+				new FolderSuggest(this.app, search.inputEl);
+				search
+					.setPlaceholder('Ex. "Décisions"')
+					.setValue(settings.dossierBase)
+					.onChange(async (value) => {
+						settings.dossierBase = value;
+						await this.plugin.saveSettings();
+					});
+			});
 
-
-		containerEl.createEl("h2", {text: "Zone de test"}).style.color = "red";
-
-		containerEl.createEl('p', {text: "N'activez ces options que si vous acceptez une dose (minimale) d'instabilité. L'ajout de fonds supplémentaires demande encore du travail, mais vous pouvez d'ores et déjà essayer (et me faire des retours 😄)"});
-
+		new Setting(containerEl).setName("Recherche").setHeading();
 
 		new Setting(containerEl)
-			.setName("Ajout de fonds supplémentaires (ALL, LODA_DATE, KALI, ACCO, JORF)")
-			.setDesc("Ajoute quelques fonds supplémentaires pour vos recherches (instable).")
-			.addToggle((cb) => {
-				cb.setValue(this.plugin.settings.fondSupp);
-				cb.onChange(async (value) => {
-					this.plugin.settings.fondSupp = value;
+			.setName("Nombre de résultats par page")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOptions({ "10": "10", "25": "25", "50": "50", "100": "100" })
+					.setValue(String(settings.maxResults))
+					.onChange(async (value) => {
+						settings.maxResults = Number(value);
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl).setName("Fonctionnalités expérimentales").setHeading();
+
+		new Setting(containerEl)
+			.setName("Fonds supplémentaires")
+			.setDesc(
+				"Ajoute ALL, LODA_DATE, KALI, ACCO et JORF à la recherche. Ces fonds demandent encore du travail et peuvent être instables."
+			)
+			.addToggle((toggle) =>
+				toggle.setValue(settings.fondSupp).onChange(async (value) => {
+					settings.fondSupp = value;
 					await this.plugin.saveSettings();
 				})
-			})
+			);
 	}
 }
