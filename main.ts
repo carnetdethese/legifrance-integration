@@ -1,8 +1,11 @@
-import { Events, Notice, Plugin } from "obsidian";
+import { Events, Notice, Plugin, TFile, debounce } from "obsidian";
 import { agentSearch } from "api/utilities";
 import { legalDocument } from "abstracts/document";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import { createNote } from "creation/newNote";
+import { ReferenceData, ReferenceIndex, emptyReferenceData } from "references";
+import { LegalRef, searchUrl } from "references/parser";
+import { resolveReference } from "references/resolver";
 import {
 	DEFAULT_SETTINGS,
 	LegifranceSettings,
@@ -11,16 +14,21 @@ import {
 import { NOTE_TAKING_VIEW, NoteTakingView } from "views/NoteTakingView";
 import { RESEARCH_TEXT_VIEW, ResearchTextView } from "views/ResearchTextView";
 import { SEARCH_RESULT_VIEW, SearchResultView } from "views/SearchResultView";
+import { REFERENCES_VIEW, ReferencesView } from "views/ReferencesView";
 import { TEXT_READER_VIEW, TextReaderView } from "views/TextReaderView";
 import { documentDataStorage } from "views/viewsData";
 
 /** Événement déclenché à chaque modification de l'historique. */
 export const HISTORY_EVENT = "history-change";
 
+/** Événement déclenché lorsqu'un lien de référence est retrouvé via l'API. */
+export const REFERENCES_EVENT = "references-change";
+
 /** Contenu de `data.json`. */
 interface PluginData {
 	data: documentDataStorage[];
 	settings: LegifranceSettings;
+	references?: ReferenceData;
 }
 
 export default class LegifrancePlugin extends Plugin {
@@ -31,6 +39,10 @@ export default class LegifrancePlugin extends Plugin {
 	readonly events = new Events();
 	/** Documents consultés. Toujours remplacé, jamais muté, pour le rendu React. */
 	historiqueDocuments: documentDataStorage[] = [];
+	/** Références juridiques détectées dans les notes du coffre (voir `references/`). */
+	references: ReferenceIndex;
+	/** Enregistre les données après une rafale de modifications (analyses de notes). */
+	private saveSoon = debounce(() => this.saveSettings(), 1000, true);
 
 	async onload() {
 		LegifrancePlugin.instance = this;
@@ -40,6 +52,7 @@ export default class LegifrancePlugin extends Plugin {
 		this.registerView(RESEARCH_TEXT_VIEW, (leaf) => new ResearchTextView(leaf, this));
 		this.registerView(SEARCH_RESULT_VIEW, (leaf) => new SearchResultView(leaf, this));
 		this.registerView(TEXT_READER_VIEW, (leaf) => new TextReaderView(leaf, this));
+		this.registerView(REFERENCES_VIEW, (leaf) => new ReferencesView(leaf, this));
 		this.registerView(NOTE_TAKING_VIEW, (leaf) => new NoteTakingView(leaf, this));
 
 		this.addRibbonIcon("scale", "Légifrance", () => this.activateResearchTextView());
@@ -49,6 +62,18 @@ export default class LegifrancePlugin extends Plugin {
 			name: "Nouvelle recherche",
 			callback: () => this.activateResearchTextView(),
 		});
+
+		this.addCommand({
+			id: "references-juridiques",
+			name: "Afficher les références juridiques de la note",
+			callback: () => this.activateReferencesView(),
+		});
+
+		// Le cache des références suit les renommages et suppressions de notes.
+		this.registerEvent(
+			this.app.vault.on("rename", (file, oldPath) => this.references.rename(oldPath, file.path))
+		);
+		this.registerEvent(this.app.vault.on("delete", (file) => this.references.remove(file.path)));
 
 		this.addSettingTab(new LegifranceSettingTab(this.app, this));
 
@@ -62,12 +87,17 @@ export default class LegifrancePlugin extends Plugin {
 		const saved: Partial<PluginData> | null = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved?.settings);
 		this.historiqueDocuments = saved?.data ?? [];
+		this.references = new ReferenceIndex(
+			saved?.references ?? emptyReferenceData(),
+			() => this.saveSoon()
+		);
 	}
 
 	async saveSettings() {
 		await this.saveData({
 			data: this.historiqueDocuments,
 			settings: this.settings,
+			references: this.references.data,
 		} satisfies PluginData);
 		this.agent.dilaApi.updateConfig(this.settings);
 	}
@@ -114,6 +144,44 @@ export default class LegifrancePlugin extends Plugin {
 			reveal: true,
 		});
 		return leaf;
+	}
+
+	/** Affiche le panneau latéral des références juridiques de la note active. */
+	async activateReferencesView() {
+		await this.app.workspace.ensureSideLeaf(REFERENCES_VIEW, "right", {
+			active: true,
+			reveal: true,
+		});
+	}
+
+	/** Références juridiques d'une note (analysées uniquement si la note a changé). */
+	getReferences(file: TFile) {
+		return this.references.forFile(file.path, file.stat.mtime, () =>
+			this.app.vault.cachedRead(file)
+		);
+	}
+
+	/** Lien à ouvrir pour une référence : celui retrouvé, sinon une recherche Légifrance. */
+	getReferenceUrl(ref: LegalRef) {
+		return this.references.linkFor(ref)?.url ?? searchUrl(ref.query);
+	}
+
+	/**
+	 * Retrouve via l'API le document d'une référence et mémorise son lien.
+	 * @returns `true` si un document a été trouvé.
+	 */
+	async resolveReference(ref: LegalRef) {
+		try {
+			const link = await resolveReference(this.agent, ref);
+			if (!link) return false;
+			this.references.setLink(ref, link);
+			this.events.trigger(REFERENCES_EVENT);
+			return true;
+		} catch (error) {
+			console.error(error);
+			new Notice("Impossible de contacter Légifrance. Vérifiez vos identifiants dans les réglages.");
+			return false;
+		}
 	}
 
 	/** Ouvre le document dans un onglet de lecture, en réutilisant celui déjà ouvert. */
