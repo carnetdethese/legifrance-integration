@@ -22,13 +22,21 @@ export class DilaApiClient {
 	private token?: string;
 
 	constructor(connection: ConnectionSettings) {
-		this.connection = connection;
+		this.connection = { ...connection };
 	}
 
-	/** Met à jour les identifiants/hôtes et invalide le jeton en cache. */
+	/** Met à jour les identifiants/hôtes ; le jeton en cache n'est invalidé que s'ils ont changé. */
 	updateConfig(connection: ConnectionSettings) {
-		this.connection = connection;
-		this.token = undefined;
+		const { clientId, clientSecret, apiHost, tokenHost } = this.connection;
+		if (
+			clientId !== connection.clientId ||
+			clientSecret !== connection.clientSecret ||
+			apiHost !== connection.apiHost ||
+			tokenHost !== connection.tokenHost
+		) {
+			this.token = undefined;
+		}
+		this.connection = { ...connection };
 	}
 
 	/** Récupère (ou réutilise) un jeton via le flux `client_credentials`. */
