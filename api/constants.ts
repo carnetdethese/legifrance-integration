@@ -7,35 +7,6 @@ export const typeRecherche = new Map<string, string>([ // Type de la recherche
 	["AUCUNE_CORRESPONDANCE_A_CETTE_EXPRESSION", "Exclure l'expression"]
 ]);
 
-export const fondSansDate = ["ALL", "CODE_ETAT", "CNIL", "", "CIRC"];
-
-
-export const criteresTriGeneraux = {
-	pertinence: {
-		pertinence: "PERTINENCE"
-	},
-	decisionAcco: {
-		DATE_ASC: "Chronologique",
-		DATE_DESC: "Antéchronologique"
-	},
-	cnil: {
-		DATE_DECISION_ASC: "Chronologique",
-		DATE_DECISION_DESC: "Antéchronologique"
-	},
-	jorfLoda: {
-		SIGNATURE_DATE_ASC: "Date signature asc",
-		SIGNATURE_DATE_DESC: "Date signature desc", 
-		PUBLICATION_DATE_ASC: "Date publication asc",
-		PUBLICATION_DATE_DESC: "Date publication desc"
-	},
-	circ: {
-		SIGNATURE_DATE_ASC: "Date signature asc",
-		SIGNATURE_DATE_DESC: "Date signature desc",
-		PUBLI_DATE_ASC: "Date publication asc",
-		PUBLI_DATE_DESC:"Date publication desc"
-	}
-}
-
 export const codeJurisprudence = [
 	'CETAT', 
 	'CONSTIT',
@@ -55,30 +26,6 @@ export const operateursRecherche = new Map<string, string>([ // Opérateur de ce
     ["OU", "ou"]
 ]);
 
-
-// Pour l'instant, je bloque l'accès aux recherches des autres fonds le temps de finir le développement.
-
-export const codeFondBeta = new Map<string, string>([ // Fond dans lequel la recherche sera effectuée
-	["ALL", "Tous les fonds"],
-	// ["", ""],
-	["LODA_DATE", "Lois / Règlements"],
-	["CONSTIT", "Conseil constitutionnel"],
-	["CETAT", "Juridictions administratives"],
-	["JURI", "Juridictions judiciaires"],
-	// ["CODE_ETAT", "Codes"],
-	// ["CIRC", "Circulaires"],
-	// ["LEGI", "Législation"],
-	["CNIL", "CNIL"],
-	// ["ACCO", "Accords d'entreprise"],
-	["KALI", "Conventions collectives"],
-	["JORF", "Journal Officiel"]
-]);
-
-export const codeFond = new Map<string, string>([ // Fond dans lequel la 
-	["CONSTIT", "Conseil constitutionnel"],
-	["CETAT", "Juridictions administratives"],
-	["JURI", "Juridictions judiciaires"],
-]);
 
 export const champRecherche = new Map<string, string>([ // Type du champ dans lequel chercher.
 	["ALL", ""],

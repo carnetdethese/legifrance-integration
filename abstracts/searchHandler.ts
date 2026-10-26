@@ -3,13 +3,11 @@ import { dateFormat } from "lib/dateHandler";
 import { getTodaysDate, startDateBeforeEndDate } from "lib/utils";
 import LegifrancePlugin from "main";
 import { Notice } from "obsidian";
+import { FONDS, dateFacetOf, fondDef } from "./fonds";
 import { champsRechercheAvancees, resultatsRecherche } from "./searches";
 
 /** Nombre maximal de critères par champ (limite côté interface comme côté recherche). */
 export const MAX_CRITERES = 4;
-
-/** Fonds pour lesquels aucun filtre de dates n'est applicable. */
-const FONDS_SANS_FILTRE_DATE = ["ALL", "CODE_ETAT", "CNIL", "CIRC"];
 
 /**
  * État d'une recherche (fond, critères, pagination, tri) tel qu'envoyé à l'API.
@@ -53,7 +51,7 @@ export class documentSearchFieldsClass {
 			],
 		};
 
-		this.fond = constants.codeFond.keys().next().value;
+		this.fond = FONDS[0].code;
 
 		this.updatingFond(this.fond, false);
 
@@ -151,51 +149,38 @@ export class documentSearchFieldsClass {
 		return this.recherche.champs[champ].criteres[critere].typeRecherche;
 	}
 
+	/**
+	 * Requête à envoyer à l'API. Les dates passent en chaînes ; pour un fond « à une date », le filtre
+	 * est une date de version unique (en millisecondes), par défaut aujourd'hui.
+	 */
 	toObject() {
-		if (this.recherche.filtres[0]) {
-			this.recherche.filtres[0].dates.end =
-				this.recherche.filtres[0].dates.end.toString();
-			this.recherche.filtres[0].dates.start =
-				this.recherche.filtres[0].dates.start.toString();
+		const [filter] = this.recherche.filtres;
+		if (!filter) return { recherche: this.recherche, fond: this.fond };
+
+		if (fondDef(this.fond).dateMode === "single") {
+			const day = filter.dates.end.toString();
+			const singleDate = day ? new Date(day).getTime() : Date.now();
+			return {
+				recherche: { ...this.recherche, filtres: [{ facette: filter.facette, singleDate }] },
+				fond: this.fond,
+			};
 		}
 
-		return {
-			recherche: this.recherche,
-			fond: this.fond,
-		};
+		filter.dates.end = filter.dates.end.toString();
+		filter.dates.start = filter.dates.start.toString();
+		return { recherche: this.recherche, fond: this.fond };
 	}
 
+	/** Change de fond : filtre de date et critères de tri sont ceux du nouveau fond. */
 	updatingFond(selection: string, returnValue: boolean) {
 		this.fond = selection;
+		const def = fondDef(selection);
 
-		// setting or resetting the date field according to the "fond"
-		
-		// const updateSelections = ["CETAT", "JURI", "CONSTIT", ...constants.codeLegalStatute];
+		if (def.dateMode === "none") this.resetDate();
+		else this.updateDate();
 
-		if (FONDS_SANS_FILTRE_DATE.includes(selection)) {
-			this.resetDate();
-		} else {
-			this.updateDate();
-		}
-
-		// setting or resetting the sorting criteria. The variable is used as a Record by the Obsidian dropdown component to show the criteria in the research view.
-
-		const triDecision = ["CETAT", "JURI", "CONSTIT", "ACCO"];
-		const jorfLoda = ["LODA_ETAT", "JORF"];
-
-		this.criteresTri = {}; // fonds sans critère de tri propre
-		if (selection == "ALL")
-			this.criteresTri = constants.criteresTriGeneraux.pertinence;
-		else if (selection == "CNIL")
-			this.criteresTri = constants.criteresTriGeneraux.cnil;
-		else if (triDecision.includes(selection))
-			this.criteresTri = constants.criteresTriGeneraux.decisionAcco;
-		else if (jorfLoda.includes(selection))
-			this.criteresTri = constants.criteresTriGeneraux.jorfLoda;
-		else if (selection == "CIRC")
-			this.criteresTri = constants.criteresTriGeneraux.circ;
-
-		this.updateFacette(); // updating the date filter facet.
+		this.criteresTri = def.sorts; // critères proposés dans la liste de tri
+		this.updateFacette(); // tri par pertinence et facette de date du fond
 
 		if (returnValue) {
 			return this.newObject();
@@ -210,40 +195,23 @@ export class documentSearchFieldsClass {
 		}
 	}
 
+	/** Change le critère de tri (pertinence par défaut) et réajuste la facette de date qui en dépend. */
 	updateFacette(crit?: string) {
-		// Function that updates the facet for the date filter according either
-		// to a criterium passed as argument or to the sorting field.
+		this.recherche.sort = crit || "PERTINENCE";
 
-		if (crit) {
-			this.recherche.sort = crit;
-		} else {
-			this.recherche.sort = "PERTINENCE"; // always falling to this as it is a default value.
-		}
-
-		if (this.recherche.filtres.length > 0) {
-			if (constants.codeJurisprudence.includes(this.fond))
-				this.recherche.filtres[0].facette = "DATE_DECISION";
-			else if (
-				this.recherche.sort.toLowerCase().includes("publication")
-			) {
-				this.recherche.filtres[0].facette = "DATE_PUBLICATION";
-			} else if (
-				this.recherche.sort.toLowerCase().includes("signature") ||
-				this.fond == "ACCO"
-			) {
-				this.recherche.filtres[0].facette = "DATE_SIGNATURE";
-			}
-		}
+		const facette = dateFacetOf(fondDef(this.fond), this.recherche.sort);
+		if (this.recherche.filtres.length > 0 && facette) this.recherche.filtres[0].facette = facette;
 	}
 
 	getFacette() {
 		return this.recherche.sort;
 	}
 
+	/** Filtre de date vierge du fond (période, ou date de version unique). */
 	updateDate() {
 		this.recherche.filtres[0] = {
 			dates: { start: new dateFormat(), end: new dateFormat() },
-			facette: "DATE_PUBLICATION",
+			facette: dateFacetOf(fondDef(this.fond), this.recherche.sort) || "DATE_PUBLICATION",
 		};
 	}
 
@@ -265,7 +233,7 @@ export class documentSearchFieldsClass {
 	 * @returns `false` (avec notification) si la date de début suit la date de fin.
 	 */
 	checkBeforeSearch(): boolean {
-		if (FONDS_SANS_FILTRE_DATE.includes(this.fond)) return true;
+		if (fondDef(this.fond).dateMode !== "range") return true;
 
 		const { dates } = this.recherche.filtres[0];
 		if (!dates.end.toString()) dates.end = getTodaysDate();

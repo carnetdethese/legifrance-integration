@@ -1,5 +1,6 @@
 import { Minus, Plus } from "lucide-react";
-import { fondSansDate, operateursRecherche, typeRecherche } from "api/constants";
+import { operateursRecherche, typeRecherche } from "api/constants";
+import { fondDef } from "abstracts/fonds";
 import { MAX_CRITERES, documentSearchFieldsClass } from "abstracts/searchHandler";
 import { SettingRow } from "../SettingRow";
 import { DatePicker } from "./DatePicker";
@@ -19,10 +20,11 @@ export const SearchForm = ({ recherche, onChange, onSubmit, advanced }: SearchFo
 
 	return (
 		<>
-			{!fondSansDate.includes(recherche.fond) && (
+			{fondDef(recherche.fond).dateMode !== "none" && (
 				// `key` réinitialise les champs date lorsque le fond (et donc la période) change.
 				<DatePicker
 					key={recherche.fond}
+					single={fondDef(recherche.fond).dateMode === "single"}
 					onChange={(place, value) => onChange(recherche.setDate(value, place, true)!)}
 				/>
 			)}

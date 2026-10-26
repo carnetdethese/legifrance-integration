@@ -14,8 +14,6 @@ export interface LegifranceSettings {
 	fileTitle:string;
 	maxResults:number;
 	dossierBase:string;
-	/** Active les fonds supplémentaires (instables) dans la recherche. */
-	fondSupp: boolean;
 	/** Retrouve automatiquement, via l'API, les liens des références juridiques d'une note. */
 	autoResolveRefs: boolean;
 	/** Mode débogage : journal détaillé de la recherche des références, visible dans le panneau. */
@@ -31,7 +29,6 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	fileTitle: '{{id}}',
 	maxResults: 25,
 	dossierBase: "/",
-	fondSupp:false,
 	autoResolveRefs: true,
 	debugRefs: false
 }
@@ -172,19 +169,6 @@ export class LegifranceSettingTab extends PluginSettingTab {
 
 		this.displayDatabase();
 
-		new Setting(containerEl).setName("Fonctionnalités expérimentales").setHeading();
-
-		new Setting(containerEl)
-			.setName("Fonds supplémentaires")
-			.setDesc(
-				"Ajoute ALL, LODA_DATE, KALI, ACCO et JORF à la recherche. Ces fonds demandent encore du travail et peuvent être instables."
-			)
-			.addToggle((toggle) =>
-				toggle.setValue(settings.fondSupp).onChange(async (value) => {
-					settings.fondSupp = value;
-					await this.plugin.saveSettings();
-				})
-			);
 	}
 
 	/** Section « Base de données » : effectifs, indexation du coffre, fiches de décisions. */

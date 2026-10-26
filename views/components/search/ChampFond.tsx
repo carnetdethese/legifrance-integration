@@ -1,5 +1,4 @@
-import { codeFond, codeFondBeta } from "api/constants";
-import { usePlugin } from "views/hooks";
+import { FONDS, FondGroup } from "abstracts/fonds";
 import { SettingRow } from "../SettingRow";
 
 interface ChampFondProps {
@@ -7,24 +6,22 @@ interface ChampFondProps {
 	onChange: (fond: string) => void;
 }
 
-/** Sélecteur du fond de données (jurisprudence, législation…). */
-export const ChampFond = ({ fond, onChange }: ChampFondProps) => {
-	const codesFond = usePlugin().settings.fondSupp ? codeFondBeta : codeFond;
+/** Groupes de fonds, dans l'ordre d'affichage. */
+const GROUPS = [...new Set(FONDS.map((fond) => fond.group))] as FondGroup[];
 
-	return (
-		<SettingRow name="Fond" htmlFor="legifrance-fond">
-			<select
-				id="legifrance-fond"
-				className="dropdown"
-				value={fond}
-				onChange={(e) => onChange(e.target.value)}
-			>
-				{Array.from(codesFond, ([code, label]) => (
-					<option key={code} value={code}>
-						{label}
-					</option>
-				))}
-			</select>
-		</SettingRow>
-	);
-};
+/** Sélecteur du fond de données (jurisprudence, législation…). */
+export const ChampFond = ({ fond, onChange }: ChampFondProps) => (
+	<SettingRow name="Fond" htmlFor="legifrance-fond">
+		<select id="legifrance-fond" className="dropdown" value={fond} onChange={(e) => onChange(e.target.value)}>
+			{GROUPS.map((group) => (
+				<optgroup key={group} label={group}>
+					{FONDS.filter((f) => f.group === group).map((f) => (
+						<option key={f.code} value={f.code}>
+							{f.label}
+						</option>
+					))}
+				</optgroup>
+			))}
+		</select>
+	</SettingRow>
+);

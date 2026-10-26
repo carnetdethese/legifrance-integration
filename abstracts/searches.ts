@@ -1,13 +1,19 @@
 import { legalDocument, statuteArticles } from "abstracts/document";
 import * as constants from "api/constants";
+import { isCaselawOrigin } from "./fonds";
 import { dateFormat } from "lib/dateHandler";
 import { findLink } from "./decisions";
 
 export interface rechercheAvStructure {
 	// Base
-	recherche: champsRechercheAvancees;
+	recherche: champsRechercheAvancees | requeteDateUnique;
 	fond: string;
 }
+
+/** Requête d'un fond « à une date » : le filtre porte une date de version unique. */
+export type requeteDateUnique = Omit<champsRechercheAvancees, "filtres"> & {
+	filtres: { facette: string; singleDate: number }[];
+};
 
 export interface champsRechercheAvancees {
 	operateur?: string;
@@ -97,7 +103,7 @@ export class resultatsRechercheClass {
 
 		return this.resultats.results.flatMap((result) => {
 			const origine = result.origin;
-			const type = constants.codeJurisprudence.includes(origine)
+			const type = isCaselawOrigin(origine)
 				? "jurisprudence"
 				: "document";
 
