@@ -1,102 +1,72 @@
-import { Notice, requestUrl, RequestUrlResponse } from "obsidian";
+import { requestUrl, RequestUrlResponse } from "obsidian";
 import { LegifranceSettings } from "settings/settings";
 
-interface ModuleOptions {
-	auth: {
-		tokenHost: string;
-		tokenPath: string;
-	};
-	client: {
-		id: string;
-		secret: string;
-	};
-	options: {
-		authorizationMethod: string;
-	};
-}
+type ConnectionSettings = Pick<
+	LegifranceSettings,
+	"clientId" | "clientSecret" | "apiHost" | "tokenHost"
+>;
 
-// Credit goes, for the most part, to https://github.com/SocialGouv/dila-api-client - I have adapted the code in order to use the FetchAPI and not the simple-oauth2 library, incompatible with mobile.
+/** Chemin de l'endpoint OAuth2 de PISTE, relatif à `tokenHost`. */
+const TOKEN_PATH = "/api/oauth/token";
 
+/**
+ * Client minimal pour l'API Légifrance (PISTE / DILA).
+ *
+ * Inspiré de https://github.com/SocialGouv/dila-api-client, réécrit autour de
+ * `requestUrl` d'Obsidian (compatible mobile, sans contrainte CORS) plutôt
+ * que de `simple-oauth2`.
+ */
 export class DilaApiClient {
-	tokenHost: string;
-	apiHost: string;
-	config: ModuleOptions;
-	globalToken: string | unknown;
+	private connection: ConnectionSettings;
+	/** Jeton OAuth2 en cache ; vidé lorsque l'API répond 401. */
+	private token?: string;
 
-	constructor(
-		clientId: string,
-		clientSecret: string,
-		apiHost: string,
-		tokenHost: string
-	) {
-		this.config = {
-			auth: {
-				tokenHost: tokenHost,
-				tokenPath: "/api/oauth/token",
-			},
-			client: {
-				id: clientId,
-				secret: clientSecret,
-			},
-			options: {
-				authorizationMethod: "body",
-			},
-		};
-		this.tokenHost = tokenHost;
-		this.apiHost = apiHost;
+	constructor(connection: ConnectionSettings) {
+		this.connection = connection;
 	}
 
-	updateConfig(settings: LegifranceSettings) {
-		this.config = {
-			auth: {
-				tokenHost: settings.tokenHost,
-				tokenPath: "/api/oauth/token",
-			},
-			client: {
-				id: settings.clientId,
-				secret: settings.clientSecret,
-			},
-			options: {
-				authorizationMethod: "body",
-			},
-		};
-		this.tokenHost = settings.tokenHost;
-		this.apiHost = settings.apiHost;
+	/** Met à jour les identifiants/hôtes et invalide le jeton en cache. */
+	updateConfig(connection: ConnectionSettings) {
+		this.connection = connection;
+		this.token = undefined;
 	}
 
-	async getAccessToken() {
-		if (this.globalToken) {
-			return this.globalToken;
-		}
+	/** Récupère (ou réutilise) un jeton via le flux `client_credentials`. */
+	private async getAccessToken(): Promise<string> {
+		if (this.token) return this.token;
 
-		const headers = {
-			"Content-Type": "application/x-www-form-urlencoded",
-		};
+		const { tokenHost, clientId, clientSecret } = this.connection;
+		const response = await requestUrl({
+			url: tokenHost + TOKEN_PATH,
+			method: "POST",
+			contentType: "application/x-www-form-urlencoded",
+			// URLSearchParams encode les caractères spéciaux du secret.
+			body: new URLSearchParams({
+				grant_type: "client_credentials",
+				client_id: clientId,
+				client_secret: clientSecret,
+				scope: "open_id",
+			}).toString(),
+			throw: false,
+		});
 
-		const tokenUrl =
-			this.config.auth.tokenHost + this.config.auth.tokenPath;
-
-		try {
-			const data = await requestUrl({
-				url: tokenUrl,
-				method: "POST",
-				headers: headers,
-				body: `grant_type=client_credentials&client_id=${this.config.client.id}&client_secret=${this.config.client.secret}&scope=open_id`,
-			}).then((r) => r.text);
-
-			const access_token = JSON.parse(data);
-			this.globalToken = access_token.access_token;
-		} catch (error) {
-			new Notice(
-				"Erreur d'authentification. Vérifiez vos identifiants et accès."
+		if (response.status !== 200) {
+			throw new Error(
+				"Authentification refusée. Vérifiez vos identifiants et accès PISTE."
 			);
-			throw error;
 		}
 
-		return this.globalToken;
+		this.token = response.json.access_token as string;
+		return this.token;
 	}
 
-	async fetch({
+	/**
+	 * Appelle un endpoint de l'API. En cas de 401, le jeton est renouvelé et la
+	 * requête rejouée une seule fois.
+	 *
+	 * @throws Error si la réponse n'est pas un succès.
+	 */
+	async fetch<T = object>({
 		path,
 		method = "POST",
 		params,
@@ -104,35 +74,28 @@ export class DilaApiClient {
 		path: string;
 		method?: string;
 		params?: object;
-	}): Promise<object> {
-		const token = await this.getAccessToken();
-		const url = `${this.apiHost}/${path}`;
-		const RequestUrlParams = {
-			url: url,
-			body: JSON.stringify(params),
-			headers: {
-				Authorization: `Bearer ${token}`,
-				"content-type": "application/json",
-			},
-			method: method,
-		};
+	}): Promise<T> {
+		for (let attempt = 0; attempt < 2; attempt++) {
+			const response: RequestUrlResponse = await requestUrl({
+				url: `${this.connection.apiHost}/${path}`,
+				method,
+				contentType: "application/json",
+				headers: { Authorization: `Bearer ${await this.getAccessToken()}` },
+				body: JSON.stringify(params),
+				throw: false,
+			});
 
-		const data = await requestUrl(RequestUrlParams).then((r: RequestUrlResponse ) => {
-			if (r.status != 200) {
-				if (r.status === 401 && this.globalToken) {
-					this.globalToken = undefined;
-					new Notice(
-						"L'authentication a échoué. Vérifiez vos identifiants et les accès PISTE."
-					);
-					return this.fetch({ path, method, params });
-				}
-				new Error(`Erreur HTTP ! Statut : ${r.status}`);
+			if (response.status === 401) {
+				this.token = undefined;
+				continue;
 			}
-
-			return r;
-		}) as RequestUrlResponse;
-
-		new Notice("Données récupérées avec succès.");
-		return JSON.parse(data.text);
+			if (response.status !== 200) {
+				throw new Error(`Erreur HTTP ${response.status}`);
+			}
+			return response.json as T;
+		}
+		throw new Error(
+			"L'authentification a échoué. Vérifiez vos identifiants et les accès PISTE."
+		);
 	}
 }

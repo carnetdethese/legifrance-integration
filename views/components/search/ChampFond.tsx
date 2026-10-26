@@ -1,43 +1,30 @@
-import LegifrancePlugin from "../../../main";
-import * as constants from "../../../api/constants";
+import { codeFond, codeFondBeta } from "api/constants";
+import { usePlugin } from "views/hooks";
+import { SettingRow } from "../SettingRow";
 
 interface ChampFondProps {
-	fond: string,
-	handleFondSelect: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+	fond: string;
+	onChange: (fond: string) => void;
 }
 
-export const ChampFond = ({ fond, handleFondSelect }: ChampFondProps) => {
-	const pluginInstance = LegifrancePlugin.instance;
-	let codesFond = new Map<string, string>();
-
-	if (pluginInstance.settings.fondSupp) codesFond = constants.codeFondBeta;
-	else codesFond = constants.codeFond;
+/** Sélecteur du fond de données (jurisprudence, législation…). */
+export const ChampFond = ({ fond, onChange }: ChampFondProps) => {
+	const codesFond = usePlugin().settings.fondSupp ? codeFondBeta : codeFond;
 
 	return (
-		<>
-			<div className="setting-item">
-				<div className="setting-item-info">
-					<label htmlFor="fond-field" className="setting-item-name">
-						Fond
-					</label>
-				</div>
-
-				<div className="setting-item-control">
-					<select
-						className="dropdown"
-						name="fond-field"
-						id="fond-field"
-						onChange={(e) => handleFondSelect(e)}
-						value={fond}
-					>
-						{Array.from(codesFond.entries()).map(([k, v]) => (
-							<option key={k} value={k}>
-								{v}
-							</option>
-						))}
-					</select>
-				</div>
-			</div>
-		</>
+		<SettingRow name="Fond" htmlFor="legifrance-fond">
+			<select
+				id="legifrance-fond"
+				className="dropdown"
+				value={fond}
+				onChange={(e) => onChange(e.target.value)}
+			>
+				{Array.from(codesFond, ([code, label]) => (
+					<option key={code} value={code}>
+						{label}
+					</option>
+				))}
+			</select>
+		</SettingRow>
 	);
 };

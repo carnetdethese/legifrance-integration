@@ -91,10 +91,10 @@ export async function getDocumentInfo(document:legalDocument, valeurRecherche:st
 	if (codeLegalStatute.includes(document.origin)) {
 		return getStatuteInfo(document, valeurRecherche, apiClient);
 	}
-	if ('CIRC'.includes(document.origin)) {
+	if (document.origin === 'CIRC') {
 		return getCirculaireInfo(document, valeurRecherche, apiClient)
 	}
-	if ('KALI'.includes(document.origin)) {
+	if (document.origin === 'KALI') {
 		return getConvCollInfo(document, valeurRecherche, apiClient);
 	}
 

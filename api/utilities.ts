@@ -1,78 +1,54 @@
-import { DilaApiClient } from 'api/client'
-import { LegifranceSettings } from 'settings/settings';
-import { listRouteConsult } from './constants';
-import { rechercheAvStructure } from 'abstracts/searches'
-import { legalDocument } from 'abstracts/document';
+import { DilaApiClient } from "api/client";
+import { LegifranceSettings } from "settings/settings";
+import { listRouteConsult } from "./constants";
+import { rechercheAvStructure } from "abstracts/searches";
+import { legalDocument } from "abstracts/document";
 
-export interface dataFiche extends legalDocument {}
-
+/** Façade au-dessus du client API : recherche et consultation de documents. */
 export class agentSearch {
-  
-  settings:LegifranceSettings;
-  dilaApi:DilaApiClient;
+	dilaApi: DilaApiClient;
 
-  constructor(settings:LegifranceSettings) {
-    this.settings = settings;
-    this.dilaApi = new DilaApiClient(this.settings.clientId, this.settings.clientSecret, this.settings.apiHost, this.settings.tokenHost);
-  }
+	constructor(settings: LegifranceSettings) {
+		this.dilaApi = new DilaApiClient(settings);
+	}
 
-  async advanceSearchText(search:rechercheAvStructure) {
-    const requestOptions = {
-      path: "/search",
-      method: "POST",
-      params: search
-    }
+	/** Lance une recherche avancée (`/search`). */
+	advanceSearchText<T = object>(search: rechercheAvStructure) {
+		return this.dilaApi.fetch<T>({ path: "/search", params: search });
+	}
 
-    const result = await this.dilaApi.fetch(requestOptions);
+	/** Récupère le contenu complet d'un document via la route propre à son origine. */
+	fetchText<T = object>(texte: legalDocument, valeurRecherche: string) {
+		return this.dilaApi.fetch<T>({
+			path: this.getPathID(texte.origin) as string,
+			params: this.defineParamConsult(valeurRecherche, texte),
+		});
+	}
 
-    return result;
-  }
+	getPathID(origin: string) {
+		return listRouteConsult.get(origin.substring(0, 4));
+	}
 
-  async fetchText(texte:legalDocument, valeurRecherche:string) {
-    const path = this.getPathID(texte.origin) as string;
-    const parametres = this.defineParamConsult(valeurRecherche, texte, texte.date);
-    const requestOptions = {
-      path: path,
-      method: "POST",
-      params: parametres
-    }
-
-    const data = await this.dilaApi.fetch(requestOptions);
-
-    return data;
-  }
-
-  getPathID(origin:string) {
-    const path = listRouteConsult.get(origin.substring(0,4));
-    return path;
-  }
-
-  defineParamConsult(valeurRecherche:string, document:legalDocument, date?:string) {
-    let result;
-    if (document.nature == "CODE" || document.fond == "ACCO" || document.fond == 'CIRC' || document.fond == "KALI") {
-      result = {
-        "id": document.id,
-        "searchedString": valeurRecherche
-      }
-    }
-    else if (document.origin == "JORF") {
-      result = {
-        "textCid": document.cid,
-        "searchedString": valeurRecherche
-      }}
-    else if (document.origin == "LEGI") {
-      result = {
-        "textId": document.id,
-        "date": document.date,
-        "searchedString": valeurRecherche
-      }
-    }
-    else {
-      result = {
-        "textId": document.id,
-        "searchedString": valeurRecherche
-      }}  
-    return result;
-  }
-
-}  
+	/** Construit le corps de la requête de consultation selon le type de document. */
+	defineParamConsult(valeurRecherche: string, document: legalDocument) {
+		if (
+			document.nature == "CODE" ||
+			document.fond == "ACCO" ||
+			document.fond == "CIRC" ||
+			document.fond == "KALI"
+		) {
+			return { id: document.id, searchedString: valeurRecherche };
+		}
+		if (document.origin == "JORF") {
+			return { textCid: document.cid, searchedString: valeurRecherche };
+		}
+		if (document.origin == "LEGI") {
+			return {
+				textId: document.id,
+				date: document.date,
+				searchedString: valeurRecherche,
+			};
+		}
+		return { textId: document.id, searchedString: valeurRecherche };
+	}
+}

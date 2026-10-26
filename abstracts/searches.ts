@@ -1,16 +1,7 @@
-import {
-	Attachment,
-	Sommaire,
-	legalDocument,
-	resumeDocument,
-	statuteArticles,
-	statuteSections,
-} from "abstracts/document";
+import { legalDocument, statuteArticles } from "abstracts/document";
 import * as constants from "api/constants";
 import { dateFormat } from "lib/dateHandler";
-import { entreeDocument } from "modals/ShowModal";
 import { findLink } from "./decisions";
-import { isArray } from "lodash";
 
 export interface rechercheAvStructure {
 	// Base
@@ -47,52 +38,16 @@ export interface Criteres {
 	typeRecherche: string;
 }
 
-export interface noteDocumentChamp {
-	[key: string]:
-		| string
-		| undefined
-		| number
-		| Sommaire[]
-		| statuteArticles[]
-		| statuteSections[]
-		| sectionsResultats[]
-		| string[]
-		| resumeDocument[]
-		| Attachment;
-	notes: string;
-	interet: string;
-	connexes: string;
-}
-
-export interface ficheArretChamp {
-	[key: string]:
-		| string
-		| undefined
-		| number
-		| Sommaire[]
-		| statuteArticles[]
-		| statuteSections[]
-		| sectionsResultats[]
-		| string[]
-		| resumeDocument[]
-		| Attachment;
-	faits: string;
-	procedure: string;
-	moyens: string;
-	question: string;
-	solution: string;
-}
-
+/** Entrée d'un document dans un résultat de recherche. */
 interface Title {
-    id?: string;
-    title?: string;
+	id: string;
+	cid?: string;
+	title: string;
 }
 
 export interface resultatsRecherche {
 	results: {
-		titles?: {
-			[x: string]: Array<Title>;
-		};
+		titles?: Title[];
 		nature?: string;
 		text: string;
 		origin: string;
@@ -126,64 +81,43 @@ export interface extractsResultats {
 	values: string[];
 }
 
+/** Transforme la réponse brute de `/search` en liste de documents affichables. */
 export class resultatsRechercheClass {
 	resultats: resultatsRecherche;
-	fond: string;
 
 	constructor(data: resultatsRecherche) {
 		this.resultats = data;
-		this.fond = "";
 	}
 
-	listeResultats() {
-		const resultsDic: legalDocument[] = [];
-
-		let contenuTexte: string,
-			origine: string,
-			date: string,
-			cid: string,
-			nature: string,
-			type: string;
-
-		if (
-			this.resultats &&
-			this.resultats.results
-		) {
-			this.resultats.results.forEach((result) => {
-				// Process each search result here
-				contenuTexte = result.text;
-				origine = result.origin;
-				nature = result.nature ? result.nature : "";
-				type = constants.codeJurisprudence.includes(origine)
-					? "jurisprudence"
-					: "document";
-				if (result.date) {
-					date = result.date;
-				}
-				if (result.titles && isArray(result.titles)) {
-					(result.titles as Title[]).forEach((entree: entreeDocument) => {
-						if (entree.cid) cid = entree.cid;
-						resultsDic.push({
-							fond: origine,
-							type: type,
-							titre: entree.title,
-							id: entree.id,
-							texte: contenuTexte,
-							lien: findLink(origine, entree.id),
-							origin: origine,
-							nature: nature,
-							date: date,
-							cid: cid,
-							sections: result.sections,
-							titreNote: ''
-						});
-					});
-				}
-			});
-		} else {
+	listeResultats(): legalDocument[] {
+		if (!this.resultats?.results) {
 			console.error("Réponse invalide ou manquante à la requête.");
+			return [];
 		}
-		
-		return resultsDic;
+
+		return this.resultats.results.flatMap((result) => {
+			const origine = result.origin;
+			const type = constants.codeJurisprudence.includes(origine)
+				? "jurisprudence"
+				: "document";
+
+			// Un résultat peut regrouper plusieurs documents (`titles`) partageant le même extrait.
+			return (Array.isArray(result.titles) ? result.titles : []).map(
+				(entree): legalDocument => ({
+					fond: origine,
+					type,
+					titre: entree.title,
+					id: entree.id,
+					texte: result.text,
+					lien: findLink(origine, entree.id),
+					origin: origine,
+					nature: result.nature ?? "",
+					date: result.date,
+					cid: entree.cid,
+					sections: result.sections,
+					titreNote: "",
+				})
+			);
+		});
 	}
 }
