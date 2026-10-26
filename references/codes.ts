@@ -127,7 +127,7 @@ export const caseInsensitive = (text: string) =>
 		.join("");
 
 /** Désignation tolérante aux points et aux espaces (« C.civ », « C. civ »). */
-const aliasPattern = (alias: string, fold: boolean) =>
+export const aliasPattern = (alias: string, fold: boolean) =>
 	alias
 		.split(/(\.\s*|\s+)/)
 		.filter(Boolean)

@@ -61,6 +61,13 @@ eq("CPCE postes", labels("Art. L 33-1 CPCE ; art. L. 34-11 CPCE ; art. L. 130 CP
 eq("CPCE exécution", labels("art. L. 111-1 CPCE ; art. R. 121-1 CPCE ; C. pr. exéc., art. L. 211-1"), ["Code des procédures civiles d'exécution, art. L. 111-1", "Code des procédures civiles d'exécution, art. R. 121-1", "Code des procédures civiles d'exécution, art. L. 211-1"]);
 eq("code des postes en toutes lettres", labels("l'article L. 33-1 du code des postes"), ["Code des postes et des communications électroniques, art. L. 33-1"]);
 
+// Législation de l'Union : article d'un texte désigné par son sigle, son nom ou son numéro.
+eq("RGPD", labels("Art. 32 RGPD ; article 6, § 1, du règlement (UE) 2016/679 ; RGPD, art. 5 ; art. 267 TFUE ; art. 2 TUE ; l'article 47 de la Charte des droits fondamentaux de l'Union européenne ; article 17 du règlement général sur la protection des données"),
+	["RGPD, art. 32", "RGPD, art. 6", "RGPD, art. 5", "TFUE, art. 267", "TUE, art. 2", "Charte des droits fondamentaux de l'UE, art. 47", "RGPD, art. 17"]);
+eq("règlement (UE) non listé", labels("art. 3 du règlement (UE) 2019/1020"), ["règlement (UE) 2019/1020, art. 3"]);
+eq("Charte de l'environnement inchangée", labels("l'article 4 de la Charte de l'environnement"), ["Charte de l'environnement de 2004, art. 4"]);
+eq("aucun faux positif", labels("la tue ; une DSA ; art. 32 de la loi"), []);
+
 // Décisions citées par leur nom sans recueil, dans un titre de section, avec l'année seule.
 eq("titre de section", parseReferences("## Document n° 1 : C.E., 21 décembre 2001, M. Hoffmann - article 34 / 37 - compétence PM").map((r) => r.data), [{ court: "ce", name: "M. Hoffmann", decided: "21 décembre 2001" }]);
 eq("année seule", parseReferences("CE, 2006, Ordre des avocats au barreau de Paris").map((r) => r.data), [{ court: "ce", name: "Ordre des avocats au barreau de Paris", decided: "2006" }]);

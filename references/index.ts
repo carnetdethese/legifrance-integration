@@ -5,7 +5,7 @@ import { ResolvedLink } from "./resolver";
  * Version du format du cache : change quand l'analyse ou les clefs changent,
  * ce qui invalide les références et liens mémorisés.
  */
-export const REFERENCE_DATA_VERSION = 5;
+export const REFERENCE_DATA_VERSION = 6;
 
 /** Délai avant de relancer la recherche d'une référence introuvable (24 h). */
 const MISS_RETRY_MS = 24 * 60 * 60 * 1000;

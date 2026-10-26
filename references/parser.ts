@@ -6,6 +6,7 @@
  */
 import { CODE_PATTERN, LEGIFRANCE_PAGES, PREAMBLE_1946, officialCodeName } from "./codes";
 import { FULL_DATE_PATTERN, MONTH_PATTERN, plain } from "./dates";
+import { EU_PATTERN, euArticleUrl, euCelexOf, euLabelOf } from "./eulaw";
 
 export type RefKind = "decision" | "texte" | "article" | "eu" | "identifiant";
 
@@ -20,7 +21,7 @@ export type Court = "cassation" | "ce" | "cc" | "tc";
  * - `texte` : `nature` (loi, ordonnance…) et `number` ; ou `nature` et `date` pour une loi
  *   citée par sa seule date (« la loi du 6 janvier 1978 ») ;
  * - `article` : `code` (nom officiel, ou texte constitutionnel) et `number` ;
- * - `eu` : `celex` (acte), ou `case` (affaire de la CJUE, « C-311/18 »).
+ * - `eu` : `celex` (acte) et, pour un article, `number` ; ou `case` (affaire de la CJUE, « C-311/18 »).
  */
 export interface LegalRef {
 	/** Clef de déduplication et de cache, stable d'une note à l'autre. */
@@ -154,6 +155,12 @@ const SHORT_EU_ACT = new RegExp(
 );
 const EU_ACT_LETTER: Record<string, string> = { règlement: "R", directive: "L", décision: "D" };
 
+/** Texte de l'Union visé par un article : sigle ou nom (« RGPD »), ou acte cité par son numéro. */
+const EU_TARGET = `(?:(?<alias>${EU_PATTERN})|(?<type>[Rr]èglement|[Dd]irective|[Dd]écision)\\s+(?:d['’]exécution\\s+)?\\((?:UE|CE|CEE|Euratom)\\)\\s*(?:n\\s?[°º]\\s*)?(?<a>\\d{1,4})/(?<b>\\d{1,4}))`;
+/** « art. 32 RGPD », « article 6, § 1, du règlement (UE) 2016/679 », « RGPD, art. 5 ». */
+const EU_ARTICLE_THEN_TEXT = new RegExp(`${ART}\\s*(?<numbers>${NUMBERS})${PRECISION}${LINK}${EU_TARGET}`, "gu");
+const EU_TEXT_THEN_ARTICLE = new RegExp(`(?<alias>${EU_PATTERN})\\s*,?\\s*${ART}\\s*(?<numbers>${NUMBERS})`, "gu");
+
 /** Numéro CELEX d'un acte dérivé : depuis 2015 « année/numéro », avant « numéro/année ». */
 function euActCelex(type: string, a: string, b: string) {
 	const [first, second] = [Number(a), Number(b)];
@@ -235,6 +242,20 @@ function scan(text: string): Candidate[] {
 					url: page && !apiResolvable ? page : undefined,
 					fallbackUrl: page,
 				});
+			}
+		}
+	}
+
+	// Articles de textes de l'Union : adresse du texte sur EUR-Lex, ancrée sur l'article.
+	for (const pattern of [EU_ARTICLE_THEN_TEXT, EU_TEXT_THEN_ARTICLE]) {
+		for (const match of text.matchAll(pattern)) {
+			const g = match.groups!;
+			const celex = g.alias ? euCelexOf(g.alias) : euActCelex(g.type, g.a, g.b);
+			if (!celex) continue;
+			const name = euLabelOf(celex) ?? (g.alias ? clean(g.alias) : `${g.type.toLowerCase()} (UE) ${g.a}/${g.b}`);
+			for (const item of g.numbers.matchAll(NUMBER_ITEM)) {
+				const number = articleNumber(item[0]);
+				add(match, "eu", `${name}, art. ${number}`, `${name} article ${number}`, { celex, number }, { url: euArticleUrl(celex, number) });
 			}
 		}
 	}
