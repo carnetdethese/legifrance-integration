@@ -56,6 +56,11 @@ eq("même décision 2x", parseReferences("CE, 7 juillet 1950, Dehaene, Rec. ; CE
 eq("UE", parseReferences("CJUE, 16 juill. 2020, aff. C-311/18 ; règlement (UE) 2016/679 ; règlement (CE) n° 44/2001 ; directive (UE) 2016/680 ; CELEX:32016R0679").map((r) => r.data), [{ case: "C-311/18" }, { celex: "32016R0679" }, { celex: "32001R0044" }, { celex: "32016L0680" }]);
 eq("ECLI", parseReferences("ECLI:FR:CCASS:2021:C100456").map((r) => r.data), [{ court: "ecli", number: "ECLI:FR:CCASS:2021:C100456" }]);
 
+// « CPCE » : Code des postes (articles à 1-2 chiffres) ou Code des procédures civiles d'exécution (3 chiffres).
+eq("CPCE postes", labels("Art. L 33-1 CPCE ; art. L. 34-11 CPCE ; art. L. 130 CPCE"), ["Code des postes et des communications électroniques, art. L. 33-1", "Code des postes et des communications électroniques, art. L. 34-11", "Code des postes et des communications électroniques, art. L. 130"]);
+eq("CPCE exécution", labels("art. L. 111-1 CPCE ; art. R. 121-1 CPCE ; C. pr. exéc., art. L. 211-1"), ["Code des procédures civiles d'exécution, art. L. 111-1", "Code des procédures civiles d'exécution, art. R. 121-1", "Code des procédures civiles d'exécution, art. L. 211-1"]);
+eq("code des postes en toutes lettres", labels("l'article L. 33-1 du code des postes"), ["Code des postes et des communications électroniques, art. L. 33-1"]);
+
 // Décisions citées par leur nom sans recueil, dans un titre de section, avec l'année seule.
 eq("titre de section", parseReferences("## Document n° 1 : C.E., 21 décembre 2001, M. Hoffmann - article 34 / 37 - compétence PM").map((r) => r.data), [{ court: "ce", name: "M. Hoffmann", decided: "21 décembre 2001" }]);
 eq("année seule", parseReferences("CE, 2006, Ordre des avocats au barreau de Paris").map((r) => r.data), [{ court: "ce", name: "Ordre des avocats au barreau de Paris", decided: "2006" }]);

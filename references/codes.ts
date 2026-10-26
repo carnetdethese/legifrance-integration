@@ -31,14 +31,14 @@ export const CODES: Record<string, string[]> = {
 	"Code général de la propriété des personnes publiques": ["CG3P", "CGPPP"],
 	"Code de la construction et de l'habitation": ["CCH"],
 	"Code de l'organisation judiciaire": ["COJ"],
-	"Code des procédures civiles d'exécution": ["CPCE"],
+	"Code des procédures civiles d'exécution": ["CPCE", "C. pr. exéc.", "CPCEx"],
 	"Code de la sécurité intérieure": ["CSI"],
 	"Code électoral": ["C. élect."],
 	"Code de la défense": ["C. défense"],
 	"Code des douanes": ["C. douanes"],
 	"Code de l'énergie": ["C. énergie"],
 	"Code des transports": ["C. transp."],
-	"Code des postes et des communications électroniques": ["Code des postes", "C. post."],
+	"Code des postes et des communications électroniques": ["CPCE", "Code des postes", "C. post."],
 };
 
 /**
@@ -84,16 +84,36 @@ export const LEGIFRANCE_PAGES: Record<string, string> = {
 /** Minuscules sans points ni espaces : « C. civ. » et « c.civ » se comparent égaux. */
 const normalize = (text: string) => text.replace(/[\s.]+/g, "").toLowerCase();
 
-/** Désignation normalisée → nom officiel du code. */
-const CODE_BY_NAME = new Map<string, string>(
-	Object.entries({ ...CODES, ...CONSTITUTIONAL_TEXTS }).flatMap(([code, aliases]) =>
-		[code, ...aliases].map((name): [string, string] => [normalize(name), code])
-	)
-);
+/** Désignation normalisée → noms officiels des codes qui la portent (plusieurs si elle est ambiguë). */
+const CODES_BY_NAME = new Map<string, string[]>();
+for (const [code, aliases] of Object.entries({ ...CODES, ...CONSTITUTIONAL_TEXTS })) {
+	for (const name of [code, ...aliases]) {
+		const key = normalize(name);
+		const known = CODES_BY_NAME.get(key) ?? [];
+		if (!known.includes(code)) CODES_BY_NAME.set(key, [...known, code]);
+	}
+}
 
-/** Nom officiel du code désigné par `designation` (« C. civ. », « code civil »…). */
-export const officialCodeName = (designation: string) =>
-	CODE_BY_NAME.get(normalize(designation));
+/**
+ * « CPCE » désigne le Code des postes et des communications électroniques comme le Code des
+ * procédures civiles d'exécution. Les articles de ce dernier ont un premier chiffre à trois
+ * positions (« L. 111-1 », « R. 121-1 ») ; ceux du Code des postes un ou deux (« L. 33-1 »,
+ * « L. 34-11 ») ou pas de tiret (« L. 130 »).
+ */
+const isCivilEnforcementNumber = (number: string) => /^[LRD]?\.?\s*\d{3}-\d/.test(number);
+
+/**
+ * Nom officiel du code désigné par `designation` (« C. civ. », « code civil »…). Si la désignation
+ * convient à plusieurs codes, le numéro d'article départage ; sans numéro, le premier l'emporte.
+ */
+export function officialCodeName(designation: string, articleNumber = "") {
+	const candidates = CODES_BY_NAME.get(normalize(designation));
+	if (candidates && candidates.length > 1 && normalize(designation) === "cpce") {
+		const enforcement = "Code des procédures civiles d'exécution";
+		return isCivilEnforcementNumber(articleNumber) ? enforcement : candidates.find((c) => c !== enforcement);
+	}
+	return candidates?.[0];
+}
 
 const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 

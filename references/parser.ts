@@ -224,12 +224,13 @@ function scan(text: string): Candidate[] {
 	// Constitution et Déclaration de 1789 : la page tant que l'API n'a pas donné l'article exact.
 	for (const pattern of [ARTICLE_THEN_CODE, CODE_THEN_ARTICLE]) {
 		for (const match of text.matchAll(pattern)) {
-			const code = officialCodeName(match.groups!.code);
-			if (!code) continue;
-			const page = LEGIFRANCE_PAGES[code];
-			const apiResolvable = code.startsWith("Code ") || code === "Constitution" || code.startsWith("Déclaration");
 			for (const item of match.groups!.numbers.matchAll(NUMBER_ITEM)) {
 				const number = articleNumber(item[0]);
+				// L'abréviation peut convenir à plusieurs codes (« CPCE ») : le numéro d'article départage.
+				const code = officialCodeName(match.groups!.code, number);
+				if (!code) continue;
+				const page = LEGIFRANCE_PAGES[code];
+				const apiResolvable = code.startsWith("Code ") || code === "Constitution" || code.startsWith("Déclaration");
 				add(match, "article", `${code}, art. ${number}`, `${code} article ${number}`, { code, number }, {
 					url: page && !apiResolvable ? page : undefined,
 					fallbackUrl: page,
