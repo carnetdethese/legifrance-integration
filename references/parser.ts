@@ -1,22 +1,32 @@
 /**
  * Détection des références juridiques (décisions, textes, articles de code,
  * identifiants Légifrance) dans le texte d'une note. Module pur : aucune
- * dépendance à Obsidian, afin d'être testable isolément.
+ * dépendance à Obsidian, afin d'être testable isolément. Les motifs de
+ * citation s'inspirent de ceux de Marginalia.
  */
+import { CODE_PATTERN, officialCodeName } from "./codes";
 
 export type RefKind = "decision" | "texte" | "article" | "identifiant";
 
-/** Référence juridique détectée dans une note. */
+/** Juridiction d'une décision. */
+export type Court = "cassation" | "ce" | "cc";
+
+/**
+ * Référence juridique détectée dans une note. `data` garde ce qu'il faut pour
+ * la retrouver via l'API :
+ * - `decision` : `court` et `number` ;
+ * - `texte` : `nature` (loi, ordonnance…) et `number` ;
+ * - `article` : `code` (nom officiel) et `number`.
+ */
 export interface LegalRef {
 	/** Clef de déduplication et de cache, stable d'une note à l'autre. */
 	key: string;
 	kind: RefKind;
-	/** Citation telle qu'écrite dans la note (espaces normalisés). */
+	/** Citation affichée (normalisée pour les articles). */
 	label: string;
-	/** Termes de recherche (numéro de décision, de loi, article…). */
+	/** Termes de recherche Légifrance, utilisés par le lien de repli. */
 	query: string;
-	/** Fond de l'API dans lequel retrouver la référence ; absent si non résoluble par l'API. */
-	fond?: string;
+	data: Record<string, string>;
 	/** Lien direct, connu sans appel à l'API (identifiants Légifrance). */
 	url?: string;
 }
@@ -25,7 +35,7 @@ const BASE_URL = "https://www.legifrance.gouv.fr";
 
 /** Lien de recherche Légifrance : toujours disponible, sans identifiants PISTE. */
 export function searchUrl(query: string) {
-	return `${BASE_URL}/search/all?tab_selection=all&searchField=ALL&searchType=ALL&query=${encodeURIComponent(query)}`;
+	return `${BASE_URL}/search/all?tab_selection=all&searchField=ALL&searchType=ALL&typePagination=DEFAUT&query=${encodeURIComponent(query)}`;
 }
 
 /** Préfixe d'un identifiant Légifrance → chemin de sa page. */
@@ -39,103 +49,139 @@ const ID_PATHS: Record<string, string> = {
 	JORFARTI: "jorf/article_jo",
 };
 
-/** Séparateur entre la juridiction et le numéro : tout sauf fin de phrase ou parenthèse. */
-const GAP = "[^\\n;()]{0,90}?";
+// --- Motifs ---------------------------------------------------------------------------------
 
-interface Rule {
-	kind: RefKind;
-	fond?: string;
-	regex: RegExp;
-	/** Numéro (ou termes de recherche) extrait de la correspondance. */
-	query: (m: RegExpExecArray) => string;
-}
+/** Texte libre entre la juridiction et le numéro : jamais de fin de phrase ni de parenthèse. */
+const PAYLOAD = "[^\\n;()]{0,70}?";
 
-const RULES: Rule[] = [
-	{
-		// Cass. civ. 1re, 12 mars 2020, n° 18-12.345
-		kind: "decision",
-		fond: "JURI",
-		regex: new RegExp(
-			`\\b(?:Cass(?:ation)?\\b\\.?|Cour de cassation|Crim\\.|Civ\\.|Soc\\.|Com\\.|Ass\\. plén\\.)${GAP}\\bn°\\s*(\\d{2}-\\d{2}[. ]?\\d{3})`,
-			"g"
-		),
-		query: (m) => m[1].replace(/[ ]/, "."),
-	},
-	{
-		// CE, sect., 12 mars 2020, n° 123456
-		kind: "decision",
-		fond: "CETAT",
-		regex: new RegExp(`\\b(?:CE|Conseil d['’]État)\\b[,.]?${GAP}\\bn°\\s*(\\d{5,6})\\b`, "g"),
-		query: (m) => m[1],
-	},
-	{
-		// Cons. const., décision n° 2019-778 DC
-		kind: "decision",
-		fond: "CONSTIT",
-		regex: new RegExp(
-			`\\b(?:Cons\\.\\s*const\\.|CC|Conseil constitutionnel)[,.]?${GAP}\\b(?:n°\\s*)?(\\d{4}-\\d{1,4}\\s*(?:DC|QPC|LP|ORGA|PDR|FNR|AN|SEN|ELEC|REF|[LDI])\\b)`,
-			"g"
-		),
-		query: (m) => m[1].replace(/\s+/g, " "),
-	},
-	{
-		// loi n° 2016-1088 du 8 août 2016, ordonnance n° 2016-131, décret n° 2020-1310…
-		kind: "texte",
-		fond: "LODA_ETAT",
-		regex: /\b(?:loi(?: organique| constitutionnelle)?|ordonnance|décret(?:-loi)?|arrêté)\s+n°\s*(\d{2,4}-\d+)(?:\s+du\s+\d{1,2}(?:er)?\s+\p{L}+\s+\d{4})?/giu,
-		query: (m) => m[1],
-	},
-	{
-		// article L. 1234-5 du code du travail
-		kind: "article",
-		regex: /\b(?:articles?|art\.)\s+((?:[LRD]\.?\s*)?\d+(?:-\d+)*)\s+du\s+(code\s+(?:de la |de l['’]|des |du |de |d['’])?\p{L}+(?:\s+(?:de la|de l['’]|des|du|de|d['’])?\s*\p{L}+){0,2}?)(?=\s*[,.;:)\n]|\s+(?:et|ou|dans|qui|est|sont|ne|a|prévoit|dispose)\b|$)/giu,
-		query: (m) => `article ${m[1].replace(/\s+/g, "")} ${m[2].toLowerCase()}`,
-	},
-];
+const NUMBER =
+	"(?:[LRD]\\*?\\.?\\s?)?\\d+(?:-\\d+)*(?:er)?(?:\\s?(?:bis|ter|quater|quinquies|sexies|septies|octies))?";
+const NUMBERS = `${NUMBER}(?:\\s*(?:,|et|à|ou)\\s*${NUMBER})*`;
+const ART = "[Aa]rt(?:icles?)?\\b\\.?";
+const PRECISION = "(?:\\s*,?\\s*(?:[Aa]l(?:inéa|\\.)?\\s*\\d+(?:er|e)?|§\\s*\\d+))*";
+const LINK = "\\s*,?\\s*(?:(?:dudit|du|de la|de l['’]|des)\\s*)?";
+
+const ARTICLE_THEN_CODE = new RegExp(
+	`${ART}\\s*(?<numbers>${NUMBERS})${PRECISION}${LINK}(?<code>${CODE_PATTERN})`,
+	"g"
+);
+const CODE_THEN_ARTICLE = new RegExp(
+	`(?<code>${CODE_PATTERN})\\s*,?\\s*${ART}\\s*(?<numbers>${NUMBERS})`,
+	"g"
+);
+const NUMBER_ITEM = new RegExp(NUMBER, "g");
+
+const LAW =
+	/(?<nature>loi\s+organique|loi\s+constitutionnelle|loi\s+de\s+finances|loi|ordonnance|décret-loi|décret|arrêté)\s+(?:n\s?[°ºo]\s*)?(?<number>\d{2,4}-\d+)(?:\s+(?:du|en date du)\s+\d{1,2}(?:er)?\s+\p{L}+\s+\d{4})?/giu;
+
+const CASSATION = new RegExp(
+	`(?:\\bCass\\.|\\bCour de cassation|\\b(?:Civ|Soc|Com|Crim)\\.|\\bAss\\. plén\\.|\\bCh\\. mixte)${PAYLOAD}(?:pourvoi\\s+)?n\\s?[°º]\\s*(?<number>\\d{2}-\\d{2}[.\\s]?\\d{3})`,
+	"g"
+);
+const CONSEIL_ETAT = new RegExp(
+	`(?:\\bCE\\b|\\bConseil d['’]État)${PAYLOAD}n\\s?[°º]\\s*(?<number>\\d{5,7})\\b`,
+	"g"
+);
+const CC_SUFFIX = "(?:QPC|DC|LOM|LP|L|AN|SEN|ELEC|FNR|PDR|ORGA|AUTO|AR16|I|D)";
+const CONSEIL_CONSTITUTIONNEL = new RegExp(
+	`(?:(?:\\bCons\\.\\s*const\\.|\\bConseil constitutionnel|\\bCC\\b)[^\\n;()]{0,40}?,?\\s*|[Dd]écision\\s+)?(?:n\\s?[°º]\\s*)?(?<number>\\d{2,4}-\\d+(?:/\\d+)*\\s+${CC_SUFFIX})\\b(?:\\s+du\\s+\\d{1,2}(?:er)?\\s+\\p{L}+\\s+\\d{4})?`,
+	"gu"
+);
 
 const ID_REGEX = /\b(JURITEXT|CETATEXT|CONSTEXT|JORFTEXT|LEGITEXT|LEGIARTI|JORFARTI)\d{12}\b/g;
 
-const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
+// --- Extraction -----------------------------------------------------------------------------
 
-/**
- * Extrait les références juridiques d'un texte, dédupliquées, dans l'ordre
- * d'apparition.
- */
-export function parseReferences(text: string): LegalRef[] {
-	const found: { index: number; ref: LegalRef }[] = [];
+const clean = (text: string) => text.replace(/\s+/g, " ").trim().replace(/^,+|,+$/g, "");
 
-	for (const rule of RULES) {
-		for (const m of text.matchAll(rule.regex)) {
-			const query = normalize(rule.query(m as RegExpExecArray));
-			found.push({
-				index: m.index ?? 0,
-				ref: {
-					key: `${rule.kind}:${rule.fond ?? ""}:${query.toLowerCase()}`,
-					kind: rule.kind,
-					label: normalize(m[0]),
-					query,
-					fond: rule.fond,
-				},
-			});
+/** Clef de cache : type, puis les données triées (insensible à la casse). */
+function makeKey(kind: RefKind, data: Record<string, string>) {
+	const parts = Object.entries(data)
+		.sort(([a], [b]) => a.localeCompare(b))
+		.map(([k, v]) => `${k}=${v.toLowerCase()}`);
+	return [kind, ...parts].join("|");
+}
+
+/** Numéro d'article normalisé : « L121-1 » devient « L. 121-1 », « 1er » devient « 1 ». */
+function articleNumber(raw: string) {
+	const number = clean(raw).replace(/(?<=\d)er$/, "");
+	return /^[LRD]/.test(number) ? number.replace(/^([LRD])\*?\.?\s?/, "$1. ") : number;
+}
+
+interface Candidate {
+	start: number;
+	end: number;
+	ref: LegalRef;
+}
+
+/** Références d'un texte avec leur plage, avant suppression des chevauchements. */
+function scan(text: string): Candidate[] {
+	const found: Candidate[] = [];
+	const add = (match: RegExpMatchArray, kind: RefKind, label: string, query: string, data: Record<string, string>) =>
+		found.push({
+			start: match.index ?? 0,
+			end: (match.index ?? 0) + match[0].length,
+			ref: { key: makeKey(kind, data), kind, label, query, data },
+		});
+
+	for (const pattern of [ARTICLE_THEN_CODE, CODE_THEN_ARTICLE]) {
+		for (const match of text.matchAll(pattern)) {
+			const code = officialCodeName(match.groups!.code);
+			if (!code) continue;
+			for (const item of match.groups!.numbers.matchAll(NUMBER_ITEM)) {
+				const number = articleNumber(item[0]);
+				add(match, "article", `${code}, art. ${number}`, `${code} article ${number}`, { code, number });
+			}
 		}
 	}
 
-	for (const m of text.matchAll(ID_REGEX)) {
-		found.push({
-			index: m.index ?? 0,
-			ref: {
-				key: `identifiant:${m[0]}`,
-				kind: "identifiant",
-				label: m[0],
-				query: m[0],
-				url: `${BASE_URL}/${ID_PATHS[m[1]]}/${m[0]}`,
-			},
-		});
+	for (const match of text.matchAll(LAW)) {
+		const nature = clean(match.groups!.nature).toLowerCase();
+		const number = match.groups!.number;
+		add(match, "texte", clean(match[0]), `${nature} n° ${number}`, { nature, number });
+	}
+
+	const decisions: [Court, RegExp][] = [
+		["cassation", CASSATION],
+		["ce", CONSEIL_ETAT],
+		["cc", CONSEIL_CONSTITUTIONNEL],
+	];
+	for (const [court, pattern] of decisions) {
+		for (const match of text.matchAll(pattern)) {
+			let number = clean(match.groups!.number);
+			if (court === "cassation") number = number.replace(/^(\d{2}-\d{2})[.\s]?(\d{3})$/, "$1.$2");
+			add(match, "decision", clean(match[0]), number, { court, number });
+		}
+	}
+
+	for (const match of text.matchAll(ID_REGEX)) {
+		const ref = { key: `identifiant|${match[0]}`, kind: "identifiant" as const, label: match[0], query: match[0], data: {}, url: `${BASE_URL}/${ID_PATHS[match[1]]}/${match[0]}` };
+		found.push({ start: match.index ?? 0, end: (match.index ?? 0) + match[0].length, ref });
+	}
+	return found;
+}
+
+/**
+ * Extrait les références juridiques d'un texte, dédupliquées, dans l'ordre
+ * d'apparition. Une citation déjà couverte par une autre (même plage) n'est
+ * comptée qu'une fois ; l'ordre de `scan` donne la priorité.
+ */
+export function parseReferences(text: string): LegalRef[] {
+	const taken: Candidate[] = [];
+	for (const candidate of scan(text)) {
+		const overlaps = taken.some(
+			(other) =>
+				candidate.start < other.end &&
+				other.start < candidate.end &&
+				// Plusieurs articles d'une même citation (« art. 1240 et 1241 ») partagent la plage.
+				!(other.start === candidate.start && other.end === candidate.end && candidate.ref.kind === "article")
+		);
+		if (!overlaps) taken.push(candidate);
 	}
 
 	const seen = new Set<string>();
-	return found
-		.sort((a, b) => a.index - b.index)
+	return taken
+		.sort((a, b) => a.start - b.start)
 		.map(({ ref }) => ref)
 		.filter((ref) => !seen.has(ref.key) && !!seen.add(ref.key));
 }

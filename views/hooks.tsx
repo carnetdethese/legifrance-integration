@@ -68,7 +68,11 @@ export const useNoteReferences = () => {
 			setRefs([]);
 			return;
 		}
-		plugin.getReferences(file).then((found) => !cancelled && setRefs(found));
+		plugin.getReferences(file).then((found) => {
+			if (cancelled) return;
+			setRefs(found);
+			if (plugin.settings.autoResolveRefs) plugin.resolveReferences(found);
+		});
 		return () => {
 			cancelled = true;
 		};

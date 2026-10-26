@@ -1,15 +1,36 @@
 import { LegalRef, parseReferences } from "./parser";
 import { ResolvedLink } from "./resolver";
 
+/**
+ * Version du format du cache : change quand l'analyse ou les clefs changent,
+ * ce qui invalide les références et liens mémorisés.
+ */
+export const REFERENCE_DATA_VERSION = 2;
+
+/** Délai avant de relancer la recherche d'une référence introuvable (24 h). */
+const MISS_RETRY_MS = 24 * 60 * 60 * 1000;
+
 /** Contenu persisté dans `data.json` (clef `references`). */
 export interface ReferenceData {
+	version: number;
 	/** Références par note ; `mtime` permet de ne reparser que les notes modifiées. */
 	files: Record<string, { mtime: number; refs: LegalRef[] }>;
 	/** Liens retrouvés via l'API, partagés entre toutes les notes. */
 	links: Record<string, ResolvedLink>;
+	/** Références cherchées sans succès : clef → date de la recherche (ms). */
+	misses: Record<string, number>;
 }
 
-export const emptyReferenceData = (): ReferenceData => ({ files: {}, links: {} });
+export const emptyReferenceData = (): ReferenceData => ({
+	version: REFERENCE_DATA_VERSION,
+	files: {},
+	links: {},
+	misses: {},
+});
+
+/** Données lues dans `data.json`, ou un cache vide si elles datent d'un ancien format. */
+export const loadReferenceData = (saved?: ReferenceData): ReferenceData =>
+	saved?.version === REFERENCE_DATA_VERSION ? saved : emptyReferenceData();
 
 /**
  * Cache des références juridiques par note. Indépendant d'Obsidian : le plugin
@@ -53,6 +74,19 @@ export class ReferenceIndex {
 
 	setLink(ref: LegalRef, link: ResolvedLink) {
 		this.data.links[ref.key] = link;
+		delete this.data.misses[ref.key];
 		this.onChange();
+	}
+
+	/** Mémorise qu'une référence n'a pas été trouvée, pour ne pas la rechercher à chaque ouverture. */
+	setMiss(ref: LegalRef) {
+		this.data.misses[ref.key] = Date.now();
+		this.onChange();
+	}
+
+	/** Une recherche récente a-t-elle déjà échoué pour cette référence ? */
+	isRecentMiss(ref: LegalRef) {
+		const at = this.data.misses[ref.key];
+		return at !== undefined && Date.now() - at < MISS_RETRY_MS;
 	}
 }

@@ -3,9 +3,10 @@ import { agentSearch } from "api/utilities";
 import { legalDocument } from "abstracts/document";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import { createNote } from "creation/newNote";
-import { ReferenceData, ReferenceIndex, emptyReferenceData } from "references";
+import { ReferenceData, ReferenceIndex, loadReferenceData } from "references";
 import { LegalRef, searchUrl } from "references/parser";
-import { resolveReference } from "references/resolver";
+import { canResolve, resolveReference } from "references/resolver";
+import { ApiError } from "api/client";
 import {
 	DEFAULT_SETTINGS,
 	LegifranceSettings,
@@ -88,12 +89,17 @@ export default class LegifrancePlugin extends Plugin {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved?.settings);
 		this.historiqueDocuments = saved?.data ?? [];
 		this.references = new ReferenceIndex(
-			saved?.references ?? emptyReferenceData(),
+			loadReferenceData(saved?.references),
 			() => this.saveSoon()
 		);
 	}
 
 	async saveSettings() {
+		// Nouveaux identifiants : on peut réessayer après un refus.
+		const credentials = `${this.settings.clientId}:${this.settings.clientSecret}`;
+		if (credentials !== this.lastCredentials) this.referenceAuthFailed = false;
+		this.lastCredentials = credentials;
+
 		await this.saveData({
 			data: this.historiqueDocuments,
 			settings: this.settings,
@@ -166,21 +172,51 @@ export default class LegifrancePlugin extends Plugin {
 		return this.references.linkFor(ref)?.url ?? searchUrl(ref.query);
 	}
 
+	/** Références en cours de recherche ; évite les requêtes en double entre deux analyses. */
+	readonly pendingReferences = new Set<string>();
+	/** Identifiants refusés : une seule notification par session, puis on cesse d'interroger l'API. */
+	private referenceAuthFailed = false;
+	private lastCredentials = "";
+
+	/** Peut-on interroger l'API ? (identifiants renseignés) */
+	get hasCredentials() {
+		return !!(this.settings.clientId && this.settings.clientSecret);
+	}
+
 	/**
-	 * Retrouve via l'API le document d'une référence et mémorise son lien.
-	 * @returns `true` si un document a été trouvé.
+	 * Retrouve via l'API le document de chaque référence sans lien connu et
+	 * mémorise le résultat (ou l'échec, pour ne pas réessayer avant 24 h). Les
+	 * références sont traitées l'une après l'autre ; les vues sont prévenues à
+	 * chaque changement.
+	 *
+	 * @param force recherche aussi les références déjà introuvables (action manuelle).
 	 */
-	async resolveReference(ref: LegalRef) {
-		try {
-			const link = await resolveReference(this.agent, ref);
-			if (!link) return false;
-			this.references.setLink(ref, link);
+	async resolveReferences(refs: LegalRef[], force = false) {
+		if (!this.hasCredentials) return;
+		const todo = refs.filter(
+			(ref) =>
+				canResolve(ref) &&
+				!this.references.linkFor(ref) &&
+				!this.pendingReferences.has(ref.key) &&
+				(force || !this.references.isRecentMiss(ref))
+		);
+		todo.forEach((ref) => this.pendingReferences.add(ref.key));
+		this.events.trigger(REFERENCES_EVENT);
+
+		for (const ref of todo) {
+			try {
+				const link = this.referenceAuthFailed ? null : await resolveReference(this.agent, ref);
+				if (link) this.references.setLink(ref, link);
+				else if (!this.referenceAuthFailed) this.references.setMiss(ref);
+			} catch (error) {
+				if (error instanceof ApiError && [401, 403, 429].includes(error.status ?? 0)) {
+					if (!this.referenceAuthFailed) new Notice(error.message);
+					this.referenceAuthFailed = error.status !== 429;
+				}
+				console.error(error);
+			}
+			this.pendingReferences.delete(ref.key);
 			this.events.trigger(REFERENCES_EVENT);
-			return true;
-		} catch (error) {
-			console.error(error);
-			new Notice("Impossible de contacter Légifrance. Vérifiez vos identifiants dans les réglages.");
-			return false;
 		}
 	}
 

@@ -15,6 +15,8 @@ export interface LegifranceSettings {
 	dossierBase:string;
 	/** Active les fonds supplémentaires (instables) dans la recherche. */
 	fondSupp: boolean;
+	/** Retrouve automatiquement, via l'API, les liens des références juridiques d'une note. */
+	autoResolveRefs: boolean;
 }
 
 export const DEFAULT_SETTINGS: LegifranceSettings = {
@@ -26,7 +28,8 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	fileTitle: '{{id}}',
 	maxResults: 25,
 	dossierBase: "/",
-	fondSupp:false
+	fondSupp:false,
+	autoResolveRefs: true
 }
 
 
@@ -135,6 +138,20 @@ export class LegifranceSettingTab extends PluginSettingTab {
 						settings.maxResults = Number(value);
 						await this.plugin.saveSettings();
 					})
+			);
+
+		new Setting(containerEl).setName("Références juridiques").setHeading();
+
+		new Setting(containerEl)
+			.setName("Retrouver les liens automatiquement")
+			.setDesc(
+				"Interroge l'API pour chaque référence détectée dans la note (décisions, lois, articles). Désactivez pour limiter les requêtes : un bouton permet alors de les lancer à la demande."
+			)
+			.addToggle((toggle) =>
+				toggle.setValue(settings.autoResolveRefs).onChange(async (value) => {
+					settings.autoResolveRefs = value;
+					await this.plugin.saveSettings();
+				})
 			);
 
 		new Setting(containerEl).setName("Fonctionnalités expérimentales").setHeading();

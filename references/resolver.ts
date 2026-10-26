@@ -1,53 +1,213 @@
+/**
+ * Retrouve sur Légifrance (via l'API PISTE) le document d'une référence. Les
+ * requêtes (fonds, champs, filtres) et la lecture des réponses sont celles de
+ * Marginalia, vérifiées sur le service : un fond ou un champ erroné donne un
+ * 400, et une recherche approchée renvoie parfois un autre document, d'où le
+ * contrôle du numéro dans le titre.
+ */
+import { htmlToMarkdown } from "obsidian";
+import { ApiError } from "api/client";
 import { agentSearch } from "api/utilities";
-import { resultatsRecherche, resultatsRechercheClass } from "abstracts/searches";
-import { removeTags } from "lib/tools";
 import { LegalRef } from "./parser";
+
+const BASE_URL = "https://www.legifrance.gouv.fr";
+
+/** Longueur maximale du texte d'un article conservé dans le cache. */
+const MAX_TEXT_LENGTH = 20000;
 
 /** Document Légifrance retrouvé pour une référence. */
 export interface ResolvedLink {
 	url: string;
 	/** Titre du document trouvé, affiché pour que l'utilisateur vérifie la correspondance. */
 	titre: string;
+	/** Texte (Markdown) d'un article, pour l'aperçu. */
+	texte?: string;
+}
+
+/** Requête à l'API : chemin et corps JSON. */
+interface Query {
+	path: string;
+	body: object;
+}
+
+/** Réponse de `/search`, réduite à ce que l'on lit. */
+interface SearchResponse {
+	results?: {
+		titles?: { id?: string; cid?: string; title?: string }[];
+		sections?: { extracts?: { id?: string; num?: string; legalStatus?: string }[] }[];
+	}[];
+}
+
+/** Ce que l'on tire d'une réponse : adresse, titre, identifiant d'article éventuel. */
+type Match = { url: string; titre: string; articleId?: string };
+
+/** Requêtes à essayer dans l'ordre, et lecture de leurs réponses. */
+interface Resolution {
+	queries: Query[];
+	read: (response: SearchResponse) => Match | null;
+}
+
+/** Fond, page Légifrance, préfixe d'identifiant et champs essayés (dans l'ordre) par juridiction. */
+const COURTS: Record<string, { fond: string; page: string; prefix: string; fields: [string, "number" | "bare"][] }> = {
+	cassation: { fond: "JURI", page: "juri", prefix: "JURITEXT", fields: [["NUM_AFFAIRE", "number"], ["ALL", "number"]] },
+	ce: { fond: "CETAT", page: "ceta", prefix: "CETATEXT", fields: [["NUM_AFFAIRE", "number"], ["NUM_DEC", "number"], ["ALL", "number"]] },
+	// Le fond du Conseil constitutionnel n'indexe pas le suffixe (« DC ») du numéro.
+	cc: { fond: "CONSTIT", page: "cons", prefix: "CONSTEXT", fields: [["NUM_DEC", "number"], ["NUM_DEC", "bare"], ["ALL", "number"]] },
+};
+
+/** Nature d'un texte → valeur de la facette `NATURE`. */
+const LAW_NATURES: Record<string, string> = {
+	loi: "LOI",
+	"loi organique": "LOI_ORGANIQUE",
+	"loi constitutionnelle": "LOI_CONSTIT",
+	"loi de finances": "LOI",
+	ordonnance: "ORDONNANCE",
+	décret: "DECRET",
+	"décret-loi": "DECRET_LOI",
+	arrêté: "ARRETE",
+};
+
+function field(typeChamp: string, valeur: string) {
+	return { typeChamp, operateur: "ET", criteres: [{ typeRecherche: "EXACTE", valeur, operateur: "ET" }] };
+}
+
+/** Requête `POST /search` sur un fond. */
+function searchQuery(fond: string, champs: object[], filtres: object[] = []): Query {
+	return {
+		path: "/search",
+		body: {
+			fond,
+			recherche: { champs, filtres, pageNumber: 1, pageSize: 5, operateur: "ET", sort: "PERTINENCE", typePagination: "DEFAUT" },
+		},
+	};
+}
+
+/** Numéro d'article sans point ni espace : « L. 121-1 » et « L121-1 » se comparent égaux. */
+const compact = (number: string) => number.replace(/[.\s]/g, "");
+
+/** Le titre d'une décision porte-t-il ce numéro ? (écarte les résultats approchés) */
+const cites = (title: string, number: string) =>
+	new RegExp(`(?<![\\w.-])${number.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w-])`).test(title.replace(/\s+/g, " "));
+
+function build(ref: LegalRef): Resolution | null {
+	const { data } = ref;
+
+	if (ref.kind === "article") {
+		const number = compact(data.number);
+		return {
+			queries: [
+				searchQuery(
+					"CODE_DATE",
+					[field("NUM_ARTICLE", number)],
+					[
+						{ facette: "NOM_CODE", valeurs: [data.code] },
+						{ facette: "DATE_VERSION", singleDate: Date.now() },
+					]
+				),
+			],
+			// L'article est dans `results[].sections[].extracts[]` (`titles` ne nomme que le code).
+			read: (response) => {
+				for (const result of response.results ?? []) {
+					for (const section of result.sections ?? []) {
+						for (const extract of section.extracts ?? []) {
+							const inForce = !extract.legalStatus || extract.legalStatus === "VIGUEUR";
+							if (inForce && compact(extract.num ?? "") === number && extract.id?.startsWith("LEGIARTI")) {
+								return { url: `${BASE_URL}/codes/article_lc/${extract.id}`, titre: ref.label, articleId: extract.id };
+							}
+						}
+					}
+				}
+				return null;
+			},
+		};
+	}
+
+	if (ref.kind === "texte") {
+		const nature = LAW_NATURES[data.nature];
+		return {
+			queries: [searchQuery("LODA_DATE", [field("NUM", data.number)], nature ? [{ facette: "NATURE", valeurs: [nature] }] : [])],
+			read: (response) => {
+				for (const result of response.results ?? []) {
+					for (const title of result.titles ?? []) {
+						const id = title.cid || title.id;
+						if (id) return { url: `${BASE_URL}/loda/id/${id}`, titre: title.title ?? ref.label };
+					}
+				}
+				return null;
+			},
+		};
+	}
+
+	if (ref.kind === "decision") {
+		const court = COURTS[data.court];
+		if (!court) return null;
+		const values = { number: data.number, bare: data.number.split(" ")[0] };
+		return {
+			queries: court.fields.map(([typeChamp, value]) => searchQuery(court.fond, [field(typeChamp, values[value])])),
+			read: (response) => {
+				for (const result of response.results ?? []) {
+					for (const title of result.titles ?? []) {
+						if (title.id?.startsWith(court.prefix) && cites(title.title ?? "", data.number)) {
+							return { url: `${BASE_URL}/${court.page}/id/${title.id}`, titre: title.title ?? ref.label };
+						}
+					}
+				}
+				return null;
+			},
+		};
+	}
+	return null;
+}
+
+/** L'API peut-elle retrouver cette référence ? (Pas les identifiants, déjà directs.) */
+export const canResolve = (ref: LegalRef) => !ref.url && build(ref) !== null;
+
+/** Texte Markdown d'un article (`POST /consult/getArticle`), borné. */
+async function fetchArticleText(agent: agentSearch, id: string) {
+	const response = await agent.dilaApi.fetch<{ article?: ArticleBody } & ArticleBody>({
+		path: "/consult/getArticle",
+		params: { id },
+	});
+	const article = response.article ?? response;
+	const html = article.texteHtml ?? article.texte;
+	return html ? htmlToMarkdown(html).trim().slice(0, MAX_TEXT_LENGTH) : undefined;
+}
+
+interface ArticleBody {
+	texteHtml?: string;
+	texte?: string;
 }
 
 /**
- * Retrouve via l'API le document correspondant à une référence (recherche
- * exacte de son numéro dans son fond) et renvoie son premier résultat.
+ * Retrouve via l'API le document de `ref` (premières requêtes qui aboutissent),
+ * avec le texte de l'article le cas échéant.
  *
  * @returns `null` si la référence n'est pas résoluble ou sans correspondance.
- * @throws Error si l'appel à l'API échoue.
+ * @throws ApiError si les identifiants sont refusés, le quota dépassé ou le service injoignable.
  */
-export async function resolveReference(
-	agent: agentSearch,
-	ref: LegalRef
-): Promise<ResolvedLink | null> {
-	if (!ref.fond) return null;
+export async function resolveReference(agent: agentSearch, ref: LegalRef): Promise<ResolvedLink | null> {
+	const resolution = build(ref);
+	if (!resolution) return null;
 
-	const data = await agent.advanceSearchText<resultatsRecherche>({
-		fond: ref.fond,
-		recherche: {
-			pageSize: 1,
-			pageNumber: 1,
-			sort: "PERTINENCE",
-			typePagination: "DEFAUT",
-			filtres: [],
-			champs: [
-				{
-					typeChamp: "ALL",
-					operateur: "ET",
-					criteres: [
-						{
-							valeur: ref.query,
-							typeRecherche: "EXACTE",
-							operateur: "ET",
-							proximite: 2,
-						},
-					],
-				},
-			],
-		},
-	});
+	let match: Match | null = null;
+	let failure: ApiError | undefined;
+	let answered = false;
+	for (const query of resolution.queries) {
+		try {
+			match = resolution.read(await agent.dilaApi.fetch<SearchResponse>({ path: query.path, params: query.body }));
+			answered = true;
+		} catch (error) {
+			// 400 (requête refusée) ou 404 : on passe à la requête suivante.
+			if (!(error instanceof ApiError) || ![400, 404].includes(error.status ?? 0)) throw error;
+			failure = error;
+		}
+		if (match) break;
+	}
+	if (!match) {
+		if (failure && !answered) throw failure;
+		return null;
+	}
 
-	const [first] = new resultatsRechercheClass(data).listeResultats();
-	return first ? { url: first.lien, titre: removeTags(first.titre) } : null;
+	const texte = match.articleId ? await fetchArticleText(agent, match.articleId).catch(() => undefined) : undefined;
+	return { url: match.url, titre: match.titre, texte };
 }

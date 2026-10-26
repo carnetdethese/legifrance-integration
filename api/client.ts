@@ -6,6 +6,13 @@ type ConnectionSettings = Pick<
 	"clientId" | "clientSecret" | "apiHost" | "tokenHost"
 >;
 
+/** Erreur de l'API, avec son code HTTP (400/404 : requête refusée, à essayer autrement). */
+export class ApiError extends Error {
+	constructor(message: string, readonly status?: number) {
+		super(message);
+	}
+}
+
 /** Chemin de l'endpoint OAuth2 de PISTE, relatif à `tokenHost`. */
 const TOKEN_PATH = "/api/oauth/token";
 
@@ -59,8 +66,9 @@ export class DilaApiClient {
 		});
 
 		if (response.status !== 200) {
-			throw new Error(
-				"Authentification refusée. Vérifiez vos identifiants et accès PISTE."
+			throw new ApiError(
+				"Authentification refusée. Vérifiez vos identifiants et accès PISTE.",
+				response.status
 			);
 		}
 
@@ -72,7 +80,7 @@ export class DilaApiClient {
 	 * Appelle un endpoint de l'API. En cas de 401, le jeton est renouvelé et la
 	 * requête rejouée une seule fois.
 	 *
-	 * @throws Error si la réponse n'est pas un succès.
+	 * @throws ApiError si la réponse n'est pas un succès.
 	 */
 	async fetch<T = object>({
 		path,
@@ -98,12 +106,13 @@ export class DilaApiClient {
 				continue;
 			}
 			if (response.status !== 200) {
-				throw new Error(`Erreur HTTP ${response.status}`);
+				throw new ApiError(`Erreur HTTP ${response.status}`, response.status);
 			}
 			return response.json as T;
 		}
-		throw new Error(
-			"L'authentification a échoué. Vérifiez vos identifiants et les accès PISTE."
+		throw new ApiError(
+			"L'authentification a échoué. Vérifiez vos identifiants et les accès PISTE.",
+			401
 		);
 	}
 }

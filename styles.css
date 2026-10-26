@@ -191,3 +191,21 @@
 	text-transform: uppercase;
 	font-size: var(--font-ui-smaller);
 }
+
+/* Aperçu du texte d'un article : une ligne tronquée, cliquable. */
+.legifrance-excerpt {
+	margin-top: var(--size-2-1);
+	color: var(--text-normal);
+	font-size: var(--font-ui-smaller);
+	cursor: pointer;
+}
+
+.legifrance-excerpt:hover {
+	color: var(--text-accent);
+}
+
+.legifrance-article-text {
+	max-height: 60vh;
+	overflow-y: auto;
+	margin-bottom: var(--size-4-3);
+}
