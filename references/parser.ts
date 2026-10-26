@@ -337,12 +337,18 @@ function scan(text: string): Candidate[] {
 	return found;
 }
 
+/** Référence détectée et nombre de fois où la note la cite. */
+export interface Citation {
+	ref: LegalRef;
+	count: number;
+}
+
 /**
- * Extrait les références juridiques d'un texte, dédupliquées, dans l'ordre
- * d'apparition. Une citation déjà couverte par une autre (même plage) n'est
- * comptée qu'une fois ; l'ordre de `scan` donne la priorité.
+ * Extrait les références juridiques d'un texte, une fois chacune (dans l'ordre de première
+ * apparition), avec leur nombre de citations. Une citation déjà couverte par une autre (même plage)
+ * n'est comptée qu'une fois ; l'ordre de `scan` donne la priorité.
  */
-export function parseReferences(text: string): LegalRef[] {
+export function parseCitations(text: string): Citation[] {
 	const taken: Candidate[] = [];
 	for (const candidate of scan(text)) {
 		const overlaps = taken.some(
@@ -355,9 +361,14 @@ export function parseReferences(text: string): LegalRef[] {
 		if (!overlaps) taken.push(candidate);
 	}
 
-	const seen = new Set<string>();
-	return taken
-		.sort((a, b) => a.start - b.start)
-		.map(({ ref }) => ref)
-		.filter((ref) => !seen.has(ref.key) && !!seen.add(ref.key));
+	const citations = new Map<string, Citation>();
+	for (const { ref } of taken.sort((a, b) => a.start - b.start)) {
+		const known = citations.get(ref.key);
+		if (known) known.count++;
+		else citations.set(ref.key, { ref, count: 1 });
+	}
+	return [...citations.values()];
 }
+
+/** Références d'un texte, sans doublon, dans l'ordre d'apparition. */
+export const parseReferences = (text: string): LegalRef[] => parseCitations(text).map(({ ref }) => ref);

@@ -32,6 +32,8 @@ const context = await esbuild.context({
 		"@lezer/highlight",
 		"@lezer/lr",
 		...builtins],
+	// sql.js : le binaire WebAssembly de SQLite est embarqué dans main.js (aucun fichier à côté du plugin).
+	loader: { ".wasm": "binary" },
 	format: "cjs",
 	target: "es2018",
 	logLevel: "info",

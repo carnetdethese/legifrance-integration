@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import { FolderSuggest } from "lib/folderSugget";
 import LegifrancePlugin from "main";
+import { ENRICH_TASK, INDEX_TASK } from "references/indexer";
 
 
 /** Réglages persistés du plugin (`data.json`, clef `settings`). */
@@ -169,6 +170,8 @@ export class LegifranceSettingTab extends PluginSettingTab {
 				})
 			);
 
+		this.displayDatabase();
+
 		new Setting(containerEl).setName("Fonctionnalités expérimentales").setHeading();
 
 		new Setting(containerEl)
@@ -180,6 +183,48 @@ export class LegifranceSettingTab extends PluginSettingTab {
 				toggle.setValue(settings.fondSupp).onChange(async (value) => {
 					settings.fondSupp = value;
 					await this.plugin.saveSettings();
+				})
+			);
+	}
+
+	/** Section « Base de données » : effectifs, indexation du coffre, fiches de décisions. */
+	private displayDatabase() {
+		const { containerEl, plugin } = this;
+		new Setting(containerEl).setName("Base de données").setHeading();
+
+		const stats = plugin.references.stats();
+		containerEl.createEl("p", {
+			cls: "setting-item-description",
+			text: `${stats.notes} notes analysées, ${stats.references} références (dont ${stats.decisions} décisions), ${stats.links} liens retrouvés, ${stats.complete} fiches de décisions complètes. Fichier : ${plugin.manifest.dir}/legifrance.sqlite`,
+		});
+
+		new Setting(containerEl)
+			.setName("Indexer le coffre")
+			.setDesc("Analyse toutes les notes et enregistre leurs références juridiques. Seules les notes modifiées depuis la dernière analyse sont relues.")
+			.addButton((button) =>
+				button.setButtonText("Indexer").onClick(async () => {
+					await plugin.runTask(INDEX_TASK);
+					this.display();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("Compléter les fiches de décisions")
+			.setDesc("Retrouve chaque décision citée sur Légifrance puis enregistre ses métadonnées (date, formation, solution, ECLI) et son texte intégral. Demande une requête par décision ; peut être relancé, la tâche reprend où elle s'est arrêtée.")
+			.addButton((button) =>
+				button.setButtonText("Compléter").onClick(async () => {
+					await plugin.runTask(ENRICH_TASK);
+					this.display();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("Vider la base")
+			.setDesc("Efface les notes analysées, références, liens et fiches. Les notes du coffre ne sont pas touchées.")
+			.addButton((button) =>
+				button.setButtonText("Vider").setWarning().onClick(() => {
+					plugin.references.clear();
+					this.display();
 				})
 			);
 	}

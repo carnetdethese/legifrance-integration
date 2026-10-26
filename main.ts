@@ -1,13 +1,15 @@
-import { Events, Notice, Plugin, TFile, debounce } from "obsidian";
+import { Events, Notice, Plugin, TFile, debounce, normalizePath } from "obsidian";
 import { agentSearch } from "api/utilities";
 import { legalDocument } from "abstracts/document";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import { createNote } from "creation/newNote";
-import { ReferenceData, ReferenceIndex, loadReferenceData } from "references";
+import { ERROR_RETRY_MS, ReferenceIndex } from "references";
+import { LegalDatabase } from "references/database";
+import { ENRICH_TASK, INDEX_TASK, Task } from "references/indexer";
+import { ResolvedLink } from "references/resolver";
 import { LegalRef, searchUrl } from "references/parser";
 import { canResolve, resolveReference } from "references/resolver";
 import { ApiError } from "api/client";
-import { ERROR_RETRY_MS } from "references";
 import {
 	DEFAULT_SETTINGS,
 	LegifranceSettings,
@@ -30,8 +32,12 @@ export const REFERENCES_EVENT = "references-change";
 interface PluginData {
 	data: documentDataStorage[];
 	settings: LegifranceSettings;
-	references?: ReferenceData;
+	/** Anciens liens de références, avant la base SQLite : repris une fois puis abandonnés. */
+	references?: { links?: Record<string, ResolvedLink>; misses?: Record<string, number> };
 }
+
+/** Nom du fichier de la base SQLite, dans le dossier du plugin. */
+const DATABASE_FILE = "legifrance.sqlite";
 
 export default class LegifrancePlugin extends Plugin {
 	static instance: LegifrancePlugin;
@@ -41,15 +47,22 @@ export default class LegifrancePlugin extends Plugin {
 	readonly events = new Events();
 	/** Documents consultés. Toujours remplacé, jamais muté, pour le rendu React. */
 	historiqueDocuments: documentDataStorage[] = [];
-	/** Références juridiques détectées dans les notes du coffre (voir `references/`). */
+	/** Références juridiques détectées dans les notes du coffre, dans la base SQLite (voir `references/`). */
 	references: ReferenceIndex;
-	/** Enregistre les données après une rafale de modifications (analyses de notes). */
-	private saveSoon = debounce(() => this.saveSettings(), 1000, true);
+	private database: LegalDatabase;
+	/** Une tâche longue (indexation, complément des fiches) est en cours. */
+	taskRunning = false;
+	/** Enregistre le fichier SQLite après une rafale de modifications (analyses de notes). */
+	private saveDatabaseSoon = debounce(() => this.saveDatabase(), 2000, true);
+	/** Notes modifiées en attente de réanalyse. */
+	private pendingNotes = new Set<TFile>();
+	private reindexSoon = debounce(() => this.reindexPendingNotes(), 2000, true);
 
 	async onload() {
 		LegifrancePlugin.instance = this;
-		await this.loadSettings();
+		const legacy = await this.loadSettings();
 		this.agent = new agentSearch(this.settings);
+		await this.openDatabase(legacy);
 
 		this.registerView(RESEARCH_TEXT_VIEW, (leaf) => new ResearchTextView(leaf, this));
 		this.registerView(SEARCH_RESULT_VIEW, (leaf) => new SearchResultView(leaf, this));
@@ -71,11 +84,32 @@ export default class LegifrancePlugin extends Plugin {
 			callback: () => this.activateReferencesView(),
 		});
 
-		// Le cache des références suit les renommages et suppressions de notes.
-		this.registerEvent(
-			this.app.vault.on("rename", (file, oldPath) => this.references.rename(oldPath, file.path))
-		);
+		this.addCommand({
+			id: "indexer-coffre",
+			name: "Indexer les références juridiques du coffre",
+			callback: () => this.runTask(INDEX_TASK),
+		});
+
+		this.addCommand({
+			id: "completer-decisions",
+			name: "Compléter les fiches de décisions (base de données)",
+			callback: () => this.runTask(ENRICH_TASK),
+		});
+
+		// La base suit les créations, modifications, renommages et suppressions de notes.
+		const markdown = (file: unknown): file is TFile => file instanceof TFile && file.extension === "md";
+		this.registerEvent(this.app.vault.on("rename", (file, oldPath) => this.references.rename(oldPath, file.path)));
 		this.registerEvent(this.app.vault.on("delete", (file) => this.references.remove(file.path)));
+		const reindex = (file: unknown) => {
+			// Au démarrage Obsidian signale la création de chaque note existante : on les ignore.
+			if (!this.app.workspace.layoutReady || !markdown(file)) return;
+			this.pendingNotes.add(file);
+			this.reindexSoon();
+		};
+		this.registerEvent(this.app.vault.on("create", reindex));
+		this.registerEvent(this.app.vault.on("modify", reindex));
+		// Dernière écriture de la base à la fermeture d'Obsidian.
+		this.registerEvent(this.app.workspace.on("quit", () => this.saveDatabase()));
 
 		this.addSettingTab(new LegifranceSettingTab(this.app, this));
 
@@ -85,14 +119,77 @@ export default class LegifrancePlugin extends Plugin {
 		);
 	}
 
+	onunload() {
+		void this.saveDatabase();
+	}
+
+	/** Charge les réglages et l'historique ; renvoie les anciennes données de références, à reprendre. */
 	async loadSettings() {
 		const saved: Partial<PluginData> | null = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved?.settings);
 		this.historiqueDocuments = saved?.data ?? [];
-		this.references = new ReferenceIndex(
-			loadReferenceData(saved?.references),
-			() => this.saveSoon()
+		return saved?.references;
+	}
+
+	private get databasePath() {
+		return normalizePath(`${this.manifest.dir}/${DATABASE_FILE}`);
+	}
+
+	/** Ouvre la base (la crée si le fichier n'existe pas) et y reprend les anciens liens de `data.json`. */
+	private async openDatabase(legacy: PluginData["references"]) {
+		const { adapter } = this.app.vault;
+		const exists = await adapter.exists(this.databasePath);
+		const bytes = exists ? new Uint8Array(await adapter.readBinary(this.databasePath)) : undefined;
+		this.database = await LegalDatabase.open(bytes, () => this.saveDatabaseSoon());
+		this.references = new ReferenceIndex(this.database);
+
+		if (legacy?.links || legacy?.misses) {
+			this.references.importLegacy(legacy);
+			await this.saveSettings(); // `references` n'est plus écrit dans data.json
+		}
+	}
+
+	/** Écrit le fichier SQLite. */
+	private async saveDatabase() {
+		const bytes = this.database.export();
+		await this.app.vault.adapter.writeBinary(
+			this.databasePath,
+			bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
 		);
+	}
+
+	/** Réanalyse les notes modifiées ou créées (seul le contenu changé est relu, voir `forFile`). */
+	private async reindexPendingNotes() {
+		const files = [...this.pendingNotes];
+		this.pendingNotes.clear();
+		for (const file of files) await this.getReferences(file);
+		this.events.trigger(REFERENCES_EVENT);
+	}
+
+	/**
+	 * Lance une tâche longue sur la base, avec une notification de progression, et annonce son
+	 * résultat. Une seule tâche à la fois.
+	 */
+	async runTask<R>({ name, run, summarize }: Task<R>) {
+		if (this.taskRunning) {
+			new Notice("Une tâche est déjà en cours.");
+			return;
+		}
+		this.taskRunning = true;
+		const notice = new Notice(`${name}…`, 0);
+		try {
+			const report = await run(this, (done, total, label) => notice.setMessage(`${name} : ${done}/${total}\n${label}`));
+			notice.hide();
+			new Notice(`${name} : ${summarize(report)}`, 10000);
+			this.events.trigger(REFERENCES_EVENT);
+			return report;
+		} catch (error) {
+			console.error(error);
+			notice.hide();
+			new Notice(`${name} : échec (${error instanceof Error ? error.message : String(error)})`, 10000);
+		} finally {
+			this.taskRunning = false;
+		}
 	}
 
 	async saveSettings() {
@@ -104,7 +201,6 @@ export default class LegifrancePlugin extends Plugin {
 		await this.saveData({
 			data: this.historiqueDocuments,
 			settings: this.settings,
-			references: this.references.data,
 		} satisfies PluginData);
 		this.agent.dilaApi.updateConfig(this.settings);
 	}

@@ -138,6 +138,14 @@ Vous pouvez installer le module directement depuis le store de l'application. C'
 -   [x] Gestionnaire d'historique.
 -   [x] Meilleur moteur d'affichage des résultats.
 
+### Base de données des références juridiques
+
+Le plugin tient, dans le dossier du plugin, une base SQLite (`legifrance.sqlite`, via sql.js : elle fonctionne aussi sur mobile) qui recense les références juridiques de **toutes** les notes du coffre : décisions, lois, articles de codes, droit de l'Union. Elle conserve pour chaque note qui cite quoi (et combien de fois), les liens Légifrance retrouvés et le texte des articles.
+
+-   **Indexer le coffre** (réglages ou commande) analyse toutes les notes ; ensuite la base suit les créations, modifications, renommages et suppressions de notes.
+-   **Compléter les fiches de décisions** retrouve chaque décision sur Légifrance et enregistre sa date, sa formation, sa solution, son ECLI et son texte intégral (une requête par décision ; reprenable).
+-   Tables : `notes`, `refs`, `citations`, `links`, `misses`, `decisions` — le fichier s'ouvre avec n'importe quel outil SQLite (copiez-le hors du coffre pour le lire).
+
 ### Fonctionnalités intéressantes à développer (si le temps le permet)
 
 -   [ ] Un _parser_ permettant de lister facilement tous les textes juridiques présents dans le coffre ;
