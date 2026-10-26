@@ -1,5 +1,4 @@
 import { legalDocument, statuteArticles } from "abstracts/document";
-import * as constants from "api/constants";
 import { isCaselawOrigin } from "./fonds";
 import { dateFormat } from "lib/dateHandler";
 import { findLink } from "./decisions";
@@ -115,7 +114,7 @@ export class resultatsRechercheClass {
 					titre: entree.title,
 					id: entree.id,
 					texte: result.text,
-					lien: findLink(origine, entree.id),
+					lien: findLink(origine, entree.id, result.nature),
 					origin: origine,
 					nature: result.nature ?? "",
 					date: result.date,

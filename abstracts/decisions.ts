@@ -2,18 +2,8 @@ import { legalDocument, resumeDocument } from "./document";
 import { reponseDocument } from "./searches";
 import { agentSearch } from "api/utilities";
 import { removeTags } from "lib/tools";
+import { legifranceUrl } from "api/urls";
 import { htmlToMarkdown } from "obsidian";
-
-export const urlFond = new Map<string, string>([
-	["CETAT", "/ceta/id/"],
-	["CONSTIT", "/cons/id/"],
-	["JURI", "/juri/id/"],
-	["LEGI", "/legi/id/"],
-	["JORF", "/jorf/id/"],
-	["ACCO", "/acco/id/"],
-	["CIRC", "/circulaire/id/"],
-	["KALI", "/conv_coll/id/"]
-]);
 
 export const codeJuridiction = new Map<string, string>([
 	["CONSEIL_ETAT", "Conseil d'État"],
@@ -22,10 +12,9 @@ export const codeJuridiction = new Map<string, string>([
 	["COURS_APPEL", "Cour d'appel"]
 ]);
 
-const baseUrl = "https://www.legifrance.gouv.fr"
-
-export function findLink(origine:string, id:string) {
-	return baseUrl + urlFond.get(origine) + id	
+/** Adresse Légifrance d'un document trouvé par une recherche. */
+export function findLink(origine: string, id: string, nature?: string) {
+	return legifranceUrl(id, nature);
 }
 
 export async function getDecisionInfo(document:legalDocument, valeurRecherche:string, apiClient:agentSearch):Promise<legalDocument | undefined> {

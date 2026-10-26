@@ -4,6 +4,7 @@
  * dépendance à Obsidian, afin d'être testable isolément. Les motifs de
  * citation s'inspirent de ceux de Marginalia.
  */
+import { ID_PATHS } from "api/urls";
 import { CODE_PATTERN, LEGIFRANCE_PAGES, PREAMBLE_1946, officialCodeName } from "./codes";
 import { FULL_DATE_PATTERN, MONTH_PATTERN, plain } from "./dates";
 import { EU_PATTERN, euArticleUrl, euCelexOf, euLabelOf } from "./eulaw";
@@ -49,16 +50,6 @@ export function searchUrl(query: string) {
 	return `${BASE_URL}/search/all?tab_selection=all&searchField=ALL&searchType=ALL&typePagination=DEFAUT&query=${encodeURIComponent(query)}`;
 }
 
-/** Préfixe d'un identifiant Légifrance → chemin de sa page. */
-const ID_PATHS: Record<string, string> = {
-	JURITEXT: "juri/id",
-	CETATEXT: "ceta/id",
-	CONSTEXT: "cons/id",
-	JORFTEXT: "jorf/id",
-	LEGITEXT: "codes/texte_lc",
-	LEGIARTI: "codes/article_lc",
-	JORFARTI: "jorf/article_jo",
-};
 
 // --- Motifs ---------------------------------------------------------------------------------
 
@@ -177,7 +168,7 @@ const CONSEIL_CONSTITUTIONNEL = new RegExp(
 	"gu"
 );
 
-const ID_REGEX = /\b(JURITEXT|CETATEXT|CONSTEXT|JORFTEXT|LEGITEXT|LEGIARTI|JORFARTI)\d{12}\b/g;
+const ID_REGEX = new RegExp(`\\b(${Object.keys(ID_PATHS).join("|")})\\d{12}\\b`, "g");
 
 // --- Extraction -----------------------------------------------------------------------------
 

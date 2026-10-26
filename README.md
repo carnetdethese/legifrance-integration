@@ -132,7 +132,7 @@ Vous pouvez installer le module directement depuis le store de l'application. C'
 
 -   [x] Intégration d'un éditeur de fiche d'arrêt.
 -   [x] Visualisation des documents dans Obsidian dans une fenêtre, sans insertion dans une note.
--   [ ] Recherche dans tous les fonds disponibles (en cours).
+-   [x] Recherche, lecture et création de notes dans tous les fonds : jurisprudence (Conseil constitutionnel, juridictions administratives, judiciaires et financières, CNIL), législation (lois et règlements en vigueur ou à une date, codes, Journal officiel, circulaires), conventions collectives et accords d'entreprise.
 -   [x] Recherche complexe : intégration des opérateurs booléens.
 -   [x] S'assurer que les _views_ persistent après redémarrage.
 -   [x] Gestionnaire d'historique.

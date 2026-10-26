@@ -60,7 +60,7 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 			await plugin.openDocument(await plugin.addToHistory(full));
 		} catch (error) {
 			console.error("Erreur lors de l'ouverture du document :", error);
-			new Notice("Impossible de récupérer ce document.");
+			new Notice(`Impossible de récupérer ce document (${error instanceof Error ? error.message : "erreur inconnue"}).`);
 		}
 	}
 

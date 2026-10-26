@@ -1,8 +1,8 @@
 import { agentSearch } from "api/utilities";
-import { reponseDocument, sectionsResultats } from "./searches";
+import { sectionsResultats } from "./searches";
 import { getDecisionInfo } from "./decisions";
-import { getCirculaireInfo, getConvCollInfo, getStatuteInfo } from "./loi";
-import { codeJurisprudence, codeLegalStatute } from "api/constants";
+import { consultDocument } from "./consult";
+import { isCaselawOrigin } from "./fonds";
 
 export interface resumeDocument {
 	resumePrincipal:string;
@@ -80,29 +80,11 @@ export interface Sommaire {
 	resume:string;
 }
 
-export async function getDocumentInfo(document:legalDocument, valeurRecherche:string, apiClient:agentSearch) {
-
-	// objet Document qui récupère une copie de l'objet passé en argument
-	const infoDocument:legalDocument = document;
-
-	if (codeJurisprudence.includes(document.origin)) {
-		return getDecisionInfo(document, valeurRecherche, apiClient);
-	}
-	if (codeLegalStatute.includes(document.origin)) {
-		return getStatuteInfo(document, valeurRecherche, apiClient);
-	}
-	if (document.origin === 'CIRC') {
-		return getCirculaireInfo(document, valeurRecherche, apiClient)
-	}
-	if (document.origin === 'KALI') {
-		return getConvCollInfo(document, valeurRecherche, apiClient);
-	}
-
-	// if (document.cid) document.id = document.cid;
-
-	// Variable qui contient la réponse de la requête
-	await apiClient.fetchText(document, valeurRecherche) as reponseDocument; // requête à l'API
-	
-	return infoDocument
+/**
+ * Complète la fiche d'un document trouvé par une recherche (texte, métadonnées) : décisions de
+ * justice par `getDecisionInfo`, tous les autres fonds par `consultDocument`.
+ */
+export async function getDocumentInfo(document: legalDocument, valeurRecherche: string, apiClient: agentSearch) {
+	if (isCaselawOrigin(document.origin)) return getDecisionInfo(document, valeurRecherche, apiClient);
+	return consultDocument(document, valeurRecherche, apiClient);
 }
-

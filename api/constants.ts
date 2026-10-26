@@ -7,20 +7,6 @@ export const typeRecherche = new Map<string, string>([ // Type de la recherche
 	["AUCUNE_CORRESPONDANCE_A_CETTE_EXPRESSION", "Exclure l'expression"]
 ]);
 
-export const codeJurisprudence = [
-	'CETAT', 
-	'CONSTIT',
-	'JURI',
-	'CNIL'
-]
-
-export const codeLegalStatute = [
-	'JORF',
-	'LEGI',
-	'LODA_ETAT'
-]
-
-
 export const operateursRecherche = new Map<string, string>([ // Opérateur de ce champ avec les autres expressions
     ["ET", "et"],
     ["OU", "ou"]
@@ -65,6 +51,7 @@ export const champRecherche = new Map<string, string>([ // Type du champ dans le
 export const listRouteConsult = new Map<string, string>([
 	["CODE", "/consult/getArticle"],
 	["CNIL", "/consult/cnil"],
+	["JUFI", "/consult/juri"],
 	["LEGI", "/consult/legiPart"],
 	["JURI", "/consult/juri"],
 	["CETA", "/consult/juri"],
