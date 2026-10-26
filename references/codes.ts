@@ -41,12 +41,52 @@ export const CODES: Record<string, string[]> = {
 	"Code des postes et des communications électroniques": ["Code des postes", "C. post."],
 };
 
+/**
+ * Textes constitutionnels (le « bloc de constitutionnalité »), cités comme les codes mais ni codes
+ * ni lois pour Légifrance.
+ */
+export const CONSTITUTIONAL_TEXTS: Record<string, string[]> = {
+	Constitution: ["Const.", "Constitution du 4 octobre 1958", "Constitution de 1958"],
+	"Déclaration des droits de l'homme et du citoyen de 1789": [
+		"DDHC",
+		"Déclaration de 1789",
+		"Déclaration des droits de l'homme et du citoyen",
+	],
+	"Charte de l'environnement de 2004": ["Charte de l'environnement", "Charte de 2004"],
+};
+
+/** Le Préambule de 1946 n'a pas d'articles mais des alinéas : cité à part. */
+export const PREAMBLE_1946 = "Préambule de la Constitution de 1946";
+
+/**
+ * Textes constitutionnels dont l'article exact vient de l'API : route de consultation, identifiant
+ * et fragment du titre attendu (le titre reçu est contrôlé : un identifiant faux ne donne jamais
+ * l'article d'un autre texte). Valeurs vérifiées par Marginalia.
+ */
+export const LEGIFRANCE_TEXTS: Record<string, [route: string, textId: string, expectedTitle: string]> = {
+	Constitution: ["/consult/legiPart", "LEGITEXT000006071194", "Constitution du 4 octobre 1958"],
+	"Déclaration des droits de l'homme et du citoyen de 1789": [
+		"/consult/lawDecree",
+		"JORFTEXT000000697056",
+		"Déclaration du 26 août 1789",
+	],
+};
+
+/** Page du texte entier sur Légifrance, pour chaque texte du bloc de constitutionnalité. */
+export const LEGIFRANCE_PAGES: Record<string, string> = {
+	Constitution: "https://www.legifrance.gouv.fr/loda/id/LEGITEXT000006071194",
+	"Déclaration des droits de l'homme et du citoyen de 1789": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000697056",
+	"Charte de l'environnement de 2004":
+		"https://www.legifrance.gouv.fr/contenu/menu/droit-national-en-vigueur/constitution/charte-de-l-environnement",
+	[PREAMBLE_1946]: "https://www.legifrance.gouv.fr/loda/id/LEGITEXT000006071193",
+};
+
 /** Minuscules sans points ni espaces : « C. civ. » et « c.civ » se comparent égaux. */
 const normalize = (text: string) => text.replace(/[\s.]+/g, "").toLowerCase();
 
 /** Désignation normalisée → nom officiel du code. */
 const CODE_BY_NAME = new Map<string, string>(
-	Object.entries(CODES).flatMap(([code, aliases]) =>
+	Object.entries({ ...CODES, ...CONSTITUTIONAL_TEXTS }).flatMap(([code, aliases]) =>
 		[code, ...aliases].map((name): [string, string] => [normalize(name), code])
 	)
 );
@@ -58,7 +98,7 @@ export const officialCodeName = (designation: string) =>
 const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Motif insensible à la casse (JS n'a pas de groupe `(?i:…)` fiable sur toutes les plateformes). */
-const caseInsensitive = (text: string) =>
+export const caseInsensitive = (text: string) =>
 	[...text]
 		.map((char) => {
 			const [lower, upper] = [char.toLowerCase(), char.toUpperCase()];
@@ -83,9 +123,9 @@ const aliasPattern = (alias: string, fold: boolean) =>
 export const CODE_PATTERN = (() => {
 	const full: string[] = [];
 	const short: string[] = [];
-	for (const [code, aliases] of Object.entries(CODES)) {
+	for (const [code, aliases] of Object.entries({ ...CODES, ...CONSTITUTIONAL_TEXTS })) {
 		full.push(code);
-		for (const alias of aliases) (/^code /i.test(alias) ? full : short).push(alias);
+		for (const alias of aliases) (/^(code |constitution|déclaration|charte)/i.test(alias) ? full : short).push(alias);
 	}
 	const alternatives = (names: string[], fold: boolean) =>
 		names

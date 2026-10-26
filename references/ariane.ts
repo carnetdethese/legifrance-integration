@@ -60,7 +60,7 @@ export async function findAriaDecision(court: string, name: string, cited: Cited
 			type: "json",
 			advanced: "1",
 			SourceStr4: source,
-			"text.add": name,
+			"text.add": name.replace(/,/g, " "),
 			synonyms: "true",
 			scmode: "smart",
 			SkipCount: String(PAGE_SIZE),

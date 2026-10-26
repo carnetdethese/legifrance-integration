@@ -10,7 +10,8 @@ import { useNoteReferences, usePlugin } from "views/hooks";
 const GROUPS: { kind: RefKind; title: string }[] = [
 	{ kind: "decision", title: "Décisions" },
 	{ kind: "texte", title: "Textes" },
-	{ kind: "article", title: "Articles de code" },
+	{ kind: "article", title: "Articles" },
+	{ kind: "eu", title: "Droit de l'Union" },
 	{ kind: "identifiant", title: "Identifiants Légifrance" },
 ];
 
@@ -86,10 +87,10 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 	const pending = plugin.pendingReferences.has(reference.key);
 	const missed = plugin.references.isRecentMiss(reference);
 
-	let status = "Lien de recherche Légifrance.";
+	let status = reference.url || reference.fallbackUrl ? "Lien vers la page du texte." : "Lien de recherche Légifrance.";
 	if (link) status = link.titre;
 	else if (pending) status = "Recherche sur Légifrance…";
-	else if (missed) status = "Introuvable via l'API : lien de recherche Légifrance.";
+	else if (missed) status = "Introuvable via l'API : lien de recherche.";
 
 	const texte = link?.texte;
 

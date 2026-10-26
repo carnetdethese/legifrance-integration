@@ -169,7 +169,7 @@ export default class LegifrancePlugin extends Plugin {
 
 	/** Lien à ouvrir pour une référence : celui retrouvé, sinon une recherche Légifrance. */
 	getReferenceUrl(ref: LegalRef) {
-		return this.references.linkFor(ref)?.url ?? searchUrl(ref.query);
+		return this.references.linkFor(ref)?.url ?? ref.fallbackUrl ?? searchUrl(ref.query);
 	}
 
 	/** Références en cours de recherche ; évite les requêtes en double entre deux analyses. */

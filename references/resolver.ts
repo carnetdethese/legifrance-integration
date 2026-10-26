@@ -9,6 +9,7 @@ import { htmlToMarkdown } from "obsidian";
 import { ApiError } from "api/client";
 import { agentSearch } from "api/utilities";
 import { findAriaDecision } from "./ariane";
+import { LEGIFRANCE_TEXTS } from "./codes";
 import { FULL_DATE_PATTERN, isoDay, matchesDate, parseCitedDate, plain, significantWords, titleDates } from "./dates";
 import { LegalRef } from "./parser";
 
@@ -49,7 +50,7 @@ type Match = { url: string; titre: string; articleId?: string };
 /** Requêtes à essayer dans l'ordre, et lecture de leurs réponses. */
 interface Resolution {
 	queries: Query[];
-	read: (response: SearchResponse) => Match | null;
+	read: (response: unknown) => Match | null;
 	/** Recherche de dernier recours (autre service), si aucune requête n'a abouti. */
 	fallback?: () => Promise<Match | null>;
 }
@@ -125,7 +126,8 @@ function buildNamed(ref: LegalRef): Resolution | null {
 	];
 	return {
 		queries,
-		read: (response) => {
+		read: (raw) => {
+			const response = raw as SearchResponse;
 			for (const result of response.results ?? []) {
 				for (const title of result.titles ?? []) {
 					if (
@@ -160,7 +162,8 @@ function buildDated(ref: LegalRef): Resolution | null {
 			searchQuery("LODA_DATE", [field("ALL", `${ref.data.nature} du ${text}`)], [...natureFilter, { facette: "DATE_SIGNATURE", dates: { start: day, end: day } }]),
 			searchQuery("LODA_DATE", [field("ALL", `du ${text}`)], natureFilter),
 		],
-		read: (response) => {
+		read: (raw) => {
+			const response = raw as SearchResponse;
 			for (const result of response.results ?? []) {
 				for (const title of result.titles ?? []) {
 					const label = title.title ?? "";
@@ -175,10 +178,49 @@ function buildDated(ref: LegalRef): Resolution | null {
 	};
 }
 
+/** Identifiant `LEGIARTI` de l'article `number` dans l'arbre de sections et d'articles d'un texte consolidé. */
+function findArticleId(node: unknown, number: string): string | null {
+	if (Array.isArray(node)) {
+		for (const item of node) {
+			const found = findArticleId(item, number);
+			if (found) return found;
+		}
+		return null;
+	}
+	if (!node || typeof node !== "object") return null;
+	const record = node as Record<string, unknown>;
+	const id = typeof record.id === "string" ? record.id : "";
+	const status = record.etat ?? record.legalStatus;
+	if (id.startsWith("LEGIARTI") && compact(String(record.num ?? "")) === number && [undefined, null, "VIGUEUR", "VIGUEUR_DIFF"].includes(status as string)) {
+		return id;
+	}
+	return findArticleId(Object.values(record), number);
+}
+
+/**
+ * Article d'un texte qui n'est pas un code (Constitution, Déclaration de 1789) : le texte entier
+ * est consulté, dont on tire l'article. Le titre reçu doit être celui attendu.
+ */
+function buildTextArticle(ref: LegalRef): Resolution {
+	const [path, textId, expectedTitle] = LEGIFRANCE_TEXTS[ref.data.code];
+	const number = compact(ref.data.number);
+	return {
+		queries: [{ path, body: { textId, date: Date.now() } }],
+		read: (raw) => {
+			const title = String((raw as { title?: string }).title ?? "");
+			if (!title.toLowerCase().includes(expectedTitle.toLowerCase())) return null;
+			const id = findArticleId(raw, number);
+			return id ? { url: `${BASE_URL}/loda/article_lc/${id}`, titre: ref.label, articleId: id } : null;
+		},
+	};
+}
+
 function build(ref: LegalRef): Resolution | null {
 	const { data } = ref;
 
 	if (ref.kind === "article") {
+		if (LEGIFRANCE_TEXTS[data.code]) return buildTextArticle(ref);
+		if (!data.code.startsWith("Code ")) return null;
 		const number = compact(data.number);
 		return {
 			queries: [
@@ -192,7 +234,8 @@ function build(ref: LegalRef): Resolution | null {
 				),
 			],
 			// L'article est dans `results[].sections[].extracts[]` (`titles` ne nomme que le code).
-			read: (response) => {
+			read: (raw) => {
+			const response = raw as SearchResponse;
 				for (const result of response.results ?? []) {
 					for (const section of result.sections ?? []) {
 						for (const extract of section.extracts ?? []) {
@@ -213,7 +256,8 @@ function build(ref: LegalRef): Resolution | null {
 		const nature = LAW_NATURES[data.nature];
 		return {
 			queries: [searchQuery("LODA_DATE", [field("NUM", data.number)], nature ? [{ facette: "NATURE", valeurs: [nature] }] : [])],
-			read: (response) => {
+			read: (raw) => {
+			const response = raw as SearchResponse;
 				for (const result of response.results ?? []) {
 					for (const title of result.titles ?? []) {
 						const id = title.cid || title.id;
@@ -232,7 +276,8 @@ function build(ref: LegalRef): Resolution | null {
 		const values = { number: data.number, bare: data.number.split(" ")[0] };
 		return {
 			queries: court.fields.map(([typeChamp, value]) => searchQuery(court.fond, [field(typeChamp, values[value])])),
-			read: (response) => {
+			read: (raw) => {
+			const response = raw as SearchResponse;
 				for (const result of response.results ?? []) {
 					for (const title of result.titles ?? []) {
 						if (title.id?.startsWith(court.prefix) && cites(title.title ?? "", data.number)) {
