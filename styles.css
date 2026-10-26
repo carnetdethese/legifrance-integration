@@ -20,7 +20,7 @@
 .legifrance-search {
 	display: flex;
 	flex-direction: column;
-	gap: var(--size-4-2);
+	gap: var(--size-2-2);
 }
 
 /*
@@ -29,7 +29,18 @@
  */
 .legifrance-view .setting-item {
 	flex-wrap: wrap;
-	gap: var(--size-4-2);
+	gap: var(--size-2-2) var(--size-4-2);
+	padding: var(--size-2-2) 0; /* défaut d'Obsidian : 0,75rem, trop aéré pour un panneau */
+}
+
+/* Marges internes réduites pour les panneaux latéraux (recherche, références) ; titres resserrés. */
+.legifrance-view.view-content:has(> .legifrance-search, > .legifrance-references) {
+	padding: var(--size-4-2) var(--size-4-3);
+}
+
+.legifrance-view h4,
+.legifrance-view h5 {
+	margin: var(--size-2-2) 0;
 }
 
 .legifrance-view .setting-item-control {
@@ -80,7 +91,7 @@
 }
 
 .legifrance-historique {
-	margin-top: var(--size-4-4);
+	margin-top: var(--size-4-2);
 }
 
 /* --- Résultats ------------------------------------------------------------ */
@@ -158,11 +169,11 @@
 .legifrance-references {
 	display: flex;
 	flex-direction: column;
-	gap: var(--size-4-2);
+	gap: var(--size-2-2);
 }
 
 .legifrance-references h5 {
-	margin: var(--size-4-3) 0 0;
+	margin: var(--size-4-2) 0 0;
 	color: var(--text-muted);
 	text-transform: uppercase;
 	font-size: var(--font-ui-smaller);

@@ -14,12 +14,17 @@ interface SettingRowProps {
  */
 export const SettingRow = ({ name, desc, htmlFor, children }: SettingRowProps) => (
 	<div className="setting-item">
-		<div className="setting-item-info">
-			<label className="setting-item-name" htmlFor={htmlFor}>
-				{name}
-			</label>
-			{desc && <div className="setting-item-description">{desc}</div>}
-		</div>
+		{/* Sans libellé, on omet le bloc d'info : il réserverait de la place pour rien. */}
+		{(name || desc) && (
+			<div className="setting-item-info">
+				{name && (
+					<label className="setting-item-name" htmlFor={htmlFor}>
+						{name}
+					</label>
+				)}
+				{desc && <div className="setting-item-description">{desc}</div>}
+			</div>
+		)}
 		<div className="setting-item-control">{children}</div>
 	</div>
 );
