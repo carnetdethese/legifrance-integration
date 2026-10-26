@@ -1,15 +1,78 @@
-import { useContext } from 'react';
-import { App } from 'obsidian';
-import { AppContext, PluginContext } from './context';
-
-export const useApp = (): App | undefined => {
-  return useContext(AppContext);
-};
+import { TFile } from "obsidian";
+import { useContext, useEffect, useState, useSyncExternalStore } from "react";
+import { LegalRef } from "references/parser";
+import { PluginContext } from "./context";
+import { HISTORY_EVENT, REFERENCES_EVENT } from "main";
+import { documentDataStorage } from "./viewsData";
 
 export const usePlugin = () => {
-  const context = useContext(PluginContext);
-  if (!context) {
-    throw new Error('usePlugin must be used within a PluginProvider');
-  }
-  return context;
+	const plugin = useContext(PluginContext);
+	if (!plugin) {
+		throw new Error("usePlugin doit être utilisé sous un PluginContext.Provider");
+	}
+	return plugin;
+};
+
+/**
+ * Historique des documents consultés, mis à jour dès que le plugin le modifie
+ * (ajout, suppression) depuis n'importe quelle vue.
+ */
+export const useHistorique = (): documentDataStorage[] => {
+	const plugin = usePlugin();
+	return useSyncExternalStore(
+		(onChange) => {
+			const ref = plugin.events.on(HISTORY_EVENT, onChange);
+			return () => plugin.events.offref(ref);
+		},
+		() => plugin.historiqueDocuments
+	);
+};
+
+/** Délai d'attente après une frappe avant de réanalyser la note modifiée. */
+const REPARSE_DELAY_MS = 800;
+
+/**
+ * Références juridiques de la note active. Se met à jour quand l'utilisateur
+ * change de note, modifie la note, ou lorsqu'un lien est retrouvé via l'API.
+ */
+export const useNoteReferences = () => {
+	const plugin = usePlugin();
+	const { workspace, vault } = plugin.app;
+	const [file, setFile] = useState<TFile | null>(() => workspace.getActiveFile());
+	const [refs, setRefs] = useState<LegalRef[]>([]);
+	/** Incrémenté pour relancer l'analyse (modification de la note, lien retrouvé). */
+	const [version, setVersion] = useState(0);
+	const bump = () => setVersion((v) => v + 1);
+
+	useEffect(() => {
+		const timer: { id?: number } = {};
+		const refs = [
+			workspace.on("file-open", (opened) => opened && setFile(opened)),
+			vault.on("modify", (modified) => {
+				if (modified !== file) return;
+				window.clearTimeout(timer.id);
+				timer.id = window.setTimeout(bump, REPARSE_DELAY_MS);
+			}),
+		];
+		const linkRef = plugin.events.on(REFERENCES_EVENT, bump);
+		return () => {
+			window.clearTimeout(timer.id);
+			refs.forEach((ref) => workspace.offref(ref));
+			plugin.events.offref(linkRef);
+		};
+	}, [file]);
+
+	useEffect(() => {
+		let cancelled = false;
+		if (!file || file.extension !== "md") {
+			setRefs([]);
+			return;
+		}
+		plugin.getReferences(file).then((found) => !cancelled && setRefs(found));
+		return () => {
+			cancelled = true;
+		};
+	}, [file, version]);
+
+	return { file: file?.extension === "md" ? file : null, refs };
 };

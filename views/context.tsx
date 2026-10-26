@@ -1,7 +1,7 @@
-import { createContext } from 'react';
-import { App } from 'obsidian';
-import LegifrancePlugin from 'main';
+import { createContext } from "react";
+import LegifrancePlugin from "main";
 
-export const AppContext = createContext<App | undefined>(undefined);
-
-export const PluginContext = createContext<LegifrancePlugin | undefined>(undefined);
+/** Donne aux composants React un accès à l'instance du plugin. */
+export const PluginContext = createContext<LegifrancePlugin | undefined>(
+	undefined
+);

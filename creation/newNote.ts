@@ -1,125 +1,51 @@
 import * as Handlebars from "handlebars";
-import { App } from "obsidian";
+import { App, Notice, normalizePath } from "obsidian";
 import { legalDocument } from "abstracts/document";
-import { ficheArretChamp, noteDocumentChamp } from "abstracts/searches";
+import { LegifranceSettings } from "settings/settings";
 
-// function isDecision(doc: legalDocument): doc is Decision {
-//     return (doc as Decision).juridiction !== undefined;
-// }
-
-export function isDecision(doc: legalDocument): doc is legalDocument {
-	return (
-		"annee" in doc &&
-		"juridiction" in doc &&
-		"formation" in doc &&
-		"urlCC" in doc &&
-		"sommaires" in doc &&
-		"abstract" in doc
+/**
+ * Dossier de destination : `dossierBase`, suivi de la juridiction pour la
+ * jurisprudence.
+ */
+function targetFolder(data: legalDocument, dossierBase: string) {
+	return normalizePath(
+		data.type == "jurisprudence" && data.juridiction
+			? `${dossierBase}/${data.juridiction}`
+			: dossierBase
 	);
 }
 
-export class newNote {
-	app: App;
-	template: string;
-	titreTemplate: string;
-	data: legalDocument;
-	folder: string;
-	champFiche: ficheArretChamp | noteDocumentChamp;
-	dataNote:
-		| Partial<ficheArretChamp>
-		| Partial<noteDocumentChamp>
-		| Partial<legalDocument>;
+/** Compile un gabarit Handlebars (sans échappement HTML) et l'applique à `data`. */
+function render(template: string, data: legalDocument) {
+	return Handlebars.compile(template, { noEscape: true })(data);
+}
 
-	constructor(
-		app: App,
-		template: string,
-		templateTitre: string,
-		data: legalDocument,
-		dossierBase: string
-	) {
-		this.app = app;
-		this.template = template;
-		this.data =
-			data.type == "jurisprudence"
-				? (data as legalDocument)
-				: (data as legalDocument);
-		this.folder = this.folderSetting(dossierBase) || "/";
-		this.titreTemplate = templateTitre;
+/**
+ * Crée dans le coffre la note d'un document à partir du modèle des réglages,
+ * puis l'ouvre dans un nouvel onglet.
+ *
+ * Le titre saisi par l'utilisateur (`titreNote`) prime sur le modèle de nom de
+ * fichier ; un fichier existant n'est jamais écrasé.
+ */
+export async function createNote(
+	app: App,
+	settings: LegifranceSettings,
+	data: legalDocument
+) {
+	const folder = targetFolder(data, settings.dossierBase);
+	const title =
+		data.titreNote?.trim() || render(settings.fileTitle, data);
 
-		if (data.type == "jurisprudence") {
-			this.champFiche = {
-				faits: "",
-				procedure: "",
-				moyens: "",
-				question: "",
-				solution: "",
-			};
-		} else {
-			this.champFiche = {
-				notes: "",
-				interet: "",
-				connexes: "",
-			};
-		}
+	if (!app.vault.getFolderByPath(folder)) {
+		await app.vault.createFolder(folder);
 	}
 
-	folderSetting(dossierBase: string) {
-		let filePath = "";
-
-		if (this.data.type == "jurisprudence" && "juridiction" in this.data) {
-			if (dossierBase == "/") filePath = `${this.data.juridiction}/`;
-			else filePath = `${dossierBase}/${this.data.juridiction}/`;
-		} else {
-			filePath = `${dossierBase}`;
-		}
-
-		return filePath;
+	let path = normalizePath(`${folder}/${title}.md`);
+	if (app.vault.getFileByPath(path)) {
+		path = normalizePath(`${folder}/${title}-${Date.now()}.md`);
 	}
 
-	async renderFileTitle() {
-		const titreTemplateCompiled = Handlebars.compile(this.titreTemplate, {
-			noEscape: true,
-		});
-		return titreTemplateCompiled(this.dataNote);
-	}
-
-	async createNote() {
-		this.dataNote = {
-			...this.data,
-			...(this.data.notes || []),
-		};
-
-		let fileTitle;
-
-		if (this.dataNote.titreNote || this.dataNote.titreNote != ''
-		) {
-			fileTitle = this.dataNote.titreNote;
-		} else {
-			fileTitle = await this.renderFileTitle();
-		}
-
-		let filePath: string = this.folder + fileTitle;
-
-		const templateContenuCompile = Handlebars.compile(this.template, {
-			noEscape: true,
-		});
-		const noteContent = templateContenuCompile(this.dataNote);
-
-		if (!this.app.vault.getFolderByPath(this.folder)) {
-			this.app.vault.createFolder(this.folder);
-		}
-
-		if (this.app.vault.getFileByPath(filePath + ".md")) {
-			// Ceci évite la suppression de notes déjà créées en ajoutant la date en millisecondes au nom du fichier s'il s'agit de la deuxième note.
-			filePath += `-${Date.now()}`;
-		}
-
-		filePath += ".md";
-
-		await this.app.vault.create(filePath, noteContent);
-		const abstractFile = this.app.vault.getFileByPath(filePath);
-		if (abstractFile !== null) {
-			await this.app.workspace.getLeaf().openFile(abstractFile);
-		}
-	}
+	const file = await app.vault.create(path, render(settings.templateAll, data));
+	await app.workspace.getLeaf("tab").openFile(file);
+	new Notice(`Note créée : ${file.path}`);
 }

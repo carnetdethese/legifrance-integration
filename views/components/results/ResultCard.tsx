@@ -1,65 +1,44 @@
+import parse from "html-react-parser";
 import { legalDocument } from "abstracts/document";
 import { sectionsResultats } from "abstracts/searches";
-import parse from "html-react-parser";
 
 interface ResultCardProps {
 	result: legalDocument;
-	handleClickDocument: (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void;
+	onOpen: (result: legalDocument) => void;
 }
 
+/** Un résultat de recherche : titre cliquable, extrait et articles trouvés. */
+export const ResultCard = ({ result, onOpen }: ResultCardProps) => (
+	<article className="legifrance-result">
+		<a
+			href="#"
+			className="legifrance-result-title"
+			onClick={(e) => {
+				e.preventDefault();
+				onOpen(result);
+			}}
+		>
+			{parse(result.titre)}
+		</a>
+		<div className="legifrance-result-excerpt">
+			{result.texte && parse(result.texte)}
+			{result.sections && <SectionsExtraits sections={result.sections} />}
+		</div>
+	</article>
+);
 
-export const ResultCard = ({
-	result,
-	handleClickDocument,
-}: ResultCardProps) => {
-	return (
-		<>
-			<div className="resultat-document-container">
-				<a
-					data-id={result.id}
-					className="titre-document"
-					onClick={(e) => handleClickDocument(e)}
-				>
-					{parse(result.titre)}
-				</a>
-				<div className="extraitContainer">
-					{result.texte ? parse(result.texte) : ""}
-					{result.sections ? (
-						<SectionsExtraits sections={result.sections} handleClickDocument={handleClickDocument} />
-					) : (
-						""
-					)}
-				</div>
-			</div>
-		</>
-	);
-};
-
-interface SectionsExtraitsProps {
-	sections: sectionsResultats[];
-    handleClickDocument: (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void;
-}
-
-const SectionsExtraits = ({ sections, handleClickDocument }: SectionsExtraitsProps) => {
-	return (
-		<>
-			{sections.map((sect) => {
-				return sect.extracts.map((extract) => {
-					if (extract.type == "articles") {
-						return (
-							<div className="extraitContainer">
-								<a
-									data-id={extract.id}
-								>
-									Article {extract.num ? extract.num : ""}
-								</a>
-
-								<div>{parse(extract.values[0])}</div>
-							</div>
-						);
-					}
-				});
-			})}
-		</>
-	);
-};
+/** Articles (avec extrait surligné) correspondant à la recherche dans un texte. */
+const SectionsExtraits = ({ sections }: { sections: sectionsResultats[] }) => (
+	<>
+		{sections.flatMap((section) =>
+			section.extracts
+				.filter((extract) => extract.type == "articles")
+				.map((extract) => (
+					<div key={extract.id} className="legifrance-result-article">
+						<strong>Article {extract.num ?? ""}</strong>
+						<div>{parse(extract.values[0])}</div>
+					</div>
+				))
+		)}
+	</>
+);

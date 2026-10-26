@@ -1,278 +1,127 @@
-import { noteChampsPersonnalises } from "abstracts/document";
-import { newNote } from "creation/newNote";
-import { Rocket } from "lucide-react";
-import LegifrancePlugin from "main";
-import { ChangeEvent, MouseEvent, useEffect, useState } from "react";
-import { usePlugin } from "views/hooks";
-import { documentDataStorage } from "views/viewsData";
+import { Plus, Rocket, X } from "lucide-react";
+import { useReducer, useState } from "react";
+import { legalDocument } from "abstracts/document";
+import { removeTags } from "lib/tools";
+import { useHistorique, usePlugin } from "views/hooks";
+import { SettingRow } from "../SettingRow";
 
+/** Longueur maximale d'un titre dans le sélecteur de document. */
+const MAX_TITLE_LENGTH = 70;
+
+const truncate = (text: string) =>
+	text.length > MAX_TITLE_LENGTH ? `${text.slice(0, MAX_TITLE_LENGTH)}…` : text;
+
+/** Éditeur de note : titre, contribution et champs libres, avant création du fichier. */
 export const NoteTaking = () => {
-	const plugin = usePlugin() as LegifrancePlugin;
-	const [documentsListe, setDocumentsListe] = useState<documentDataStorage[]>(
-		plugin.historiqueDocuments
-	);
-	const [chosenDoc, setChosenDoc] = useState<documentDataStorage>(
-		documentsListe[0]
-	);
+	const plugin = usePlugin();
+	const documents = useHistorique();
+	const [selectedId, setSelectedId] = useState<string>();
+	const [, refresh] = useReducer((n: number) => n + 1, 0);
 
-	useEffect(() => {
-		setDocumentsListe([...plugin.historiqueDocuments]);
-	}, [plugin.historiqueDocuments]);
-
-	const removeHtmlTags = /(<([^>]+)>)/gi;
-
-	function handleChangeDoc(e: ChangeEvent<HTMLSelectElement>) {
-		const doc = documentsListe.find((elt) => elt.data.id == e.target.value);
-		if (doc) {
-			setChosenDoc(doc);
-		}
-	}
-
-	function handleFieldClick(
-		e: MouseEvent<HTMLButtonElement, globalThis.MouseEvent>
-	) {
-		// Ajoute ou supprime un champ pour la note finale en ajoutant un item dans la variable dédié de <legalDocument>.
-		const newDoc = new documentDataStorage(
-			chosenDoc.id,
-			chosenDoc.data,
-			chosenDoc.template
+	const doc = documents.find((d) => d.data.id === selectedId) ?? documents[0];
+	if (!doc) {
+		return (
+			<p className="legifrance-empty">
+				Aucun document dans l'historique : ouvrez-en un depuis une recherche.
+			</p>
 		);
+	}
+	const { data } = doc;
 
-		const target = e.target as HTMLButtonElement;
-
-		if (target.value == "-") {
-			if (newDoc.data.notes) {
-				if (newDoc.data.notes.length == 0) return;
-				newDoc.data.notes.pop();
-			}
-		} else if (target.value == "+") {
-			const newChamp = {
-				titreChamp: "",
-				valeurChamp: "",
-			} as noteChampsPersonnalises;
-
-			newDoc.data.notes = newDoc.data.notes || [];
-
-			newDoc.data.notes?.push(newChamp);
-		}
-
-		setChosenDoc(newDoc);
+	/** Modifie le document de l'historique, l'enregistre et rafraîchit l'affichage. */
+	function edit(mutate: (data: legalDocument) => void) {
+		mutate(data);
 		plugin.saveSettings();
-	}
-
-	function HandleContributionChange(e: ChangeEvent<HTMLTextAreaElement>) {
-		const newContributionNote = e.target.value;
-		const newDoc = new documentDataStorage(
-			chosenDoc.id,
-			chosenDoc.data,
-			chosenDoc.template
-		);
-		newDoc.data.contributionNote = newContributionNote;
-
-		setChosenDoc(newDoc);
-		plugin.saveSettings();
-	}
-
-	function handleNoteFieldChange(
-		e: ChangeEvent<HTMLTextAreaElement> | ChangeEvent<HTMLInputElement>
-	) {
-		const index = e.target.dataset.index;
-		const champ = e.target.dataset.field;
-
-		const newDoc = new documentDataStorage(
-			chosenDoc.id,
-			chosenDoc.data,
-			chosenDoc.template
-		);
-
-		if (newDoc.data.notes && index) {
-			newDoc.data.notes[parseInt(index)][
-				champ as keyof noteChampsPersonnalises
-			] = e.target.value;
-		}
-		setChosenDoc(newDoc);
-		plugin.saveSettings();
-	}
-
-	function handleClickCreateNoteButton(
-		e: MouseEvent<HTMLButtonElement, globalThis.MouseEvent>
-	) {
-		chosenDoc.template = plugin.settings.templateAll;
-
-		const nouvelleNote = new newNote(
-			plugin.app,
-			chosenDoc.template,
-			plugin.settings.fileTitle,
-			chosenDoc.data,
-			plugin.settings.dossierBase
-		);
-		
-		nouvelleNote.createNote();
-	}
-
-	function handleTitreNoteChange(e: ChangeEvent<HTMLInputElement>) {
-		const target = e.target as HTMLInputElement;
-		const newDoc = new documentDataStorage(
-			chosenDoc.id,
-			chosenDoc.data,
-			chosenDoc.template
-		);
-
-		newDoc.data.titreNote = target.value;
-		setChosenDoc(newDoc);
-		plugin.saveSettings();
+		refresh();
 	}
 
 	return (
-		<>
-			<div className="view-text">
-				<h1>Création d'une note de document</h1>
-				<div>
-					<label htmlFor="select-document">Document : </label>
-					<select
-						name="select-document"
-						onChange={(e) => handleChangeDoc(e)}
+		<div className="legifrance-note-editor">
+			<h1>Création d'une note</h1>
+
+			<SettingRow name="Document" htmlFor="legifrance-note-doc">
+				<select
+					id="legifrance-note-doc"
+					className="dropdown"
+					value={data.id}
+					onChange={(e) => setSelectedId(e.target.value)}
+				>
+					{documents.map((d) => (
+						<option key={d.data.id} value={d.data.id}>
+							{truncate(removeTags(d.data.titre))}
+						</option>
+					))}
+				</select>
+			</SettingRow>
+
+			<h4>{removeTags(data.titre)}</h4>
+
+			<SettingRow name="Titre de la note" htmlFor="legifrance-note-title">
+				<input
+					id="legifrance-note-title"
+					type="text"
+					placeholder={data.id}
+					value={data.titreNote ?? ""}
+					onChange={(e) => edit((d) => (d.titreNote = e.target.value))}
+				/>
+			</SettingRow>
+
+			<SettingRow name="Contribution" htmlFor="legifrance-note-contribution">
+				<textarea
+					id="legifrance-note-contribution"
+					rows={5}
+					value={data.contributionNote ?? ""}
+					onChange={(e) => edit((d) => (d.contributionNote = e.target.value))}
+				/>
+			</SettingRow>
+
+			{data.notes?.map((champ, index) => (
+				<SettingRow
+					key={index}
+					name={
+						<input
+							type="text"
+							placeholder="Nom du champ"
+							value={champ.titreChamp}
+							onChange={(e) => edit(() => (champ.titreChamp = e.target.value))}
+						/>
+					}
+				>
+					<textarea
+						placeholder="Valeur du champ"
+						value={champ.valeurChamp}
+						onChange={(e) => edit(() => (champ.valeurChamp = e.target.value))}
+					/>
+					<button
+						className="clickable-icon"
+						aria-label="Supprimer le champ"
+						onClick={() => edit((d) => d.notes?.splice(index, 1))}
 					>
-						{documentsListe && documentsListe.length > 0
-							? documentsListe.map((elt, index) => {
-									return (
-										<option key={index} value={elt.data.id}>
-											{elt.data.titre
-												.replace(removeHtmlTags, "")
-												.substring(0, 70)}
-											{elt.data.titre.length > 70
-												? "..."
-												: ""}
-										</option>
-									);
-							})
-							: ""}
-					</select>
-				</div>
+						<X size={16} />
+					</button>
+				</SettingRow>
+			))}
 
-				<div className="note-taking-box">
-					<h4>{chosenDoc.data.titre}</h4>
+			<SettingRow name="Champs personnalisés">
+				<button
+					aria-label="Ajouter un champ"
+					onClick={() =>
+						edit((d) => (d.notes = [...(d.notes ?? []), { titreChamp: "", valeurChamp: "" }]))
+					}
+				>
+					<Plus size={16} />
+				</button>
+			</SettingRow>
 
-					<div className="setting-item">
-						<div className="setting-item-info">
-							<div className="setting-item-name">
-								Titre de la note
-							</div>
-						</div>
-						<div className="setting-item-control">
-							<input
-								value={chosenDoc.data.titreNote}
-								type="text"
-								name="titre-note"
-								id="titre-note"
-								onChange={(e) => handleTitreNoteChange(e)}
-							/>
-						</div>
-					</div>
-
-					<div className="setting-item">
-						<div className="setting-item-info">
-							<div className="setting-item-name">
-								<label htmlFor="contribution">
-									Contribution
-								</label>
-							</div>
-						</div>
-						<div className="setting-item-control">
-							<textarea
-								value={
-									chosenDoc.data.contributionNote
-										? chosenDoc.data.contributionNote
-										: ""
-								}
-								rows={5}
-								cols={50}
-								id="contribution"
-								name="contribution"
-								onChange={(e) => HandleContributionChange(e)}
-							/>
-						</div>
-					</div>
-					{chosenDoc.data.notes && chosenDoc.data.notes.length > 0
-						? chosenDoc.data.notes.map((elt, index) => {
-								return (
-									<div key={index} className="setting-item">
-										<div className="setting-item-info">
-											<div className="setting-item-name">
-												<input
-													data-index={index}
-													data-field="titreChamp"
-													type="text"
-													placeholder="Nom du champ"
-													value={
-														elt.titreChamp
-															? elt.titreChamp
-															: ""
-													}
-													onChange={(e) =>
-														handleNoteFieldChange(e)
-													}
-												/>
-											</div>
-										</div>
-										<div className="setting-item-control">
-											<textarea
-												data-field="valeurChamp"
-												data-index={index}
-												placeholder="Valeur du champ"
-												value={
-													elt.valeurChamp
-														? elt.valeurChamp
-														: ""
-												}
-												onChange={(e) =>
-													handleNoteFieldChange(e)
-												}
-											/>
-										</div>
-									</div>
-								);
-						})
-						: ""}
-
-					<div className="setting-item">
-						<div className="setting-item-info">
-							<div className="setting-item-name">
-								Ajouter ou supprimer un champ
-							</div>
-						</div>
-						<div className="setting-item-control">
-							<button
-								value="+"
-								onClick={(e) => handleFieldClick(e)}
-							>
-								+
-							</button>
-							<button
-								value="-"
-								onClick={(e) => handleFieldClick(e)}
-							>
-								-
-							</button>
-						</div>
-					</div>
-				</div>
-				<div className="setting-item">
-					<div className="setting-item-info">
-						<div className="setting-item-name">
-							Créer une nouvelle note
-						</div>
-					</div>
-					<div className="setting-item-control">
-						<button
-							onClick={(e) => handleClickCreateNoteButton(e)}
-							className="clickable-icon"
-						>
-							<Rocket />
-						</button>
-					</div>
-				</div>
-			</div>
-		</>
+			<SettingRow name="Créer la note">
+				<button
+					className="mod-cta"
+					aria-label="Créer la note"
+					onClick={() => plugin.createNoteFor(data)}
+				>
+					<Rocket size={16} />
+				</button>
+			</SettingRow>
+		</div>
 	);
 };
