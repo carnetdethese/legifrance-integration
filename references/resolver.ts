@@ -35,6 +35,7 @@ interface Query {
 
 /** Réponse de `/search`, réduite à ce que l'on lit. */
 interface SearchResponse {
+	totalResultNumber?: number;
 	results?: SearchResult[];
 }
 
@@ -235,26 +236,38 @@ function build(ref: LegalRef): Resolution | null {
 		/** Extraits (articles) de la réponse, à plat. */
 		const extractsOf = (response: SearchResponse) =>
 			(response.results ?? []).flatMap((r) => (r.sections ?? []).flatMap((sec) => sec.extracts ?? []));
+		/** Articles de la réponse : extraits (cas habituel) ou titres `LEGIARTI…` (autre forme de réponse). */
+		const articlesOf = (response: SearchResponse) => [
+			...extractsOf(response),
+			...(response.results ?? []).flatMap((r) =>
+				(r.titles ?? [])
+					.filter((t) => t.id?.startsWith("LEGIARTI"))
+					.map((t) => ({ id: t.id, num: /(\d[\w.-]*)\s*$/.exec(t.title ?? "")?.[1] ?? "", legalStatus: undefined as string | undefined }))
+			),
+		];
 		return {
 			queries: [
 				// 1. Version en vigueur aujourd'hui (requête vérifiée par Marginalia).
 				searchQuery("CODE_DATE", [field("NUM_ARTICLE", number)], [codeFilter, { facette: "DATE_VERSION", singleDate: Date.now() }]),
 				// 2. Sans filtre de date, au cas où celui-ci écarte l'article.
 				searchQuery("CODE_DATE", [field("NUM_ARTICLE", number)], [codeFilter]),
+				// 3. Recherche libre du numéro dans le code, si le champ NUM_ARTICLE ne donne rien.
+				searchQuery("CODE_DATE", [field("ALL", number)], [codeFilter]),
 			],
-			// L'article est dans `results[].sections[].extracts[]` (`titles` ne nomme que le code). On préfère
-			// la version en vigueur ; à défaut, n'importe quelle version (article abrogé, toujours citable).
+			// On préfère la version en vigueur ; à défaut, n'importe quelle version (article abrogé, toujours citable).
 			read: (raw) => {
-				const candidates = extractsOf(raw as SearchResponse).filter(
+				const candidates = articlesOf(raw as SearchResponse).filter(
 					(e) => compact(e.num ?? "") === number && e.id?.startsWith("LEGIARTI")
 				);
 				const best = candidates.find((e) => !e.legalStatus || e.legalStatus === "VIGUEUR") ?? candidates[0];
 				return best ? { url: `${BASE_URL}/codes/article_lc/${best.id}`, titre: ref.label, articleId: best.id } : null;
 			},
 			describe: (raw) => {
-				const extracts = extractsOf(raw as SearchResponse);
-				const seen = extracts.slice(0, 8).map((e) => `${e.num ?? "?"} [${e.legalStatus ?? "?"}]`).join(", ");
-				return `${extracts.length} article(s) renvoyé(s)${seen ? ` : ${seen}` : ""}`;
+				const response = raw as SearchResponse;
+				const articles = articlesOf(response);
+				const seen = articles.slice(0, 8).map((e) => `${e.num || "?"} [${e.legalStatus ?? "?"}]`).join(", ");
+				const codes = (response.results ?? []).flatMap((r) => (r.titles ?? []).map((t) => t.title ?? t.id ?? "?")).slice(0, 3).join(" | ");
+				return `${response.results?.length ?? 0} résultat(s) (total API : ${response.totalResultNumber ?? "?"}), ${articles.length} article(s) lisible(s)${seen ? ` : ${seen}` : ""}${codes ? ` ; titres : ${codes}` : ""}`;
 			},
 		};
 	}
