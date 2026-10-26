@@ -1,5 +1,5 @@
 import { TFile } from "obsidian";
-import { useContext, useEffect, useState, useSyncExternalStore } from "react";
+import { useContext, useEffect, useReducer, useState, useSyncExternalStore } from "react";
 import { LegalRef } from "references/parser";
 import { PluginContext } from "./context";
 import { HISTORY_EVENT, REFERENCES_EVENT } from "main";
@@ -40,9 +40,15 @@ export const useNoteReferences = () => {
 	const { workspace, vault } = plugin.app;
 	const [file, setFile] = useState<TFile | null>(() => workspace.getActiveFile());
 	const [refs, setRefs] = useState<LegalRef[]>([]);
-	/** Incrémenté pour relancer l'analyse (modification de la note, lien retrouvé). */
+	/** Incrémenté pour relancer l'analyse après une modification de la note. */
 	const [version, setVersion] = useState(0);
-	const bump = () => setVersion((v) => v + 1);
+	const reparse = () => setVersion((v) => v + 1);
+	/**
+	 * Simple rafraîchissement de l'affichage quand un lien est retrouvé ou une recherche
+	 * démarre. Ne doit PAS relancer l'analyse : celle-ci lance la recherche des liens, qui
+	 * émet cet événement — d'où une boucle sans fin qui figeait Obsidian.
+	 */
+	const [, refresh] = useReducer((n: number) => n + 1, 0);
 
 	useEffect(() => {
 		const timer: { id?: number } = {};
@@ -51,10 +57,10 @@ export const useNoteReferences = () => {
 			vault.on("modify", (modified) => {
 				if (modified !== file) return;
 				window.clearTimeout(timer.id);
-				timer.id = window.setTimeout(bump, REPARSE_DELAY_MS);
+				timer.id = window.setTimeout(reparse, REPARSE_DELAY_MS);
 			}),
 		];
-		const linkRef = plugin.events.on(REFERENCES_EVENT, bump);
+		const linkRef = plugin.events.on(REFERENCES_EVENT, refresh);
 		return () => {
 			window.clearTimeout(timer.id);
 			refs.forEach((ref) => workspace.offref(ref));

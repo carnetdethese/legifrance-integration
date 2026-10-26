@@ -200,6 +200,7 @@ export default class LegifrancePlugin extends Plugin {
 				!this.pendingReferences.has(ref.key) &&
 				(force || !this.references.isRecentMiss(ref))
 		);
+		if (todo.length === 0) return; // rien à faire : surtout pas d'événement (les vues relanceraient l'appel)
 		todo.forEach((ref) => this.pendingReferences.add(ref.key));
 		this.events.trigger(REFERENCES_EVENT);
 
