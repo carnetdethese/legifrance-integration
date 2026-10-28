@@ -2,12 +2,11 @@
  * Lecture de la base pour les analyses : décisions du coffre (citées, enrichies ou non), articles
  * qu'elles visent, rapprochements. Les calculs eux-mêmes sont dans `timeline.ts` et `similarity.ts`.
  */
-import type { ReferenceIndex } from ".";
+import { DECISION_REFS_SQL, type ReferenceIndex } from ".";
 import type { CitationCheck } from "./checks";
-import { parseCitedDate } from "./dates";
 import { COURT_NAMES, CourtCode, DecisionValues, courtCode } from "./fiches";
 import { decisionKey } from "./ids";
-import { LegalRef, normalizedName, parseCitations } from "./parser";
+import { LegalRef, decidedIso, normalizedName, parseCitations } from "./parser";
 import type { GraphInput } from "./graph";
 import { cleanTheme, topTheme } from "./themes";
 import { DecisionFeatures, RelatedDecision, relatedDecisions, termCounts } from "./similarity";
@@ -33,14 +32,6 @@ interface Row {
 
 /** La juridiction telle que l'API la donne, ou son nom complet si seul un code (« ce ») a été conservé. */
 const courtName = (court: string | null) => (court ? COURT_NAMES[court as CourtCode] ?? court : undefined);
-
-/** Date citée (« 12 févr. 2018 », « 2006 ») au format AAAA-MM-JJ, AAAA-MM ou AAAA. */
-function citedIso(decided?: string) {
-	const cited = decided ? parseCitedDate(decided) : null;
-	if (!cited) return undefined;
-	const pad = (n: number) => String(n).padStart(2, "0");
-	return cited.month ? (cited.day ? `${cited.year}-${pad(cited.month)}-${pad(cited.day)}` : `${cited.year}-${pad(cited.month)}`) : String(cited.year);
-}
 
 /** Ce que le plugin sait des fiches du coffre, pour compléter les décisions citées. */
 export interface FicheContext {
@@ -72,14 +63,22 @@ export function loadDecisions(index: ReferenceIndex, fiches?: FicheContext): Dec
 	const rows = index.db.all<Row>(
 		`SELECT r.key, r.kind, r.label, r.data, r.url, d.legifrance_id, d.status, d.court, d.number, d.title, d.date, d.formation, d.solution, d.themes, d.summary
 		 FROM refs r LEFT JOIN decisions d ON d.ref_key = r.key
-		 WHERE r.kind = 'decision' OR (r.kind = 'identifiant' AND (r.label LIKE 'JURITEXT%' OR r.label LIKE 'CETATEXT%' OR r.label LIKE 'CONSTEXT%'))`
+		 WHERE ${DECISION_REFS_SQL}`
 	);
-	const notesOf = new Map<string, string[]>();
-	for (const { ref_key, note_path } of index.db.all<{ ref_key: string; note_path: string }>("SELECT ref_key, note_path FROM citations")) {
-		notesOf.set(ref_key, [...(notesOf.get(ref_key) ?? []), note_path]);
-	}
+	const notesOf = index.notesByRef("SELECT ref_key, note_path FROM citations");
 
 	const records = new Map<string, DecisionRecord>();
+	addCitedDecisions(index, records, rows, notesOf);
+	if (fiches) addFiches(index, records, fiches);
+	// Une même décision citée par son nom, par son numéro, avec sa fiche et sous son identifiant Légifrance : une seule décision.
+	const merged = mergeAliases([...records.values()], index.manualMerges());
+	// Une fiche ne se cite pas elle-même (son en-tête contient la citation et le lien de sa décision).
+	for (const record of merged) record.notes = record.notes.filter((path) => path !== record.fichePath);
+	return merged;
+}
+
+/** Première phase : une décision par identifiant Légifrance, regroupant les références qui la citent. */
+function addCitedDecisions(index: ReferenceIndex, records: Map<string, DecisionRecord>, rows: Row[], notesOf: Map<string, string[]>) {
 	for (const row of rows) {
 		const ref: LegalRef = { key: row.key, kind: row.kind, label: row.label, query: "", data: JSON.parse(row.data), ...(row.url && { url: row.url }) };
 		const link = index.linkFor(ref);
@@ -106,7 +105,7 @@ export function loadDecisions(index: ReferenceIndex, fiches?: FicheContext): Dec
 			record.themes = row.themes ? [...new Set((JSON.parse(row.themes) as string[]).map(cleanTheme).filter(Boolean))] : [];
 		}
 		// Date, de la plus sûre à la plus approximative : celle citée avec les parties, celle écrite dans la citation, l'année du numéro.
-		record.date = betterDate(record.date, citedIso(ref.data.decided) ?? dateFromLabel(row.label) ?? (ref.data.court === "cc" ? ccYear(ref.data.number) : undefined));
+		record.date = betterDate(record.date, (ref.data.decided ? decidedIso(ref.data.decided) : undefined) ?? dateFromLabel(row.label) ?? (ref.data.court === "cc" ? ccYear(ref.data.number) : undefined));
 		if (!record.court && ref.data.court) record.court = courtName(ref.data.court);
 		records.set(id, record);
 
@@ -117,46 +116,39 @@ export function loadDecisions(index: ReferenceIndex, fiches?: FicheContext): Dec
 		const completeGroup = complete ? courtGroup(courtCode(row.court) ?? ref.data.court) : undefined;
 		if (completeGroup && row.number) addSigns(record, { numbers: numbersOf(completeGroup, row.number) });
 	}
+}
 
-	if (fiches) {
-		for (const { path, id: ficheId } of index.ficheEntries()) {
-			const id = ficheId ?? `fiche:${path}`;
-			const record: DecisionRecord = records.get(id) ?? { id, label: baseName(path), themes: [], complete: false, notes: [], members: [id] };
-			const values = fiches.values(path);
-			record.fichePath = path;
-			record.name ??= nameFromNote(baseName(path));
-			record.notes = [...new Set([...record.notes, ...(fiches.inbound.get(path) ?? [])])];
-			record.title ??= values.title;
-			record.court ??= values.court;
-			record.number ??= values.number;
-			record.formation ??= values.formation;
-			record.solution ??= values.solution;
-			record.url ??= values.url;
-			// Indices de la fiche : son numéro, et son nom (intitulé ou titre de la note) avec sa juridiction et sa date.
-			const group = courtGroup(courtCode(values.court ?? record.court));
-			if (group && values.number) addSigns(record, { numbers: numbersOf(group, values.number) });
-			if (group && values.date?.length === 10) {
-				const names = [...new Set([baseName(path), values.title ?? ""].map(normalizedName).filter(Boolean))];
-				addSigns(record, { names: names.map((name) => ({ group, date: values.date!, name })) });
-			}
-			// La date de la fiche (écrite par l'utilisateur) prime sur une date devinée dans une citation.
-			record.date = values.date ?? record.date;
-			records.set(id, record);
+/** Seconde phase : les fiches complètent la décision de même identifiant, ou en créent une. */
+function addFiches(index: ReferenceIndex, records: Map<string, DecisionRecord>, fiches: FicheContext) {
+	for (const { path, id: ficheId } of index.ficheEntries()) {
+		const id = ficheId ?? `fiche:${path}`;
+		const record: DecisionRecord = records.get(id) ?? { id, label: baseName(path), themes: [], complete: false, notes: [], members: [id] };
+		const values = fiches.values(path);
+		record.fichePath = path;
+		record.name ??= nameFromNote(baseName(path));
+		record.notes = [...new Set([...record.notes, ...(fiches.inbound.get(path) ?? [])])];
+		record.title ??= values.title;
+		record.court ??= values.court;
+		record.number ??= values.number;
+		record.formation ??= values.formation;
+		record.solution ??= values.solution;
+		record.url ??= values.url;
+		// Indices de la fiche : son numéro, et son nom (intitulé ou titre de la note) avec sa juridiction et sa date.
+		const group = courtGroup(courtCode(values.court ?? record.court));
+		if (group && values.number) addSigns(record, { numbers: numbersOf(group, values.number) });
+		if (group && values.date?.length === 10) {
+			const names = [...new Set([baseName(path), values.title ?? ""].map(normalizedName).filter(Boolean))];
+			addSigns(record, { names: names.map((name) => ({ group, date: values.date!, name })) });
 		}
+		// La date de la fiche (écrite par l'utilisateur) prime sur une date devinée dans une citation.
+		record.date = values.date ?? record.date;
+		records.set(id, record);
 	}
-	// Une même décision citée par son nom, par son numéro, avec sa fiche et sous son identifiant Légifrance : une seule décision.
-	const merged = mergeAliases([...records.values()], index.manualMerges());
-	// Une fiche ne se cite pas elle-même (son en-tête contient la citation et le lien de sa décision).
-	for (const record of merged) record.notes = record.notes.filter((path) => path !== record.fichePath);
-	return merged;
 }
 
 /** Citations de décisions dont la décision complète est en base, avec ce que les notes en écrivent. */
 export function loadCitationChecks(index: ReferenceIndex): CitationCheck[] {
-	const notesOf = new Map<string, string[]>();
-	for (const { ref_key, note_path } of index.db.all<{ ref_key: string; note_path: string }>("SELECT ref_key, note_path FROM citations")) {
-		notesOf.set(ref_key, [...(notesOf.get(ref_key) ?? []), note_path]);
-	}
+	const notesOf = index.notesByRef("SELECT ref_key, note_path FROM citations");
 	return index.db
 		.all<{ key: string; label: string; data: string; date: string | null; number: string | null }>(
 			`SELECT r.key, r.label, r.data, d.date, d.number FROM refs r JOIN decisions d ON d.ref_key = r.key
@@ -345,13 +337,10 @@ export function staleArticles(index: ReferenceIndex) {
 		`SELECT r.key, r.label, l.status, l.url FROM links l JOIN refs r ON r.key = l.ref_key
 		 WHERE r.kind = 'article' AND l.status IS NOT NULL AND l.status NOT IN ('VIGUEUR', 'VIGUEUR_DIFF') ORDER BY r.label`
 	);
-	const notesOf = new Map<string, string[]>();
-	for (const { ref_key, note_path } of index.db.all<{ ref_key: string; note_path: string }>(
+	const notesOf = index.notesByRef(
 		`SELECT c.ref_key, c.note_path FROM citations c JOIN links l ON l.ref_key = c.ref_key JOIN refs r ON r.key = c.ref_key
 		 WHERE r.kind = 'article' AND l.status IS NOT NULL AND l.status NOT IN ('VIGUEUR', 'VIGUEUR_DIFF') ORDER BY c.note_path`
-	)) {
-		notesOf.set(ref_key, [...(notesOf.get(ref_key) ?? []), note_path]);
-	}
+	);
 	return rows.map((row) => ({ ...row, notes: notesOf.get(row.key) ?? [] }));
 }
 

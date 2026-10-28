@@ -15,7 +15,7 @@ export const ERROR_RETRY_MS = 60 * 60 * 1000;
  * identifiant Légifrance de décision (Cour de cassation, Conseil d'État, Conseil constitutionnel).
  * Condition SQL sur la table `refs`.
  */
-const DECISION_REFS_SQL = "kind = 'decision' OR (kind = 'identifiant' AND (label LIKE 'JURITEXT%' OR label LIKE 'CETATEXT%' OR label LIKE 'CONSTEXT%'))";
+export const DECISION_REFS_SQL = "kind = 'decision' OR (kind = 'identifiant' AND (label LIKE 'JURITEXT%' OR label LIKE 'CETATEXT%' OR label LIKE 'CONSTEXT%'))";
 
 /** Contenu d'une fiche de décision (table `decisions`). */
 export interface DecisionFields {
@@ -114,8 +114,8 @@ export class ReferenceIndex {
 		return this.db.get<{ n: number }>(sql)?.n ?? 0;
 	}
 
-	/** Notes qui citent chaque référence, regroupées par clef de référence. */
-	private notesByRef(sql: string) {
+	/** Notes qui citent chaque référence, regroupées par clef de référence (`sql` renvoie `ref_key` et `note_path`). */
+	notesByRef(sql: string) {
 		const notes = new Map<string, string[]>();
 		for (const { ref_key, note_path } of this.db.all<{ ref_key: string; note_path: string }>(sql)) {
 			notes.set(ref_key, [...(notes.get(ref_key) ?? []), note_path]);
