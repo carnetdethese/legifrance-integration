@@ -15,6 +15,7 @@ import { findAriaDecision } from "./ariane";
 import { LEGIFRANCE_TEXTS } from "./codes";
 import { FULL_DATE_PATTERN, isoDay, matchesDate, parseCitedDate, plain, significantWords, titleDates } from "./dates";
 import { LegalRef } from "./parser";
+import { datedTextMatches, stripMarks } from "./textMatch";
 
 export const BASE_URL = "https://www.legifrance.gouv.fr";
 
@@ -57,6 +58,8 @@ type Match = { url: string; titre: string; articleId?: string; status?: string }
 interface Resolution {
 	queries: Query[];
 	read: (response: unknown) => Match | null;
+	/** Tous les documents d'une réponse qui conviennent (plusieurs textes le même jour…), pour les faire choisir. */
+	candidates?: (response: unknown) => Match[];
 	/** Résumé lisible d'une réponse, pour le journal de débogage. */
 	describe?: (response: unknown) => string;
 	/** Recherche de dernier recours (autre service), si aucune requête n'a abouti. */
@@ -189,19 +192,12 @@ function buildDated(ref: LegalRef): Resolution | null {
 			searchQuery("LODA_DATE", [field("ALL", `${ref.data.nature} du ${text}`)], [...natureFilter, { facette: "DATE_SIGNATURE", dates: { start: day, end: day } }]),
 			searchQuery("LODA_DATE", [field("ALL", `du ${text}`)], natureFilter),
 		],
+		// Plusieurs textes le même jour : on ne devine pas, l'utilisateur choisit (`findTextCandidates`).
 		read: (raw) => {
-			const response = raw as SearchResponse;
-			for (const result of response.results ?? []) {
-				for (const title of result.titles ?? []) {
-					const label = title.title ?? "";
-					const id = title.cid || title.id;
-					if (id && plain(label).startsWith(ref.data.nature) && titleDates(label).some((d) => matchesDate(cited, d))) {
-						return { url: `${BASE_URL}/loda/id/${id}`, titre: label };
-					}
-				}
-			}
-			return null;
+			const found = datedTextMatches((raw as SearchResponse).results ?? [], ref.data.nature, cited);
+			return found.length === 1 ? { url: `${BASE_URL}/loda/id/${found[0].id}`, titre: found[0].title } : null;
 		},
+		candidates: (raw) => datedTextMatches((raw as SearchResponse).results ?? [], ref.data.nature, cited).map((m) => ({ url: `${BASE_URL}/loda/id/${m.id}`, titre: m.title })),
 	};
 }
 
@@ -298,11 +294,15 @@ function buildText(ref: LegalRef): Resolution | null {
 			for (const result of response.results ?? []) {
 				for (const title of result.titles ?? []) {
 					const id = title.cid || title.id;
-					if (id) return { url: `${BASE_URL}/loda/id/${id}`, titre: title.title ?? ref.label };
+					if (id) return { url: `${BASE_URL}/loda/id/${id}`, titre: stripMarks(title.title ?? ref.label) };
 				}
 			}
 			return null;
 		},
+		candidates: (raw) =>
+			((raw as SearchResponse).results ?? []).flatMap((result) =>
+				(result.titles ?? []).flatMap((title) => (title.cid || title.id ? [{ url: `${BASE_URL}/loda/id/${title.cid || title.id}`, titre: stripMarks(title.title ?? ref.label) }] : []))
+			),
 	};
 }
 
@@ -363,6 +363,27 @@ function build(ref: LegalRef, useRgd = true): Resolution | null {
 
 /** L'API peut-elle retrouver cette référence ? (Pas les identifiants, déjà directs.) */
 export const canResolve = (ref: LegalRef) => !ref.url && build(ref) !== null;
+
+/**
+ * Textes (lois, décrets…) qui conviennent à une référence, sans trancher : tous ceux que la recherche trouve,
+ * sans doublon. Sert à faire choisir quand la date seule désigne plusieurs textes.
+ * @throws ApiError si les identifiants sont refusés, le quota dépassé ou le service injoignable.
+ */
+export async function findTextCandidates(api: LegifranceApi, ref: LegalRef, lane?: Lane): Promise<{ url: string; titre: string }[]> {
+	const resolution = ref.kind === "texte" ? build(ref, false) : null;
+	if (!resolution?.candidates) return [];
+	const found = new Map<string, { url: string; titre: string }>();
+	for (const query of resolution.queries) {
+		try {
+			for (const match of resolution.candidates(await api.consult<SearchResponse>(query.path, query.body, lane))) found.set(match.url, { url: match.url, titre: match.titre });
+		} catch (error) {
+			// 400 (requête refusée) ou 404 : on passe à la requête suivante.
+			if (!(error instanceof ApiError) || ![400, 404].includes(error.status ?? 0)) throw error;
+		}
+		if (found.size > 0) break;
+	}
+	return [...found.values()];
+}
 
 /** Texte Markdown d'un article (`POST /consult/getArticle`), borné. */
 export async function fetchArticleText(api: LegifranceApi, id: string, lane?: Lane) {
@@ -431,5 +452,5 @@ export async function resolveReference(
 
 	const texte = match.articleId ? await fetchArticleText(api, match.articleId, lane).catch(() => undefined) : undefined;
 	trace(`✔ ${match.url}${texte ? " (texte récupéré)" : match.articleId ? " (texte de l'article indisponible)" : ""}`);
-	return { url: match.url, titre: match.titre, texte, statut: match.status };
+	return { url: match.url, titre: stripMarks(match.titre), texte, statut: match.status };
 }

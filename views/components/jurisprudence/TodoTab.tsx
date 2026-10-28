@@ -7,7 +7,7 @@
 import { Notice } from "obsidian";
 import { REFERENCES_EVENT } from "lib/events";
 import { refineUnresolved } from "references/refine";
-import { refineLostText } from "references/refineText";
+import { preciseReference } from "references/refineText";
 import { useMemo, useState } from "react";
 import { citationIssues } from "references/checks";
 import { loadCitationChecks, staleArticles, statusLabel } from "references/corpus";
@@ -59,7 +59,7 @@ export const TodoTab = ({ records }: { records: DecisionRecord[] }) => {
 	const lost = useMemo(() => plugin.references.unlinkedTexts(), [plugin, records]);
 	const [lostLimit, setLostLimit] = useState(30);
 	async function refineText(ref: LegalRef) {
-		if (await refineLostText(plugin, ref)) plugin.events.trigger(REFERENCES_EVENT);
+		if (await preciseReference(plugin, ref)) plugin.events.trigger(REFERENCES_EVENT);
 	}
 
 	/** Rubriques du menu : groupe, identifiant, titre, effectif, et si un effectif non nul demande une action. */

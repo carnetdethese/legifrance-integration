@@ -1,6 +1,7 @@
 /** Tests des fiches de décisions. Lancer : `npm test`. */
 import { ariaValues, completableCount, courtCode, ficheDifferences, ficheId, ficheQuery, ficheUpdates, isFiche, missingProperties } from "./fiches";
 import { decisionKey, legifranceIdOf, spokenDate } from "./ids";
+import { datedTextMatches, stripMarks } from "./textMatch";
 import { numberSignature } from "./merge";
 
 let fail = 0;
@@ -157,6 +158,19 @@ eq("identifiant seul", legifranceIdOf(" LEGIARTI000006419280 "), "LEGIARTI000006
 eq("lien sans identifiant", legifranceIdOf("https://www.legifrance.gouv.fr/"), undefined);
 eq("date parlée", [spokenDate("1978-01-06"), spokenDate("2016-10-07"), spokenDate("2020-02-29")], ["6 janvier 1978", "7 octobre 2016", "29 février 2020"]);
 eq("premier du mois", spokenDate("1978-01-01"), "1er janvier 1978");
+
+// Textes cités par leur date : la nature se compare sans accents, les balises de surlignage sont retirées, les doublons écartés.
+const answer = [
+	{ titles: [{ id: "LEGITEXT1_01-01-2999", cid: "JORFTEXT000050001", title: "Décret n° 2025-700 du <mark>18 juillet 2025</mark> relatif à la chasse" }] },
+	{ titles: [{ id: "X", cid: "JORFTEXT000050002", title: "Décret n° 2025-701 du 18 juillet 2025 portant nomination" }, { id: "Y", cid: "JORFTEXT000050001", title: "Décret n° 2025-700 du 18 juillet 2025 relatif à la chasse" }] },
+	{ titles: [{ id: "Z", cid: "JORFTEXT000050003", title: "Arrêté du 18 juillet 2025 fixant…" }, { id: "W", cid: "JORFTEXT000050004", title: "Décret n° 2024-1 du 3 mars 2024" }] },
+];
+const matches = datedTextMatches(answer, "décret", { day: 18, month: 7, year: 2025 });
+eq("décret : deux textes le même jour, sans doublon", matches.map((m) => m.id), ["JORFTEXT000050001", "JORFTEXT000050002"]);
+eq("titre sans balises", matches[0].title, "Décret n° 2025-700 du 18 juillet 2025 relatif à la chasse");
+eq("un seul texte ce jour-là", datedTextMatches(answer, "arrêté", { day: 18, month: 7, year: 2025 }).length, 1);
+eq("autre date : aucun", datedTextMatches(answer, "décret", { day: 1, month: 1, year: 2000 }), []);
+eq("balises retirées", stripMarks("Loi n° 2005-102 du <mark>11 février 2005</mark> pour l'égalité"), "Loi n° 2005-102 du 11 février 2005 pour l'égalité");
 
 console.log(fail ? `${fail} échec(s)` : "tout passe");
 import { significantWords } from "./dates";

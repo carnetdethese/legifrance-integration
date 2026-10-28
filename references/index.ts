@@ -3,6 +3,7 @@ import type { Relation, RelationRow } from "./genealogy";
 import { decisionKey } from "./ids";
 import { LegalRef, parseCitations } from "./parser";
 import { ResolvedLink } from "./resolver";
+import { stripMarks } from "./textMatch";
 import type { ArticleVersion } from "./versions";
 
 /** Délai avant de relancer la recherche d'une référence introuvable (24 h). */
@@ -138,7 +139,7 @@ export class ReferenceIndex {
 			this.articleNotePaths.set(row.note_path, row.ref_key);
 		}
 		for (const row of db.all<{ ref_key: string; url: string; title: string; text: string | null; status: string | null }>("SELECT ref_key, url, title, text, status FROM links")) {
-			this.links.set(row.ref_key, { url: row.url, titre: row.title, texte: row.text ?? undefined, statut: row.status ?? undefined });
+			this.links.set(row.ref_key, { url: row.url, titre: stripMarks(row.title), texte: row.text ?? undefined, statut: row.status ?? undefined });
 		}
 		for (const row of db.all<{ ref_key: string; at: number }>("SELECT ref_key, at FROM misses")) {
 			this.misses.set(row.ref_key, row.at);
@@ -401,6 +402,7 @@ export class ReferenceIndex {
 
 	setLink(ref: LegalRef, link: ResolvedLink) {
 		const before = this.links.get(ref.key);
+		link = { ...link, titre: stripMarks(link.titre) };
 		this.links.set(ref.key, link);
 		this.misses.delete(ref.key);
 		// Veille : un statut de vigueur ou un texte qui change entre deux consultations est signalé.

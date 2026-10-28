@@ -6,12 +6,12 @@
 import { Notice, htmlToMarkdown } from "obsidian";
 import { legifranceUrl } from "api/urls";
 import type LegifrancePlugin from "main";
-import { pickCandidate } from "views/CandidateModal";
+import { OTHER_CHOICE_KEY, pickCandidate } from "views/CandidateModal";
 import { RefinedText, refineText } from "views/RefineTextModal";
 import { LegalRef } from "./parser";
 import { legifranceIdOf, spokenDate } from "./ids";
-import { isoOf } from "./refine";
-import { field, resolveReference, searchQuery, SearchResponse } from "./resolver";
+import { isoOf, refineUnresolved } from "./refine";
+import { field, findTextCandidates, resolveReference, searchQuery, SearchResponse } from "./resolver";
 import type { DecisionCandidate } from "./sources";
 
 /** Longueur maximale du texte d'un article conservé. */
@@ -130,5 +130,62 @@ export async function refineLostText(plugin: LegifrancePlugin, ref: LegalRef): P
 		return false;
 	} finally {
 		notice.hide();
+	}
+}
+
+/**
+ * Texte cité par sa date (« le décret du 18 juillet 2025 ») : propose tous les textes qui conviennent. Un seul : il
+ * est retenu ; plusieurs : l'utilisateur choisit (ou précise autrement) ; aucun : formulaire de précision.
+ * @returns `true` si un lien a été enregistré
+ */
+export async function chooseText(plugin: LegifrancePlugin, ref: LegalRef): Promise<boolean> {
+	if (!plugin.hasCredentials) {
+		new Notice("Renseignez vos identifiants PISTE dans les réglages du plugin.");
+		return false;
+	}
+	const notice = new Notice("Recherche des textes…", 0);
+	let found: { url: string; titre: string }[];
+	try {
+		found = await findTextCandidates(plugin.api, ref);
+	} catch (error) {
+		new Notice(`Recherche impossible : ${error instanceof Error ? error.message : String(error)}`, 8000);
+		return false;
+	} finally {
+		notice.hide();
+	}
+	if (found.length === 0) return refineLostText(plugin, ref);
+	if (found.length === 1) {
+		plugin.references.setLink(ref, found[0]);
+		new Notice(`Retrouvé : ${found[0].titre}`, 6000);
+		return true;
+	}
+	const candidates = found.map((f): DecisionCandidate => ({ source: "legifrance", key: f.url, title: f.titre, url: f.url }));
+	const chosen = await pickCandidate(plugin.app, candidates, {
+		placeholder: `${found.length} textes correspondent à « ${ref.label} » : choisissez`,
+		otherLabel: "Aucun de ceux-là : préciser autrement…",
+	});
+	if (!chosen) return false;
+	if (chosen.key === OTHER_CHOICE_KEY) return refineLostText(plugin, ref);
+	plugin.references.setLink(ref, { url: chosen.url, titre: chosen.title });
+	new Notice(`Lien enregistré : ${chosen.title}`, 6000);
+	return true;
+}
+
+/**
+ * Précise ou fait choisir une référence qu'aucun lien ne désigne, selon sa nature : décision (formulaire, puis
+ * choix parmi les résultats), texte (choix parmi les textes de la date), article (formulaire).
+ * @returns `true` si un lien a été enregistré
+ */
+export function preciseReference(plugin: LegifrancePlugin, ref: LegalRef): Promise<boolean> {
+	switch (ref.kind) {
+		case "decision":
+			return refineUnresolved(plugin, ref);
+		case "texte":
+			// Un texte cité par son numéro n'a pas de choix à proposer : le formulaire suffit.
+			return ref.data.number ? refineLostText(plugin, ref) : chooseText(plugin, ref);
+		case "article":
+			return refineLostText(plugin, ref);
+		default:
+			return Promise.resolve(false);
 	}
 }

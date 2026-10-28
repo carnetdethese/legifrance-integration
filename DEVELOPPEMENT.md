@@ -143,6 +143,12 @@ pour le contenu, `articleNotes.ts` pour la création et la mise à jour automati
 `article_notes`, dont le contenu n'est pas indexé comme des citations), **précisions** saisies pour une décision
 introuvable (table `decision_precisions`, `precisionsFor` / `savePrecisions`).
 
+**Préciser une référence sans lien** (`preciseReference`, `refineText.ts`) : depuis le panneau des références
+comme depuis « À faire ». Une décision passe par le formulaire puis le choix des résultats ; un texte cité par sa
+seule date propose tous les textes de ce jour (`findTextCandidates`, lecture dans `textMatch.ts`) ; un article ou un
+texte cité par son numéro passe par le formulaire. La résolution automatique ne devine jamais entre plusieurs textes
+du même jour.
+
 La commande **« Compléter les fiches de décisions »** (`ENRICH_TASK`) enchaîne les étapes ③, ② puis ④ ; chaque
 étape peut aussi être lancée seule depuis la vue ou la palette de commandes.
 

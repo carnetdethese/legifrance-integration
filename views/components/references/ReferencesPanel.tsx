@@ -5,17 +5,19 @@
  */
 import { Mentions } from "./Mentions";
 import { Section } from "./Section";
-import { BookOpen, ExternalLink, FilePlus, FileText, Search } from "lucide-react";
+import { BookOpen, ExternalLink, FilePlus, FileText, Search, SlidersHorizontal } from "lucide-react";
 import { decisionKey } from "references/ids";
 import { storedLegalDocument } from "references/stored";
 import { Notice, TFile, setTooltip } from "obsidian";
 import { useMemo, useState } from "react";
 import { ArticleModal } from "views/ArticleModal";
 import { canResolve } from "references/resolver";
+import { REFERENCES_EVENT } from "lib/events";
 import { LegalRef, RefKind } from "references/parser";
 import { isFiche } from "references/fiches";
 import { articleExcerpts, countApplying, statusLabel } from "references/corpus";
 import { openArticleNote } from "references/articleNotes";
+import { preciseReference } from "references/refineText";
 import { decisionsOf } from "references/insights";
 import { ExcerptQuote, Genealogy, RelatedList, SourceBadge } from "views/components/jurisprudence/Shared";
 import { useDatabaseVersion, useNoteReferences, usePlugin } from "views/hooks";
@@ -154,7 +156,7 @@ const FicheInsights = ({ file }: { file: TFile }) => {
 interface ReferenceItemProps {
 	reference: LegalRef;
 	disabled: boolean;
-	onResolve: () => void;
+	onResolve: () => Promise<void>;
 }
 
 const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) => {
@@ -168,6 +170,17 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 	if (link) status = link.titre === reference.label ? "" : link.titre;
 	else if (pending) status = "Recherche sur Légifrance…";
 	else if (missed) status = "Introuvable via l'API : lien de recherche.";
+
+	/** Sans lien retrouvé : l'utilisateur peut préciser la référence ou choisir parmi les résultats. */
+	const canPrecise = !link && !pending && ["decision", "texte", "article"].includes(reference.kind);
+	/** Nouvelle recherche via l'API ; un texte cité par sa date qui désigne plusieurs textes est ensuite proposé au choix. */
+	async function retry() {
+		await onResolve();
+		if (!plugin.references.linkFor(reference) && reference.kind === "texte" && !reference.data.number) await precise();
+	}
+	async function precise() {
+		if (await preciseReference(plugin, reference)) plugin.events.trigger(REFERENCES_EVENT);
+	}
 
 	const fichePath = plugin.references.ficheFor(reference);
 	const fiche = fichePath ? plugin.app.vault.getAbstractFileByPath(fichePath) : null;
@@ -202,7 +215,17 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 						)}
 					</div>
 				)}
-				{status && <div className="legifrance-ref-sub">{status}</div>}
+				{(status || canPrecise) && (
+					<div className="legifrance-ref-sub">
+						{status}
+						{canPrecise && (
+							<>
+								{status ? " " : ""}
+								<a onClick={() => void precise()}>Préciser ou choisir…</a>
+							</>
+						)}
+					</div>
+				)}
 				{applying > 0 && <ApplyingExcerpts articleKey={reference.key} />}
 				{plugin.settings.debugRefs && (
 					<details className="legifrance-trace">
@@ -244,12 +267,17 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 						<BookOpen size={16} />
 					</button>
 				)}
+				{canPrecise && (
+					<button className="clickable-icon" aria-label="Préciser la référence ou choisir parmi les résultats" onClick={() => void precise()}>
+						<SlidersHorizontal size={16} />
+					</button>
+				)}
 				{!link && !pending && canResolve(reference) && (
 					<button
 						className="clickable-icon"
 						aria-label="Retrouver le document via l'API"
 						disabled={disabled}
-						onClick={onResolve}
+						onClick={() => void retry()}
 					>
 						<Search size={16} />
 					</button>
