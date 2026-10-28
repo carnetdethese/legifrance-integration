@@ -9,6 +9,12 @@ import { CODE_PATTERN, LEGIFRANCE_PAGES, PREAMBLE_1946, officialCodeName } from 
 import { FULL_DATE_PATTERN, MONTH_PATTERN, parseCitedDate, plain } from "./dates";
 import { EU_PATTERN, euArticleUrl, euCelexOf, euLabelOf } from "./eulaw";
 
+/**
+ * Version de l'analyse des notes. À incrémenter quand le parseur change ce qu'il reconnaît : au démarrage, les
+ * notes sont alors relues (en local) pour que leurs références soient celles du nouveau parseur.
+ */
+export const PARSER_VERSION = 2;
+
 export type RefKind = "decision" | "texte" | "article" | "eu" | "identifiant";
 
 /** Juridiction d'une décision. */
@@ -169,10 +175,16 @@ function euActCelex(type: string, a: string, b: string) {
 const dateKey = (date: string) => plain(date.replace(/\b1er\b/, "1")).replace(/\s+/g, " ");
 
 const CC_SUFFIX = "(?:QPC|DC|LOM|LP|L|AN|SEN|ELEC|FNR|PDR|ORGA|AUTO|AR16|I|D)";
+/** Le Conseil constitutionnel sous ses désignations usuelles : « Cons. const. », « Cons. constit. », « C.C. », « CC ». */
+const COURT_CC = "\\bCons\\.\\s*const(?:it)?\\.|\\bC\\.\\s?C\\.|\\bCC\\b|\\b[Cc]onseil [Cc]onstitutionnel";
+// Le numéro (« 2011-210 QPC ») ne commence ni au milieu d'un nombre ni d'une date (« 2001-01-01 L'article » : « 01-01 L » n'est pas
+// un numéro), et la lettre de nature n'est pas le début d'un mot (« L'article », « Dans »).
 const CONSEIL_CONSTITUTIONNEL = new RegExp(
-	`(?:(?:\\bCons\\.\\s*const\\.|\\bConseil constitutionnel|\\bCC\\b)[^\\n;()]{0,40}?,?\\s*|[Dd]écision\\s+)?(?:n\\s?[°º]\\s*)?(?<number>\\d{2,4}-\\d+(?:/\\d+)*\\s+${CC_SUFFIX})\\b(?:\\s+du\\s+\\d{1,2}(?:er)?\\s+\\p{L}+\\s+\\d{4})?`,
+	`(?:(?:${COURT_CC})[^\\n;()]{0,40}?,?\\s*|[Dd]écision\\s+)?(?:n\\s?[°º]\\s*)?(?<number>(?<![\\d/.-])\\d{2,4}-\\d+(?:/\\d+)*\\s+${CC_SUFFIX})(?![\\p{L}\\d'’-])(?:\\s+du\\s+\\d{1,2}(?:er)?\\s+\\p{L}+\\s+\\d{4})?`,
 	"gu"
 );
+/** Décision du Conseil constitutionnel citée par sa seule date : « Cons. constit., 16 juillet 1971 », « C.C., … », « CC, … ». */
+const CC_BY_DATE = new RegExp(`(?:${COURT_CC})\\s*,?\\s*(?:(?:[Dd]écision\\s+)?du\\s+)?(?<date>${FULL_DATE_PATTERN})`, "gu");
 
 const ID_REGEX = new RegExp(`\\b(${Object.keys(ID_PATHS).join("|")})\\d{12}\\b`, "g");
 
@@ -271,6 +283,7 @@ function scan(text: string): Candidate[] {
 		...scanLaws(text),
 		...scanDecisions(text),
 		...scanDecisionsByName(text),
+		...scanCcByDate(text),
 		...scanEcli(text),
 		...scanEuLaw(text),
 		...scanIdentifiers(text),
@@ -407,6 +420,18 @@ function scanDecisionsByName(text: string): Candidate[] {
 		found.push(candidate(match, "decision", label, `${name} ${written}`, { court, name, decided }, { key: namedDecisionKey(court, name, decided) }));
 	}
 	return found;
+}
+
+/**
+ * Décisions du Conseil constitutionnel citées par leur date seule. Plusieurs décisions peuvent porter la même date
+ * (le 16 juillet 1971 : 71-44 DC et 71-45 DC) : la recherche le sait et fait choisir.
+ */
+function scanCcByDate(text: string): Candidate[] {
+	return [...text.matchAll(CC_BY_DATE)].flatMap((match) => {
+		const written = clean(match.groups!.date);
+		const decided = decidedIso(written);
+		return decided ? [candidate(match, "decision", clean(match[0]), `Conseil constitutionnel ${written}`, { court: "cc", decided }, { key: makeKey("decision", { court: "cc", decided }) })] : [];
+	});
 }
 
 /** Identifiants ECLI. */

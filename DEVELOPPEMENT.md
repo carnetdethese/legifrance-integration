@@ -149,6 +149,13 @@ seule date propose tous les textes de ce jour (`findTextCandidates`, lecture dan
 texte cité par son numéro passe par le formulaire. La résolution automatique ne devine jamais entre plusieurs textes
 du même jour.
 
+**Version du parseur** : `PARSER_VERSION` (`parser.ts`) est à incrémenter quand le parseur change ce qu'il reconnaît.
+Au démarrage, `ReferenceIndex.parserChanged` invalide l'analyse de toutes les notes (`notes.mtime = 0`) et `INDEX_TASK`
+les relit, en local ; les références devenues fausses disparaissent (`prune`). Les décisions du Conseil
+constitutionnel citées par leur date seule (« CC, 16 juillet 1971 ») sont des références `court=cc` avec `decided` ;
+plusieurs décisions peuvent partager la date, d'où le choix proposé (`buildCcByDate`). Les fiches citées par un lien
+(`[[fiche]]`) n'ont pas de référence dans le texte : le panneau les liste à part (`linkedFiches`).
+
 **Corriger un lien** : une référence déjà liée peut être corrigée (icône « Corriger le lien » du panneau). Le lien
 choisi est marqué `manual` (colonne `links.manual`, `ResolvedLink.manuel`) : `setLink` refuse de le remplacer par un
 résultat automatique, la veille (`articlesToRefresh`) et `LinkResolver.resolve` l'ignorent. Seuls un nouveau choix

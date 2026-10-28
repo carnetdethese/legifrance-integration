@@ -155,6 +155,14 @@ const check = (name: string, ok: boolean, detail = "") => { if (!ok) { fail++; c
 	index.setLink(art, { url: "https://exemple/b", titre: "B", statut: "ABROGE" });
 	check("autre document : pas de changement signalé", index.changedArticles().every((c) => c.key !== art.key));
 
+	// Version du parseur : un changement invalide l'analyse de toutes les notes.
+	const fresh = new ReferenceIndex(await LegalDatabase.open(undefined, () => undefined));
+	check("parseur : base vide, rien à relire", fresh.parserChanged(2) === false && fresh.parserChanged(2) === false);
+	fresh.db.run("INSERT INTO notes (path, mtime, indexed_at) VALUES ('a.md', 100, 1)");
+	check("parseur : même version, notes à jour", fresh.parserChanged(2) === false && fresh.cached("a.md", 100) !== undefined);
+	check("parseur : nouvelle version, notes à relire", fresh.parserChanged(3) === true && fresh.cached("a.md", 100) === undefined);
+	check("parseur : une seule relecture par version", fresh.parserChanged(3) === false);
+
 	console.log(fail ? `${fail} échec(s)` : "tout passe");
 	process.exit(fail ? 1 : 0);
 })();

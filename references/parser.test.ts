@@ -129,5 +129,26 @@ eq("nom avec « et » conservé", parseReferences("CE, 30 juin 1930, Boyer et Ju
 const phrase = "Voir CE, 8 février 2007, Arcelor, et l'art. 1240 du Code civil.";
 eq("plages : le texte de la plage est la citation", citationSpans(phrase).map((s) => phrase.slice(s.start, s.end)), ["CE, 8 février 2007, Arcelor", "art. 1240 du Code civil"]);
 
+// Conseil constitutionnel cité par sa date : toutes les désignations usuelles donnent la même référence.
+for (const court of ["Cons. constit.", "Cons. const.", "C.C.", "CC", "Conseil constitutionnel"]) {
+	const r = parseReferences(`Voir ${court}, 16 juillet 1971, sur la liberté d'association.`);
+	eq(`CC par la date : ${court}`, r.map((x) => x.data), [{ court: "cc", decided: "1971-07-16" }]);
+}
+eq("CC par la date : clef", parseReferences("CC, 16 juillet 1971")[0].key, "decision|court=cc|decided=1971-07-16");
+eq("CC par la date : mois abrégé", parseReferences("Cons. constit., 16 juill. 1971")[0].data, { court: "cc", decided: "1971-07-16" });
+eq("CC par la date : « décision du »", parseReferences("Conseil constitutionnel, décision du 16 juillet 1971")[0].data, { court: "cc", decided: "1971-07-16" });
+eq("CC avec numéro : une seule référence, par le numéro", parseReferences("Cons. const., 16 juillet 1971, n° 71-44 DC").map((x) => x.data), [{ court: "cc", number: "71-44 DC" }]);
+eq("CC par la date : deux citations", parseReferences("CC, 16 juillet 1971 puis Cons. constit., 23 août 1985").map((x) => x.data.decided), ["1971-07-16", "1985-08-23"]);
+eq("« cc » sans date n'est pas une décision", parseReferences("envoyer en cc le dossier"), []);
+eq("« CC » seul avec une date étrangère", parseReferences("Le CC est applicable. Rendez-vous le 3 mai 2024.").length, 0);
+
+// Une date écrite AAAA-MM-JJ n'est pas un numéro de décision (« 01-01 L » dans « 2001-01-01 L'article… »).
+for (const text of ["Le 2023-07-02 L'article 3 est entré en vigueur.", "du 2001-01-01 L’adoption", "2002-02-15 Loi du jour", "2003-06-02 Dans le cas", "daté du 2023-07-02 D’après"]) {
+	eq(`date ISO non parsée : ${text}`, parseReferences(text), []);
+}
+eq("numéro de décision réel après une date", parseReferences("Le 2010-05-28 Décision n° 2010-1 QPC").map((r) => r.label), ["Décision n° 2010-1 QPC"]);
+eq("numéros réels conservés", parseReferences("Cons. const., n° 2011-210 QPC, et la décision n° 71-44 DC, et 2012-647 DC.").map((r) => r.data.number), ["2011-210 QPC", "71-44 DC", "2012-647 DC"]);
+eq("délégalisation conservée", parseReferences("Décision n° 2005-202 L").map((r) => r.data.number), ["2005-202 L"]);
+
 console.log(fail ? `${fail} échec(s)` : "tout passe");
 process.exit(fail ? 1 : 0);

@@ -195,6 +195,21 @@ export class ReferenceIndex {
 			.map(toRef);
 	}
 
+	/**
+	 * Si les notes ont été analysées par une autre version du parseur (`PARSER_VERSION`), toutes sont à relire :
+	 * leurs références ne sont plus celles que reconnaît le parseur actuel (nouvelles citations, fausses citations
+	 * écartées). La relecture est locale, sans requête.
+	 * @returns `true` si des notes sont à relire
+	 */
+	parserChanged(version: number) {
+		const stored = this.db.get<{ value: string }>("SELECT value FROM meta WHERE key = 'parser_version'")?.value;
+		if (stored === String(version)) return false;
+		this.db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('parser_version', ?)", [String(version)]);
+		if (!this.db.get("SELECT 1 FROM notes LIMIT 1")) return false;
+		this.db.run("UPDATE notes SET mtime = 0");
+		return true;
+	}
+
 	rename(oldPath: string, newPath: string) {
 		this.db.transaction(() => {
 			this.db.run("UPDATE notes SET path = ? WHERE path = ?", [newPath, oldPath]);

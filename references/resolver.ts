@@ -308,10 +308,34 @@ function buildText(ref: LegalRef): Resolution | null {
 	};
 }
 
-/** Décision citée par son numéro (ou, sans numéro, par ses parties). */
+/**
+ * Décision du Conseil constitutionnel citée par sa seule date (« CC, 16 juillet 1971 ») : toutes celles de ce jour.
+ * Plusieurs décisions peuvent porter la même date (71-44 DC et 71-45 DC) : une seule est retenue d'office, sinon
+ * l'utilisateur choisit (`findTextCandidates`).
+ */
+function buildCcByDate(ref: LegalRef): Resolution | null {
+	const cited = parseCitedDate(ref.data.decided ?? "");
+	const day = cited && isoDay(cited);
+	if (!day) return null;
+	const court = COURTS.cc;
+	const decisionsOf = (raw: unknown) =>
+		((raw as SearchResponse).results ?? []).flatMap((result) =>
+			(result.titles ?? []).flatMap((title) => (title.id?.startsWith(court.prefix) ? [{ url: `${BASE_URL}/${court.page}/id/${title.id}`, titre: stripMarks(title.title ?? ref.label) }] : []))
+		);
+	return {
+		queries: [searchQuery(court.fond, [field("ALL", "Conseil constitutionnel")], [{ facette: "DATE_DECISION", dates: { start: day, end: day } }])],
+		read: (raw) => {
+			const found = decisionsOf(raw);
+			return found.length === 1 ? found[0] : null;
+		},
+		candidates: decisionsOf,
+	};
+}
+
+/** Décision citée par son numéro (ou, sans numéro, par ses parties, ou par sa seule date pour le Conseil constitutionnel). */
 function buildDecision(ref: LegalRef, useRgd: boolean): Resolution | null {
 	const { data } = ref;
-	if (!data.number) return buildNamed(ref, useRgd);
+	if (!data.number) return data.name ? buildNamed(ref, useRgd) : data.court === "cc" ? buildCcByDate(ref) : null;
 	const court = COURTS[data.court];
 	if (!court) return null;
 	const values = { number: data.number, bare: data.number.split(" ")[0] };
@@ -367,12 +391,12 @@ function build(ref: LegalRef, useRgd = true): Resolution | null {
 export const canResolve = (ref: LegalRef) => !ref.url && build(ref) !== null;
 
 /**
- * Textes (lois, décrets…) qui conviennent à une référence, sans trancher : tous ceux que la recherche trouve,
+ * Textes (lois, décrets…) ou décisions (Conseil constitutionnel cité par sa date) qui conviennent à une référence, sans trancher : tous ceux que la recherche trouve,
  * sans doublon. Sert à faire choisir quand la date seule désigne plusieurs textes.
  * @throws ApiError si les identifiants sont refusés, le quota dépassé ou le service injoignable.
  */
 export async function findTextCandidates(api: LegifranceApi, ref: LegalRef, lane?: Lane): Promise<{ url: string; titre: string }[]> {
-	const resolution = ref.kind === "texte" ? build(ref, false) : null;
+	const resolution = build(ref, false);
 	if (!resolution?.candidates) return [];
 	const found = new Map<string, { url: string; titre: string }>();
 	for (const query of resolution.queries) {

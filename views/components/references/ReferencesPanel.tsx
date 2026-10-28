@@ -18,7 +18,9 @@ import { isFiche } from "references/fiches";
 import { articleExcerpts, countApplying, statusLabel } from "references/corpus";
 import { openArticleNote } from "references/articleNotes";
 import { preciseReference } from "references/refineText";
-import { decisionsOf } from "references/insights";
+import { LinkedFiche, decisionsOf, linkedFiches } from "references/insights";
+import { legifranceUrl } from "api/urls";
+import { displayDate } from "references/timeline";
 import { ExcerptQuote, Genealogy, RelatedList, SourceBadge } from "views/components/jurisprudence/Shared";
 import { useDatabaseVersion, useNoteReferences, usePlugin } from "views/hooks";
 import LegifrancePlugin from "main";
@@ -58,6 +60,10 @@ export const ReferencesPanel = () => {
 		setBusy(false);
 	}
 
+	// Fiches citées par un lien : elles n'ont pas de citation écrite, donc pas de référence dans le texte.
+	const version = useDatabaseVersion();
+	const fiches = useMemo(() => (file ? linkedFiches(plugin, file) : []), [plugin, file, refs, version]);
+
 	if (!file) {
 		return <p className="legifrance-empty">Ouvrez une note pour en lister les références juridiques.</p>;
 	}
@@ -66,8 +72,13 @@ export const ReferencesPanel = () => {
 		<div className="legifrance-references">
 			<h4>{file.basename}</h4>
 			{isFiche(plugin.app.metadataCache.getFileCache(file)?.frontmatter, plugin.settings) && <FicheInsights file={file} />}
-			{refs.length === 0 && (
+			{refs.length === 0 && fiches.length === 0 && (
 				<p className="legifrance-empty">Aucune référence juridique détectée dans cette note.</p>
+			)}
+			{fiches.length > 0 && (
+				<Section id="linked-fiches" title="Fiches liées" count={fiches.length}>
+					{fiches.map((fiche) => <LinkedFicheItem key={fiche.path} fiche={fiche} />)}
+				</Section>
 			)}
 
 			{plugin.settings.debugRefs && (
@@ -324,5 +335,40 @@ const ApplyingExcerpts = ({ articleKey }: { articleKey: string }) => {
 				</div>
 			))}
 		</details>
+	);
+};
+
+/** Une fiche de décision citée par un lien : son nom, ce qu'elle dit de la décision, et l'accès à la fiche et à Légifrance. */
+const LinkedFicheItem = ({ fiche }: { fiche: LinkedFiche }) => {
+	const plugin = usePlugin();
+	const { values } = fiche;
+	const details = [values.court, displayDate(values.date), values.number && `n° ${values.number}`, values.formation].filter(Boolean).join(" — ");
+	const url = values.url ?? (fiche.id ? legifranceUrl(fiche.id) : undefined);
+	const open = () => {
+		const file = plugin.app.vault.getFileByPath(fiche.path);
+		if (file) void plugin.app.workspace.getLeaf(false).openFile(file);
+	};
+	return (
+		<div className="legifrance-ref">
+			<div className="legifrance-ref-main">
+				<div className="legifrance-ref-title">
+					<a onClick={open}>{values.title ?? fiche.name}</a>
+					<SourceBadge fiche notes={1} />
+				</div>
+				{details && <div className="legifrance-ref-sub">{details}</div>}
+				{values.title && values.title !== fiche.name && <div className="legifrance-ref-sub">{fiche.name}</div>}
+				{!fiche.id && <div className="legifrance-ref-sub">Identifiant Légifrance manquant : la fiche n'est pas reliée aux autres citations.</div>}
+			</div>
+			<div className="legifrance-ref-actions">
+				<button className="clickable-icon" aria-label="Ouvrir la fiche" onClick={open}>
+					<FileText size={16} />
+				</button>
+				{url && (
+					<a className="clickable-icon" aria-label="Ouvrir sur Légifrance" href={url}>
+						<ExternalLink size={16} />
+					</a>
+				)}
+			</div>
+		</div>
 	);
 };

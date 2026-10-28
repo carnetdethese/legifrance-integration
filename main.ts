@@ -26,6 +26,7 @@ import { DatabaseFile } from "references/databaseFile";
 import { FicheEditor, isMarkdown } from "references/ficheEditor";
 import { DEFAULT_GRAPH_SETTINGS, GraphSettings, mergeGraphSettings } from "references/graph";
 import { INDEX_TASK } from "references/indexer";
+import { PARSER_VERSION } from "references/parser";
 import { refreshArticleNotes } from "references/articleNotes";
 import { refreshOnStartup } from "references/startup";
 import { LinkResolver } from "references/linkResolver";
@@ -157,6 +158,11 @@ export default class LegifrancePlugin extends Plugin {
 			const { rewritten, merged } = this.migration;
 			this.migration = undefined;
 			new Notice(`Références mises à jour : ${rewritten} réécrites, ${merged} doublons fusionnés. Les notes sont relues. Une copie de la base est conservée (legifrance.sqlite.avant-migration-v2).`, 12000);
+			void this.tasks.run(INDEX_TASK);
+		}
+		// Parseur amélioré depuis la dernière analyse : les notes sont relues (en local) avec ses nouvelles règles.
+		if (this.references.parserChanged(PARSER_VERSION)) {
+			new Notice("Reconnaissance des références améliorée : les notes sont relues (aucune requête).", 8000);
 			void this.tasks.run(INDEX_TASK);
 		}
 		// Textes déjà enregistrés : vocabulaire et articles visés, en local (décisions proches).

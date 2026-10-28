@@ -2,12 +2,12 @@
  * Analyses de la jurisprudence du coffre qui touchent aux notes : fiches manquantes ou orphelines,
  * écarts avec Légifrance, table des décisions d'une note.
  */
-import { Notice, TFile, normalizePath } from "obsidian";
+import { Notice, TFile, getLinkpath, normalizePath } from "obsidian";
 import { codeJuridiction } from "abstracts/decisions";
 import type LegifrancePlugin from "main";
 import { BIB_FORMATS, BibEntry, BibFilter, BibFormat, decisionEntries, filterDecisions, formatBibliography, isFiltered } from "./bibliography";
 import { articlesByDecision, citedTexts, loadDecisions, statusLabel } from "./corpus";
-import { DecisionValues, FicheDifference, ficheDifferences, ficheId, ficheValues } from "./fiches";
+import { DecisionValues, FicheDifference, ficheDifferences, ficheId, ficheValues, isFiche } from "./fiches";
 import { PlanOptions, coursePlan, planThemes } from "./plan";
 import { DecisionRecord, decisionsTable, ficheFileName, themeCounts } from "./timeline";
 
@@ -256,4 +256,33 @@ export async function writeFicheIds(plugin: LegifrancePlugin, chosen: DecisionRe
 		written.push(path);
 	}
 	return written;
+}
+
+/** Une fiche de décision vers laquelle une note renvoie par un lien (`[[fiche]]`). */
+export interface LinkedFiche {
+	path: string;
+	name: string;
+	/** Identifiant Légifrance de la décision, s'il est connu. */
+	id?: string;
+	/** Ce que la fiche dit de sa décision (propriétés de la correspondance). */
+	values: DecisionValues;
+}
+
+/**
+ * Fiches de décisions que la note cite par un lien interne : une décision peut n'être citée que par le lien de sa
+ * fiche (« Cite [[annamiteParis1956]] »), sans que sa citation soit écrite, donc sans référence détectable dans le
+ * texte. Une fois par fiche, dans l'ordre où la note les cite.
+ */
+export function linkedFiches(plugin: LegifrancePlugin, file: TFile): LinkedFiche[] {
+	const { app, settings } = plugin;
+	const cache = app.metadataCache.getFileCache(file);
+	const found = new Map<string, LinkedFiche>();
+	for (const link of [...(cache?.links ?? []), ...(cache?.frontmatterLinks ?? [])]) {
+		const target = app.metadataCache.getFirstLinkpathDest(getLinkpath(link.link), file.path);
+		if (!target || target.path === file.path || found.has(target.path)) continue;
+		const front = app.metadataCache.getFileCache(target)?.frontmatter;
+		if (!isFiche(front, settings)) continue;
+		found.set(target.path, { path: target.path, name: target.basename, id: ficheId(front, settings), values: ficheValues(front, settings) });
+	}
+	return [...found.values()];
 }

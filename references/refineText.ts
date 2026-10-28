@@ -10,6 +10,7 @@ import { OTHER_CHOICE_KEY, pickCandidate } from "views/CandidateModal";
 import { RefinedText, refineText } from "views/RefineTextModal";
 import { LegalRef } from "./parser";
 import { legifranceIdOf, spokenDate } from "./ids";
+import { enrichDecisions } from "./indexer";
 import { isoOf, refineUnresolved } from "./refine";
 import { field, findTextCandidates, resolveReference, searchQuery, SearchResponse } from "./resolver";
 import type { DecisionCandidate } from "./sources";
@@ -151,8 +152,9 @@ export async function chooseText(plugin: LegifrancePlugin, ref: LegalRef, correc
 		new Notice("Renseignez vos identifiants PISTE dans les réglages du plugin.");
 		return false;
 	}
+	const noun = ref.kind === "decision" ? "décisions" : "textes";
 	const current = plugin.references.linkFor(ref)?.url;
-	const notice = new Notice("Recherche des textes…", 0);
+	const notice = new Notice(`Recherche des ${noun}…`, 0);
 	let found: { url: string; titre: string }[];
 	try {
 		found = await findTextCandidates(plugin.api, ref);
@@ -162,24 +164,32 @@ export async function chooseText(plugin: LegifrancePlugin, ref: LegalRef, correc
 	} finally {
 		notice.hide();
 	}
-	if (found.length === 0) return refineLostText(plugin, ref, correcting);
+	if (found.length === 0) return ref.kind === "decision" ? refineUnresolved(plugin, ref, correcting) : refineLostText(plugin, ref, correcting);
 	// Un seul résultat : retenu d'office, sauf pour corriger un lien (c'est peut-être justement le mauvais).
 	if (found.length === 1 && !correcting) {
-		plugin.references.setLink(ref, found[0], true);
+		await saveChoice(plugin, ref, found[0]);
 		new Notice(`Retrouvé : ${found[0].titre}`, 6000);
 		return true;
 	}
 	const candidates = found.map((f): DecisionCandidate => ({ source: "legifrance", key: f.url, title: f.url === current ? `${f.titre} (lien actuel)` : f.titre, url: f.url }));
 	const chosen = await pickCandidate(plugin.app, candidates, {
-		placeholder: correcting ? `Corriger « ${ref.label} » : choisissez le bon texte (${found.length})` : `${found.length} textes correspondent à « ${ref.label} » : choisissez`,
+		placeholder: correcting ? `Corriger « ${ref.label} » : choisissez la bonne réponse (${found.length})` : `${found.length} ${noun} correspondent à « ${ref.label} » : choisissez`,
 		otherLabel: "Aucun de ceux-là : préciser autrement…",
 	});
 	if (!chosen) return false;
-	if (chosen.key === OTHER_CHOICE_KEY) return refineLostText(plugin, ref, correcting);
+	if (chosen.key === OTHER_CHOICE_KEY) return ref.kind === "decision" ? refineUnresolved(plugin, ref, correcting) : refineLostText(plugin, ref, correcting);
 	const title = found.find((f) => f.url === chosen.url)?.titre ?? chosen.title;
-	plugin.references.setLink(ref, { url: chosen.url, titre: title }, true);
+	await saveChoice(plugin, ref, { url: chosen.url, titre: title });
 	new Notice(chosen.url === current ? "Lien conservé : la recherche automatique ne le remplacera plus." : `Lien enregistré : ${title}`, 6000);
 	return true;
+}
+
+/** Enregistre le lien choisi ; pour une décision, sa fiche (métadonnées, texte) est complétée aussitôt. */
+async function saveChoice(plugin: LegifrancePlugin, ref: LegalRef, link: { url: string; titre: string }) {
+	plugin.references.setLink(ref, link, true);
+	if (ref.kind !== "decision") return;
+	plugin.references.saveDecision(ref.key, { status: "pending" });
+	await enrichDecisions(plugin, () => undefined, { retryUnresolved: true, only: [ref] });
 }
 
 /**
@@ -192,7 +202,8 @@ export function preciseReference(plugin: LegifrancePlugin, ref: LegalRef): Promi
 	const correcting = !!plugin.references.linkFor(ref);
 	switch (ref.kind) {
 		case "decision":
-			return refineUnresolved(plugin, ref, correcting);
+			// Le Conseil constitutionnel cité par sa seule date : toutes les décisions de ce jour sont proposées.
+			return ref.data.court === "cc" && !ref.data.number && !ref.data.name ? chooseText(plugin, ref, correcting) : refineUnresolved(plugin, ref, correcting);
 		case "texte":
 			// Sans lien, un texte cité par son numéro n'a pas de choix à proposer : le formulaire suffit.
 			return ref.data.number && !correcting ? refineLostText(plugin, ref) : chooseText(plugin, ref, correcting);
