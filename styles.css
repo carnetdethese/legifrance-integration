@@ -1553,3 +1553,16 @@
 .legifrance-todo-body .legifrance-card-head {
 	margin-bottom: var(--size-4-2);
 }
+
+/* Actions d'une ligne : chaque icône occupe une case de même taille (vide si l'action manque), pour que les
+   boutons soient alignés d'une ligne à l'autre. */
+.legifrance-row-actions .clickable-icon,
+.legifrance-row-slot {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+}

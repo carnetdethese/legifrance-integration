@@ -109,25 +109,32 @@ export const DecisionRow = ({
 					<button className={`clickable-icon ${showInfo ? "is-active" : ""}`} aria-label="Plus d'informations" onClick={() => setShowInfo(!showInfo)}>
 						<Info size={16} />
 					</button>
-					{record.complete && (
+					{/* Une case par action, vide si elle ne s'applique pas : les icônes restent alignées d'une ligne à l'autre. */}
+					{record.complete ? (
 						<button className="clickable-icon" aria-label="Lire le texte de la décision" onClick={() => void plugin.openStoredDocument(record.id)}>
 							<BookOpen size={16} />
 						</button>
+					) : (
+						<span className="legifrance-row-slot" />
 					)}
 					{withRelated && (
 						<button className={`clickable-icon ${showRelated ? "is-active" : ""}`} aria-label="Décisions proches" onClick={() => setShowRelated(!showRelated)}>
 							<Sparkles size={16} />
 						</button>
 					)}
-					{record.fichePath && (
+					{record.fichePath ? (
 						<button className="clickable-icon" aria-label="Ouvrir la fiche" onClick={() => openNote(record.fichePath!)}>
 							<FileText size={16} />
 						</button>
+					) : (
+						<span className="legifrance-row-slot" />
 					)}
-					{record.url && (
+					{record.url ? (
 						<a className="clickable-icon" aria-label="Ouvrir la décision" href={record.url}>
 							<ExternalLink size={16} />
 						</a>
+					) : (
+						<span className="legifrance-row-slot" />
 					)}
 				</>
 			}

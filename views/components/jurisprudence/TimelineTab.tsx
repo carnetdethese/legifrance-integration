@@ -155,21 +155,30 @@ export const TimelineTab = ({ records }: { records: DecisionRecord[] }) => {
 	};
 
 	/** Case de sélection, ou bouton pour défaire un rapprochement manuel. */
-	const rowExtra = (record: DecisionRecord) => (
-		<>
-			{!selecting && (record.members ?? []).some((id) => manual.has(id)) && (
-				<button className="clickable-icon" aria-label="Défaire le rapprochement manuel" onClick={() => unmerge(record)}>
-					<Unlink size={16} />
-				</button>
-			)}
-			{!selecting && !record.fichePath && RESOLVED_ID.test(record.id) && (
-				<button className="clickable-icon" aria-label="Créer la fiche" onClick={() => void create(record)}>
-					<FilePlus size={16} />
-				</button>
-			)}
-			{selecting && <input type="checkbox" aria-label="Sélectionner" checked={selected.has(record.id)} onChange={() => toggle(record.id)} />}
-		</>
-	);
+	const rowExtra = (record: DecisionRecord) => {
+		const unmergeable = !selecting && (record.members ?? []).some((id) => manual.has(id));
+		const creatable = !selecting && !record.fichePath && RESOLVED_ID.test(record.id);
+		return (
+			<>
+				{/* Une case par action, vide si elle manque : les icônes restent alignées d'une ligne à l'autre. */}
+				{!selecting && (unmergeable ? (
+					<button className="clickable-icon" aria-label="Défaire le rapprochement manuel" onClick={() => unmerge(record)}>
+						<Unlink size={16} />
+					</button>
+				) : (
+					<span className="legifrance-row-slot" />
+				))}
+				{!selecting && (creatable ? (
+					<button className="clickable-icon" aria-label="Créer la fiche" onClick={() => void create(record)}>
+						<FilePlus size={16} />
+					</button>
+				) : (
+					<span className="legifrance-row-slot" />
+				))}
+				{selecting && <input type="checkbox" aria-label="Sélectionner" checked={selected.has(record.id)} onChange={() => toggle(record.id)} />}
+			</>
+		);
+	};
 
 	return (
 		<div style={{ "--legifrance-bar-height": `${barHeight}px` } as CSSProperties}>
