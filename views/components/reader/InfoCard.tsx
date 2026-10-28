@@ -1,11 +1,11 @@
 import { FilePlus, Sparkles } from "lucide-react";
-import { legalDocument } from "abstracts/document";
+import { LegalDocument } from "abstracts/document";
 import { removeTags } from "lib/tools";
 import { templateContext } from "creation/newNote";
 import { usePlugin } from "views/hooks";
 
 interface InfoCardProps {
-	data: legalDocument;
+	data: LegalDocument;
 }
 
 /** Métadonnées du document et actions de création de note. */

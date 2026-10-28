@@ -8,7 +8,7 @@ import { useContext, useEffect, useReducer, useState, useSyncExternalStore } fro
 import { LegalRef } from "references/parser";
 import { PluginContext } from "./context";
 import { HISTORY_EVENT, REFERENCES_EVENT, TASK_EVENT } from "lib/events";
-import { documentDataStorage } from "./viewsData";
+import { DocumentData } from "./viewsData";
 
 export const usePlugin = () => {
 	const plugin = useContext(PluginContext);
@@ -22,7 +22,7 @@ export const usePlugin = () => {
  * Historique des documents consultés, mis à jour dès que le plugin le modifie
  * (ajout, suppression) depuis n'importe quelle vue.
  */
-export const useHistorique = (): documentDataStorage[] => {
+export const useHistorique = (): DocumentData[] => {
 	const plugin = usePlugin();
 	return useSyncExternalStore(
 		(onChange) => {

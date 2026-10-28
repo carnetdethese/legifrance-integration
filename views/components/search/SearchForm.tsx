@@ -1,14 +1,14 @@
 import { Minus, Plus } from "lucide-react";
 import { operateursRecherche, typeRecherche } from "api/constants";
 import { fondDef } from "abstracts/fonds";
-import { MAX_CRITERES, documentSearchFieldsClass } from "abstracts/searchHandler";
+import { MAX_CRITERES, DocumentSearch } from "abstracts/searchHandler";
 import { SettingRow } from "../SettingRow";
 import { DatePicker } from "./DatePicker";
 
 interface SearchFormProps {
-	recherche: documentSearchFieldsClass;
+	recherche: DocumentSearch;
 	/** Reçoit la nouvelle recherche après chaque modification. */
-	onChange: (recherche: documentSearchFieldsClass) => void;
+	onChange: (recherche: DocumentSearch) => void;
 	onSubmit: () => void;
 	/** Recherche avancée : plusieurs critères combinables. */
 	advanced: boolean;
@@ -40,7 +40,7 @@ export const SearchForm = ({ recherche, onChange, onSubmit, advanced }: SearchFo
 							type="text"
 							value={critere.valeur}
 							onChange={(e) =>
-								onChange(recherche.updateValue(0, rank, e.target.value, true) as documentSearchFieldsClass)
+								onChange(recherche.updateValue(0, rank, e.target.value, true) as DocumentSearch)
 							}
 							onKeyDown={(e) => e.key === "Enter" && onSubmit()}
 						/>
@@ -51,7 +51,7 @@ export const SearchForm = ({ recherche, onChange, onSubmit, advanced }: SearchFo
 							aria-label="Type de recherche"
 							value={critere.typeRecherche}
 							onChange={(e) =>
-								onChange(recherche.updateTypeRechercheChamp(0, rank, e.target.value, true) as documentSearchFieldsClass)
+								onChange(recherche.updateTypeRechercheChamp(0, rank, e.target.value, true) as DocumentSearch)
 							}
 						>
 							{Array.from(typeRecherche, ([code, label]) => (
@@ -65,7 +65,7 @@ export const SearchForm = ({ recherche, onChange, onSubmit, advanced }: SearchFo
 							aria-label="Opérateur"
 							value={critere.operateur}
 							onChange={(e) =>
-								onChange(recherche.updateOperateurCritereChamp(0, rank, e.target.value, true) as documentSearchFieldsClass)
+								onChange(recherche.updateOperateurCritereChamp(0, rank, e.target.value, true) as DocumentSearch)
 							}
 						>
 							{Array.from(operateursRecherche, ([code, label]) => (

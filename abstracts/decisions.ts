@@ -1,12 +1,12 @@
 /**
  * Fiche d'une décision de justice trouvée par une recherche : son texte et ses métadonnées sont demandés à
- * l'API (`LegifranceApi.consultDecision`) et reportés sur le `legalDocument`.
+ * l'API (`LegifranceApi.consultDecision`) et reportés sur le `LegalDocument`.
  */
 import type { LegifranceApi } from "api/legifrance";
 import { removeTags } from "lib/tools";
 import { htmlToMarkdown } from "obsidian";
-import { legalDocument, resumeDocument } from "./document";
-import { reponseDocument } from "./searches";
+import { LegalDocument, DocumentSummary } from "./document";
+import { DocumentResponse } from "./searches";
 
 /** Nom de juridiction d'après le code de l'API (certains codes ne sont pas présentables tels quels). */
 export const codeJuridiction = new Map<string, string>([
@@ -24,8 +24,8 @@ export const codeJuridiction = new Map<string, string>([
  *
  * @returns le document complété, ou `undefined` si la réponse ne contient pas de texte.
  */
-export async function getDecisionInfo(document: legalDocument, search: string, api: LegifranceApi): Promise<legalDocument | undefined> {
-	const response = (await api.consultDecision(document.id, { searchedString: search, cnil: document.origin === "CNIL" })) as reponseDocument;
+export async function getDecisionInfo(document: LegalDocument, search: string, api: LegifranceApi): Promise<LegalDocument | undefined> {
+	const response = (await api.consultDecision(document.id, { searchedString: search, cnil: document.origin === "CNIL" })) as DocumentResponse;
 
 	document.titre = removeTags(document.titre);
 	const text = response.text;
@@ -44,7 +44,7 @@ export async function getDecisionInfo(document: legalDocument, search: string, a
 	if (text.formation != null) document.formation = text.formation;
 
 	if (document.sommaires !== undefined) {
-		for (const entry of text.sommaire ?? ([] as resumeDocument[])) {
+		for (const entry of text.sommaire ?? ([] as DocumentSummary[])) {
 			if (entry.resumePrincipal) document.sommaires.push({ resume: entry.resumePrincipal });
 		}
 	}

@@ -1,6 +1,6 @@
 import * as Handlebars from "handlebars";
 import { App, Notice, normalizePath } from "obsidian";
-import { legalDocument } from "abstracts/document";
+import { LegalDocument } from "abstracts/document";
 import { removeTags } from "lib/tools";
 import { solutionFromTitle } from "references/themes";
 import { LegifranceSettings } from "settings/settings";
@@ -9,7 +9,7 @@ import { LegifranceSettings } from "settings/settings";
  * Dossier de destination : `dossierBase`, suivi de la juridiction pour la
  * jurisprudence.
  */
-function targetFolder(data: legalDocument, dossierBase: string) {
+function targetFolder(data: LegalDocument, dossierBase: string) {
 	return normalizePath(
 		data.type == "jurisprudence" && data.juridiction
 			? `${dossierBase}/${data.juridiction}`
@@ -22,7 +22,7 @@ function targetFolder(data: legalDocument, dossierBase: string) {
  * solution (champ `abstract` des décisions issues d'une recherche, ou fin du titre d'une décision du
  * Conseil constitutionnel) ; `{{court}}` et `{{number}}` sont ceux de `juridiction` et `numero`.
  */
-export function templateContext(data: legalDocument) {
+export function templateContext(data: LegalDocument) {
 	return {
 		...data,
 		solution: data.solution ?? data.abstract ?? solutionFromTitle(removeTags(data.titre)),
@@ -33,7 +33,7 @@ export function templateContext(data: legalDocument) {
 }
 
 /** Compile un gabarit Handlebars (sans échappement HTML) et l'applique à `data`. */
-function render(template: string, data: legalDocument) {
+function render(template: string, data: LegalDocument) {
 	return Handlebars.compile(template, { noEscape: true })(templateContext(data));
 }
 
@@ -47,7 +47,7 @@ function render(template: string, data: legalDocument) {
 export async function createNote(
 	app: App,
 	settings: LegifranceSettings,
-	data: legalDocument
+	data: LegalDocument
 ) {
 	const folder = targetFolder(data, settings.dossierBase);
 	const title =

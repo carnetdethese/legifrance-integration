@@ -8,7 +8,7 @@ import { removeTags } from "lib/tools";
 import { storedLegalDocument } from "references/stored";
 import { ReaderView } from "./components/reader/ReaderView";
 import { ReactItemView } from "./ReactItemView";
-import { documentDataStorage } from "./viewsData";
+import { DocumentData } from "./viewsData";
 
 export const TEXT_READER_VIEW = "text-reader-view";
 
@@ -26,7 +26,7 @@ interface ReaderState extends Record<string, unknown> {
  * donc les onglets ouverts au redémarrage.
  */
 export class TextReaderView extends ReactItemView {
-	document?: documentDataStorage;
+	document?: DocumentData;
 	private storedId?: string;
 
 	getViewType() {

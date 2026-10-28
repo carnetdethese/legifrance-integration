@@ -1,6 +1,6 @@
 import { Plus, Rocket, X } from "lucide-react";
 import { useReducer, useState } from "react";
-import { legalDocument } from "abstracts/document";
+import { LegalDocument } from "abstracts/document";
 import { removeTags } from "lib/tools";
 import { useHistorique, usePlugin } from "views/hooks";
 import { SettingRow } from "../SettingRow";
@@ -29,7 +29,7 @@ export const NoteTaking = () => {
 	const { data } = doc;
 
 	/** Modifie le document de l'historique, l'enregistre et rafraîchit l'affichage. */
-	function edit(mutate: (data: legalDocument) => void) {
+	function edit(mutate: (data: LegalDocument) => void) {
 		mutate(data);
 		plugin.saveSettings();
 		refresh();

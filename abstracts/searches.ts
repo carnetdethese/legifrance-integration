@@ -1,28 +1,28 @@
-import { legalDocument, statuteArticles } from "abstracts/document";
+import { LegalDocument, StatuteArticle } from "abstracts/document";
 import { isCaselawOrigin } from "./fonds";
-import { dateFormat } from "lib/dateHandler";
+import { DateFormat } from "lib/dateHandler";
 import { legifranceUrl } from "api/urls";
 
 /**
  * Les requêtes `POST /search` du formulaire de recherche et leurs réponses. Le corps de la requête est construit par
- * `documentSearchFieldsClass` (`searchHandler.ts`) d'après le fond choisi (`fonds.ts`) ; la réponse est mise en forme
- * en `legalDocument` par `resultatsRechercheClass`.
+ * `DocumentSearch` (`searchHandler.ts`) d'après le fond choisi (`fonds.ts`) ; la réponse est mise en forme
+ * en `LegalDocument` par `SearchResults`.
  */
 
 /** Corps d'une recherche : le fond et la recherche proprement dite. */
-export interface rechercheAvStructure {
+export interface SearchRequest {
 	/** Code du fond (`CETAT`, `JORF`, `LODA_DATE`…). */
 	fond: string;
-	recherche: champsRechercheAvancees | requeteDateUnique;
+	recherche: AdvancedSearch | SingleDateSearch;
 }
 
 /** Requête d'un fond « à une date » : le filtre porte une date de version unique. */
-export type requeteDateUnique = Omit<champsRechercheAvancees, "filtres"> & {
+export type SingleDateSearch = Omit<AdvancedSearch, "filtres"> & {
 	filtres: { facette: string; singleDate: number }[];
 };
 
 /** Recherche : champs interrogés, filtres de date, tri et pagination. */
-export interface champsRechercheAvancees {
+export interface AdvancedSearch {
 	/** Opérateur entre les champs (`ET` / `OU`). */
 	operateur?: string;
 	pageSize: number;
@@ -33,7 +33,7 @@ export interface champsRechercheAvancees {
 	/** Un champ de l'API (titre, texte, numéro…) et les critères qui s'y appliquent. */
 	champs: {
 		operateur?: string;
-		criteres: Criteres[];
+		criteres: SearchCriterion[];
 		/** Champ interrogé (`ALL`, `TITLE`, `NUM_ARTICLE`…). */
 		typeChamp: string;
 	}[];
@@ -41,17 +41,17 @@ export interface champsRechercheAvancees {
 	filtres: {
 		facette: string;
 		dates: {
-			start: dateFormat | string;
-			end: dateFormat | string;
+			start: DateFormat | string;
+			end: DateFormat | string;
 		};
 	}[];
 }
 
 /** Un critère de recherche dans un champ : un mot ou une expression, et la façon de la chercher. */
-export interface Criteres {
+export interface SearchCriterion {
 	/** Opérateur avec le critère voisin (`ET` / `OU`). */
 	operateur: string;
-	criteres?: Criteres;
+	criteres?: SearchCriterion;
 	valeur: string;
 	/** Écart maximal entre les mots (recherche par proximité). */
 	proximite: number;
@@ -67,7 +67,7 @@ interface Title {
 }
 
 /** Réponse de `POST /search`. */
-export interface resultatsRecherche {
+export interface SearchResultsResponse {
 	/** Un résultat regroupe des documents (`titles`) qui partagent le même extrait. */
 	results: {
 		titles?: Title[];
@@ -76,29 +76,29 @@ export interface resultatsRecherche {
 		text: string;
 		origin: string;
 		date?: string;
-		sections?: sectionsResultats[];
+		sections?: ResultSection[];
 	}[];
 	totalResultNumber: number;
 	fond?: string;
 }
 
 /** Réponse d'une consultation : le document est sous `text` (textes, décisions) ou `circulaire`. */
-export interface reponseDocument {
-	text?: legalDocument;
-	circulaire?: legalDocument;
+export interface DocumentResponse {
+	text?: LegalDocument;
+	circulaire?: LegalDocument;
 }
 
 // Les deux interfaces qui suivent servent à récupérer les différents extraits dans lesquels se trouvent les résultats à la recherche (dans le cas d'un code, texte législatif, etc.). Le premier contient le deuxième
-export interface sectionsResultats {
-	articles?: statuteArticles[];
+export interface ResultSection {
+	articles?: StatuteArticle[];
 	dateVersion: string;
 	id: string;
 	title: string;
 	legalStatus: string;
-	extracts: extractsResultats[];
+	extracts: ResultExtract[];
 }
 
-export interface extractsResultats {
+export interface ResultExtract {
 	id: string;
 	legalStatus: string;
 	num: number;
@@ -107,14 +107,14 @@ export interface extractsResultats {
 }
 
 /** Transforme la réponse brute de `/search` en liste de documents affichables. */
-export class resultatsRechercheClass {
-	resultats: resultatsRecherche;
+export class SearchResults {
+	resultats: SearchResultsResponse;
 
-	constructor(data: resultatsRecherche) {
+	constructor(data: SearchResultsResponse) {
 		this.resultats = data;
 	}
 
-	listeResultats(): legalDocument[] {
+	listeResultats(): LegalDocument[] {
 		if (!this.resultats?.results) {
 			console.error("Réponse invalide ou manquante à la requête.");
 			return [];
@@ -128,7 +128,7 @@ export class resultatsRechercheClass {
 
 			// Un résultat peut regrouper plusieurs documents (`titles`) partageant le même extrait.
 			return (Array.isArray(result.titles) ? result.titles : []).map(
-				(entree): legalDocument => ({
+				(entree): LegalDocument => ({
 					fond: origine,
 					type,
 					titre: entree.title,

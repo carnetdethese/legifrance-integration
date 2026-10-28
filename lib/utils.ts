@@ -1,9 +1,9 @@
-import { dateFormat } from "./dateHandler";
+import { DateFormat } from "./dateHandler";
 
 /** Vrai si `start` est antérieure ou égale à `end` (dates au format AAAA-MM-JJ). */
 export function startDateBeforeEndDate(
-	start: dateFormat | string,
-	end: dateFormat | string
+	start: DateFormat | string,
+	end: DateFormat | string
 ) {
 	return new Date(start.toString()) <= new Date(end.toString());
 }

@@ -5,16 +5,16 @@
  */
 import { Notice } from "obsidian";
 import { useEffect, useState } from "react";
-import { getDocumentInfo, legalDocument } from "abstracts/document";
-import { documentSearchFieldsClass } from "abstracts/searchHandler";
-import { resultatsRechercheClass } from "abstracts/searches";
+import { getDocumentInfo, LegalDocument } from "abstracts/document";
+import { DocumentSearch } from "abstracts/searchHandler";
+import { SearchResults } from "abstracts/searches";
 import { documentRow, storedLegalDocument } from "references/stored";
 import { usePlugin } from "views/hooks";
 import { ResultCard } from "./ResultCard";
 import { ResultsNav } from "./ResultsNav";
 
 interface ResultsViewProps {
-	searchHandler: documentSearchFieldsClass;
+	searchHandler: DocumentSearch;
 }
 
 type Status = "loading" | "done" | "error";
@@ -22,7 +22,7 @@ type Status = "loading" | "done" | "error";
 /** Résultats d'une recherche : requête, pagination et ouverture des documents. */
 export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 	const plugin = usePlugin();
-	const [results, setResults] = useState<legalDocument[]>([]);
+	const [results, setResults] = useState<LegalDocument[]>([]);
 	const [totalResults, setTotalResults] = useState(0);
 	const [status, setStatus] = useState<Status>("loading");
 
@@ -40,7 +40,7 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		try {
 			const data = await searchHandler.search();
 			setTotalResults(data.totalResultNumber);
-			setResults(new resultatsRechercheClass(data).listeResultats());
+			setResults(new SearchResults(data).listeResultats());
 			setStatus("done");
 		} catch (error) {
 			console.error("Erreur lors de la recherche :", error);
@@ -59,7 +59,7 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		fetchResults();
 	}
 
-	async function openDocument(selected: legalDocument) {
+	async function openDocument(selected: LegalDocument) {
 		try {
 			// La base d'abord : un document déjà connu (cité dans le coffre, ou consulté avant) n'est pas redemandé à l'API.
 			const stored = storedLegalDocument(plugin, selected.id);

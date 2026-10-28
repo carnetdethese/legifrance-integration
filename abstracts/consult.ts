@@ -9,7 +9,7 @@ import { ApiError } from "api/client";
 import type { LegifranceApi } from "api/legifrance";
 import { idPrefix } from "api/urls";
 import { removeTags } from "lib/tools";
-import { legalDocument } from "./document";
+import { LegalDocument } from "./document";
 
 /** Une route de consultation et le corps de sa requête. */
 interface Route {
@@ -169,7 +169,7 @@ export function readConsultation(response: Json): Consultation {
  *
  * @throws Error si aucune route ne donne le document.
  */
-export async function consultDocument(document: legalDocument, search: string, api: LegifranceApi): Promise<legalDocument> {
+export async function consultDocument(document: LegalDocument, search: string, api: LegifranceApi): Promise<LegalDocument> {
 	let failure: unknown;
 	for (const route of routesFor(document.id, search)) {
 		const attempts = "searchedString" in route.params ? [route.params, { ...route.params, searchedString: undefined }] : [route.params];
@@ -188,7 +188,7 @@ export async function consultDocument(document: legalDocument, search: string, a
 }
 
 /** Reporte une consultation sur la fiche du document. */
-function applyConsultation(document: legalDocument, consultation: Consultation) {
+function applyConsultation(document: LegalDocument, consultation: Consultation) {
 	if (consultation.title) document.titre = removeTags(consultation.title);
 	if (consultation.date) {
 		document.date = consultation.date;

@@ -34,7 +34,7 @@ export class LegifranceApi {
 		this.client.updateConfig(settings);
 	}
 
-	/** Recherche avancée dans un fond (`POST /search`). `request` est le corps d'une recherche : celui du formulaire (`documentSearchFieldsClass.toObject()`) ou d'une recherche de référence (`searchQuery` dans `resolver.ts`). */
+	/** Recherche avancée dans un fond (`POST /search`). `request` est le corps d'une recherche : celui du formulaire (`DocumentSearch.toObject()`) ou d'une recherche de référence (`searchQuery` dans `resolver.ts`). */
 	search<T = object>(request: object, lane?: Lane) {
 		return this.client.fetch<T>({ path: "/search", params: request, lane });
 	}

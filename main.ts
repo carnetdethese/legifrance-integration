@@ -15,8 +15,8 @@
  */
 import { Events, Notice, Plugin, TFile, debounce } from "obsidian";
 import { LegifranceApi } from "api/legifrance";
-import { legalDocument } from "abstracts/document";
-import { documentSearchFieldsClass } from "abstracts/searchHandler";
+import { LegalDocument } from "abstracts/document";
+import { DocumentSearch } from "abstracts/searchHandler";
 import { registerCommands } from "commands";
 import { createNote } from "creation/newNote";
 import { HISTORY_EVENT, REFERENCES_EVENT } from "lib/events";
@@ -39,12 +39,12 @@ import { REFERENCES_VIEW, ReferencesView } from "views/ReferencesView";
 import { RESEARCH_TEXT_VIEW, ResearchTextView } from "views/ResearchTextView";
 import { SEARCH_RESULT_VIEW, SearchResultView } from "views/SearchResultView";
 import { TEXT_READER_VIEW, TextReaderView } from "views/TextReaderView";
-import { documentDataStorage } from "views/viewsData";
+import { DocumentData } from "views/viewsData";
 
 /** Contenu de `data.json`. */
 interface PluginData {
 	/** Historique des documents consultés. */
-	data: documentDataStorage[];
+	data: DocumentData[];
 	settings: LegifranceSettings;
 	/** Réglages du graphe des citations (filtres, groupes, affichage, forces). */
 	graph?: Partial<GraphSettings>;
@@ -60,7 +60,7 @@ export default class LegifrancePlugin extends Plugin {
 	/** Événements internes : les vues React s'y abonnent par les hooks de `views/hooks.tsx` (voir `lib/events.ts`). */
 	readonly events = new Events();
 	/** Documents consultés. Toujours remplacé, jamais muté, pour le rendu React. */
-	historiqueDocuments: documentDataStorage[] = [];
+	historiqueDocuments: DocumentData[] = [];
 	/** Réglages du graphe des citations, conservés d'une ouverture à l'autre. Toujours remplacés, jamais mutés. */
 	graphSettings: GraphSettings = DEFAULT_GRAPH_SETTINGS;
 	/** Références juridiques détectées dans les notes du coffre, dans la base SQLite (voir `references/`). */
@@ -203,7 +203,7 @@ export default class LegifrancePlugin extends Plugin {
 	 * Ajoute un document à l'historique s'il n'y figure pas déjà.
 	 * @returns l'entrée d'historique correspondante.
 	 */
-	async addToHistory(data: legalDocument) {
+	async addToHistory(data: LegalDocument) {
 		const existing = this.historiqueDocuments.find((e) => e.data.id === data.id);
 		if (existing) return existing;
 
@@ -290,7 +290,7 @@ export default class LegifrancePlugin extends Plugin {
 	}
 
 	/** Ouvre le document dans un onglet de lecture, en réutilisant celui déjà ouvert. */
-	async openDocument(doc: documentDataStorage) {
+	async openDocument(doc: DocumentData) {
 		const { workspace } = this.app;
 		const leaf =
 			this.getReaderLeaves(doc.data.id)[0] ?? workspace.getLeaf("tab");
@@ -332,7 +332,7 @@ export default class LegifrancePlugin extends Plugin {
 	}
 
 	/** Affiche les résultats d'une recherche dans l'onglet de résultats. */
-	async activateResultsView(search: documentSearchFieldsClass) {
+	async activateResultsView(search: DocumentSearch) {
 		const { workspace } = this.app;
 		const leaf =
 			workspace.getLeavesOfType(SEARCH_RESULT_VIEW)[0] ?? workspace.getLeaf("tab");
@@ -343,7 +343,7 @@ export default class LegifrancePlugin extends Plugin {
 	}
 
 	/** Crée la note d'un document de l'historique à partir du modèle des réglages. */
-	async createNoteFor(data: legalDocument) {
+	async createNoteFor(data: LegalDocument) {
 		try {
 			await createNote(this.app, this.settings, data);
 		} catch (error) {

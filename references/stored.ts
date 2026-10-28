@@ -1,8 +1,8 @@
 /**
  * Documents (décisions, articles, textes) que la base contient déjà, sous la forme que lit le lecteur
- * de l'ancienne partie du plugin (`legalDocument`) : la recherche et la base se rejoignent ici.
+ * de l'ancienne partie du plugin (`LegalDocument`) : la recherche et la base se rejoignent ici.
  */
-import type { legalDocument } from "abstracts/document";
+import type { LegalDocument } from "abstracts/document";
 import { legifranceUrl } from "api/urls";
 import type LegifrancePlugin from "main";
 import { COURT_NAMES } from "./fiches";
@@ -24,7 +24,7 @@ function originOf(id: string) {
 const urlOf = (id: string) => (id.startsWith("http") ? id : legifranceUrl(id));
 
 /** Fiche d'un document consulté, au format de la table `documents`. */
-export function documentRow(doc: legalDocument): Omit<StoredDocument, "fetched_at"> {
+export function documentRow(doc: LegalDocument): Omit<StoredDocument, "fetched_at"> {
 	return {
 		id: doc.id,
 		origin: doc.origin ?? null,
@@ -40,7 +40,7 @@ export function documentRow(doc: legalDocument): Omit<StoredDocument, "fetched_a
 	};
 }
 
-function fromRow(id: string, row: StoredDocument): legalDocument {
+function fromRow(id: string, row: StoredDocument): LegalDocument {
 	return {
 		fond: row.origin ?? originOf(id),
 		origin: row.origin ?? originOf(id),
@@ -73,7 +73,7 @@ const markdownToHtml = (markdown: string) =>
  * (identifiant Légifrance, ou adresse pour ArianeWeb et la Revue générale du droit), document déjà
  * consulté par la recherche, article ou texte retrouvé pour une citation.
  */
-export function storedLegalDocument(plugin: LegifrancePlugin, id: string): legalDocument | undefined {
+export function storedLegalDocument(plugin: LegifrancePlugin, id: string): LegalDocument | undefined {
 	const index = plugin.references;
 
 	const decision = index.completeDecision(id);

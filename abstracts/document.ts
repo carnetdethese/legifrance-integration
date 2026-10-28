@@ -1,21 +1,21 @@
 /**
- * Le document manipulé par le plugin (`legalDocument`) et les types de la réponse de l'API qui le composent.
+ * Le document manipulé par le plugin (`LegalDocument`) et les types de la réponse de l'API qui le composent.
  * `getDocumentInfo` complète un document trouvé par une recherche : décisions de justice (`decisions.ts`) ou tous
  * les autres fonds (`consult.ts`).
  */
 import type { LegifranceApi } from "api/legifrance";
-import { sectionsResultats } from "./searches";
+import { ResultSection } from "./searches";
 import { getDecisionInfo } from "./decisions";
 import { consultDocument } from "./consult";
 import { isCaselawOrigin } from "./fonds";
 
 /**
  * Un document de l'API Légifrance (décision, texte, article, convention…), tel que le plugin le manipule : né d'un
- * résultat de recherche (`resultatsRechercheClass.listeResultats`), complété par la consultation
+ * résultat de recherche (`SearchResults.listeResultats`), complété par la consultation
  * (`getDocumentInfo`), conservé dans l'historique (`data.json`) et offert aux modèles de notes (Handlebars :
  * tout champ ci-dessous est une variable `{{champ}}`, voir `creation/newNote.ts`).
  */
-export interface legalDocument {
+export interface LegalDocument {
 	// --- Identité, d'après le résultat de recherche ---
 	/** Identifiant Légifrance (`JURITEXT…`, `LEGITEXT…`, `KALITEXT…` ; sans préfixe pour une circulaire). */
 	id: string;
@@ -40,7 +40,7 @@ export interface legalDocument {
 	/** Lien vers le site du Conseil constitutionnel (décisions du Conseil seulement). */
 	urlCC?: string;
 	/** Extraits par section, pour les codes et textes (`sections` du résultat de recherche). */
-	sections?: sectionsResultats[];
+	sections?: ResultSection[];
 
 	// --- Décision de justice, après consultation ---
 	/** Numéro de la décision (pourvoi, ou « 2018-765 DC »). */
@@ -62,7 +62,7 @@ export interface legalDocument {
 	/** Visas d'un texte (HTML). */
 	visa?: string;
 	/** Articles d'un texte, dans la réponse de l'API. */
-	articles?: statuteArticles[];
+	articles?: StatuteArticle[];
 	/** Pièce jointe (circulaire, accord d'entreprise) dont le texte est lu côté API. */
 	attachment?: Attachment;
 
@@ -73,7 +73,7 @@ export interface legalDocument {
 	jorfText?: string;
 	num?: string;
 	/** Résumés de la décision dans la réponse de l'API (avant mise en forme dans `sommaires`). */
-	sommaire?: resumeDocument[];
+	sommaire?: DocumentSummary[];
 
 	// --- Saisis par l'utilisateur dans l'éditeur de note (`NoteTaking`) ---
 	titreNote: string;
@@ -82,17 +82,17 @@ export interface legalDocument {
 	motsCles?: string[];
 	motsClesLibres?: string;
 	/** Champs personnalisés du modèle de note. */
-	notes?: noteChampsPersonnalises[];
+	notes?: NoteCustomFields[];
 }
 
 /** Champ personnalisé de l'éditeur de note : son titre et sa valeur. */
-export interface noteChampsPersonnalises {
+export interface NoteCustomFields {
 	titreChamp: string;
 	valeurChamp: string;
 }
 
 /** Entrée du sommaire d'une décision dans la réponse de l'API. */
-export interface resumeDocument {
+export interface DocumentSummary {
 	resumePrincipal: string;
 }
 
@@ -115,24 +115,24 @@ export interface Attachment {
 }
 
 /** Article d'un texte, dans l'arbre de sections de l'API. */
-export interface statuteArticles {
+export interface StatuteArticle {
 	content: string;
 	num: number | string;
 	cid: string;
 }
 
 /** Section d'un texte (titre, articles, sous-sections), dans la réponse de l'API. */
-export interface statuteSections {
+export interface StatuteSection {
 	title: string;
-	articles: statuteArticles[];
-	sections?: statuteSections[];
+	articles: StatuteArticle[];
+	sections?: StatuteSection[];
 }
 
 /**
  * Complète la fiche d'un document trouvé par une recherche (texte, métadonnées) : décisions de
  * justice par `getDecisionInfo`, tous les autres fonds par `consultDocument`.
  */
-export async function getDocumentInfo(document: legalDocument, valeurRecherche: string, api: LegifranceApi) {
+export async function getDocumentInfo(document: LegalDocument, valeurRecherche: string, api: LegifranceApi) {
 	if (isCaselawOrigin(document.origin)) return getDecisionInfo(document, valeurRecherche, api);
 	return consultDocument(document, valeurRecherche, api);
 }

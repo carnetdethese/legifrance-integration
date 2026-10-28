@@ -1,9 +1,9 @@
 import parse from "html-react-parser";
-import { legalDocument } from "abstracts/document";
+import { LegalDocument } from "abstracts/document";
 import { InfoCard } from "./InfoCard";
 
 interface ReaderViewProps {
-	data: legalDocument;
+	data: LegalDocument;
 }
 
 /** Fiche d'information puis texte intégral d'un document. */

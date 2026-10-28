@@ -1,12 +1,12 @@
 import parse from "html-react-parser";
-import { legalDocument } from "abstracts/document";
-import { extractsResultats } from "abstracts/searches";
+import { LegalDocument } from "abstracts/document";
+import { ResultExtract } from "abstracts/searches";
 import { legifranceUrl } from "api/urls";
 import { removeTags } from "lib/tools";
 
 interface ResultCardProps {
-	result: legalDocument;
-	onOpen: (result: legalDocument) => void;
+	result: LegalDocument;
+	onOpen: (result: LegalDocument) => void;
 }
 
 /** Un résultat de recherche : titre cliquable, extrait et articles trouvés. */
@@ -30,7 +30,7 @@ export const ResultCard = ({ result, onOpen }: ResultCardProps) => (
 );
 
 /** Document que désigne un extrait (article d'un code ou d'un texte) : on l'ouvre comme un résultat à part. */
-const documentOfExtract = (result: legalDocument, extract: extractsResultats): legalDocument => ({
+const documentOfExtract = (result: LegalDocument, extract: ResultExtract): LegalDocument => ({
 	...result,
 	id: extract.id,
 	titre: `${removeTags(result.titre)} — article ${extract.num ?? ""}`.trim(),
@@ -40,7 +40,7 @@ const documentOfExtract = (result: legalDocument, extract: extractsResultats): l
 });
 
 /** Articles (avec extrait surligné) correspondant à la recherche dans un texte ; un clic ouvre l'article. */
-const SectionsExtraits = ({ result, onOpen }: { result: legalDocument; onOpen: (doc: legalDocument) => void }) => (
+const SectionsExtraits = ({ result, onOpen }: { result: LegalDocument; onOpen: (doc: LegalDocument) => void }) => (
 	<>
 		{(result.sections ?? []).flatMap((section) =>
 			section.extracts

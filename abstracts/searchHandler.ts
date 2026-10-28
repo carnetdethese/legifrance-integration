@@ -1,10 +1,10 @@
 import * as constants from "api/constants";
-import { dateFormat } from "lib/dateHandler";
+import { DateFormat } from "lib/dateHandler";
 import { getTodaysDate, startDateBeforeEndDate } from "lib/utils";
 import LegifrancePlugin from "main";
 import { Notice } from "obsidian";
 import { FONDS, dateFacetOf, fondDef } from "./fonds";
-import { champsRechercheAvancees, resultatsRecherche } from "./searches";
+import { AdvancedSearch, SearchResultsResponse } from "./searches";
 
 /** Nombre maximal de critères par champ (limite côté interface comme côté recherche). */
 export const MAX_CRITERES = 4;
@@ -15,8 +15,8 @@ export const MAX_CRITERES = 4;
  * Les méthodes avec `returnValue = true` renvoient une nouvelle instance
  * (`newObject`) afin que React détecte le changement d'état.
  */
-export class documentSearchFieldsClass {
-	recherche: champsRechercheAvancees; // Initialise l'objet qui contiendra les critères de recherche
+export class DocumentSearch {
+	recherche: AdvancedSearch; // Initialise l'objet qui contiendra les critères de recherche
 	fond: string; // Définit le fond dans lequel sera effectué la recherche
 	criteresTri: Record<string, string> = {}; // Contient les critères de tri en fonction du fond - voir la documentation de l'API.
 
@@ -210,7 +210,7 @@ export class documentSearchFieldsClass {
 	/** Filtre de date vierge du fond (période, ou date de version unique). */
 	updateDate() {
 		this.recherche.filtres[0] = {
-			dates: { start: new dateFormat(), end: new dateFormat() },
+			dates: { start: new DateFormat(), end: new DateFormat() },
 			facette: dateFacetOf(fondDef(this.fond), this.recherche.sort) || "DATE_PUBLICATION",
 		};
 	}
@@ -238,7 +238,7 @@ export class documentSearchFieldsClass {
 		const { dates } = this.recherche.filtres[0];
 		if (!dates.end.toString()) dates.end = getTodaysDate();
 		if (!dates.start.toString())
-			dates.start = new dateFormat("1800", "1", "1").toString();
+			dates.start = new DateFormat("1800", "1", "1").toString();
 
 		if (!startDateBeforeEndDate(dates.start, dates.end)) {
 			new Notice(
@@ -255,13 +255,13 @@ export class documentSearchFieldsClass {
 	}
 
 	async search() {
-		return LegifrancePlugin.instance.api.search<resultatsRecherche>(
+		return LegifrancePlugin.instance.api.search<SearchResultsResponse>(
 			this.toObject()
 		);
 	}
 
 	newObject() {
-		const newSearch = new documentSearchFieldsClass();
+		const newSearch = new DocumentSearch();
 		newSearch.recherche = { ...this.recherche };
 		newSearch.criteresTri = { ...this.criteresTri };
 		newSearch.fond = this.fond;

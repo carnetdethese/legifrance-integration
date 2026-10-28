@@ -1,6 +1,6 @@
 import { Notice } from "obsidian";
 import { useState } from "react";
-import { documentSearchFieldsClass } from "abstracts/searchHandler";
+import { DocumentSearch } from "abstracts/searchHandler";
 import { usePlugin } from "views/hooks";
 import { ChampFond } from "./ChampFond";
 import { HistoriqueView } from "./HistoriqueView";
@@ -9,7 +9,7 @@ import { SearchForm } from "./SearchForm";
 /** Panneau de recherche : mode simple ou avancé, lancement, historique. */
 export const ResearchView = () => {
 	const plugin = usePlugin();
-	const [recherche, setRecherche] = useState(() => new documentSearchFieldsClass());
+	const [recherche, setRecherche] = useState(() => new DocumentSearch());
 	const [advanced, setAdvanced] = useState(false);
 
 	/** Le mode simple n'affiche qu'un critère : on écarte les autres pour qu'ils ne faussent pas la recherche. */

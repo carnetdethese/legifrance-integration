@@ -1,7 +1,7 @@
 /** Date en trois parties (année, mois, jour) telle que l'API de recherche la demande et que le sélecteur de date la saisit. */
 import { dateJour, dateMois, dateAnnee } from "api/constants";
 
-export class dateFormat {
+export class DateFormat {
     annee:string;
     mois:string;
     jour:string;
