@@ -73,7 +73,7 @@ function initialValues(plugin: LegifrancePlugin, ref: LegalRef): Partial<Refined
  * Demande à l'utilisateur ce qu'il sait du texte ou de l'article, le cherche, et enregistre le lien trouvé.
  * @returns `true` si un lien a été enregistré
  */
-export async function refineLostText(plugin: LegifrancePlugin, ref: LegalRef): Promise<boolean> {
+export async function refineLostText(plugin: LegifrancePlugin, ref: LegalRef, correcting = false): Promise<boolean> {
 	const article = ref.kind === "article";
 	const input = await refineText(plugin.app, ref.label, article, initialValues(plugin, ref));
 	if (!input) return false;
@@ -103,7 +103,8 @@ export async function refineLostText(plugin: LegifrancePlugin, ref: LegalRef): P
 		if (number || date) {
 			const data = article ? { ...ref.data, number: number || ref.data.number } : { ...ref.data, nature: input.nature || ref.data.nature || "loi", ...(number ? { number } : { date: spokenDate(date!) }) };
 			const found = await resolveReference(plugin.api, { ...ref, data }, undefined, undefined, plugin.settings.ficheUseRgd);
-			if (found) {
+			// Corriger un lien : retrouver le même document ne corrige rien, on ne l'enregistre pas.
+			if (found && !(correcting && found.url === plugin.references.linkFor(ref)?.url)) {
 				plugin.references.setLink(ref, found, true);
 				new Notice(`Retrouvé : ${found.titre}`, 6000);
 				return true;
@@ -123,7 +124,14 @@ export async function refineLostText(plugin: LegifrancePlugin, ref: LegalRef): P
 			new Notice(`Lien enregistré : ${chosen.title}`, 6000);
 			return true;
 		}
-		new Notice(number || date ? "Toujours introuvable." : "Indiquez un numéro, une date, des mots du titre ou un lien.", 8000);
+		new Notice(
+			number || date
+				? correcting
+					? "La recherche redonne le même document : précisez autrement (autre numéro, mots du titre ou lien)."
+					: "Toujours introuvable."
+				: "Indiquez un numéro, une date, des mots du titre ou un lien.",
+			8000
+		);
 		return false;
 	} catch (error) {
 		new Notice(`Recherche impossible : ${error instanceof Error ? error.message : String(error)}`, 8000);
@@ -138,11 +146,12 @@ export async function refineLostText(plugin: LegifrancePlugin, ref: LegalRef): P
  * est retenu ; plusieurs : l'utilisateur choisit (ou précise autrement) ; aucun : formulaire de précision.
  * @returns `true` si un lien a été enregistré
  */
-export async function chooseText(plugin: LegifrancePlugin, ref: LegalRef): Promise<boolean> {
+export async function chooseText(plugin: LegifrancePlugin, ref: LegalRef, correcting = false): Promise<boolean> {
 	if (!plugin.hasCredentials) {
 		new Notice("Renseignez vos identifiants PISTE dans les réglages du plugin.");
 		return false;
 	}
+	const current = plugin.references.linkFor(ref)?.url;
 	const notice = new Notice("Recherche des textes…", 0);
 	let found: { url: string; titre: string }[];
 	try {
@@ -153,21 +162,23 @@ export async function chooseText(plugin: LegifrancePlugin, ref: LegalRef): Promi
 	} finally {
 		notice.hide();
 	}
-	if (found.length === 0) return refineLostText(plugin, ref);
-	if (found.length === 1) {
+	if (found.length === 0) return refineLostText(plugin, ref, correcting);
+	// Un seul résultat : retenu d'office, sauf pour corriger un lien (c'est peut-être justement le mauvais).
+	if (found.length === 1 && !correcting) {
 		plugin.references.setLink(ref, found[0], true);
 		new Notice(`Retrouvé : ${found[0].titre}`, 6000);
 		return true;
 	}
-	const candidates = found.map((f): DecisionCandidate => ({ source: "legifrance", key: f.url, title: f.titre, url: f.url }));
+	const candidates = found.map((f): DecisionCandidate => ({ source: "legifrance", key: f.url, title: f.url === current ? `${f.titre} (lien actuel)` : f.titre, url: f.url }));
 	const chosen = await pickCandidate(plugin.app, candidates, {
-		placeholder: `${found.length} textes correspondent à « ${ref.label} » : choisissez`,
+		placeholder: correcting ? `Corriger « ${ref.label} » : choisissez le bon texte (${found.length})` : `${found.length} textes correspondent à « ${ref.label} » : choisissez`,
 		otherLabel: "Aucun de ceux-là : préciser autrement…",
 	});
 	if (!chosen) return false;
-	if (chosen.key === OTHER_CHOICE_KEY) return refineLostText(plugin, ref);
-	plugin.references.setLink(ref, { url: chosen.url, titre: chosen.title }, true);
-	new Notice(`Lien enregistré : ${chosen.title}`, 6000);
+	if (chosen.key === OTHER_CHOICE_KEY) return refineLostText(plugin, ref, correcting);
+	const title = found.find((f) => f.url === chosen.url)?.titre ?? chosen.title;
+	plugin.references.setLink(ref, { url: chosen.url, titre: title }, true);
+	new Notice(chosen.url === current ? "Lien conservé : la recherche automatique ne le remplacera plus." : `Lien enregistré : ${title}`, 6000);
 	return true;
 }
 
@@ -177,14 +188,16 @@ export async function chooseText(plugin: LegifrancePlugin, ref: LegalRef): Promi
  * @returns `true` si un lien a été enregistré
  */
 export function preciseReference(plugin: LegifrancePlugin, ref: LegalRef): Promise<boolean> {
+	// Avec un lien déjà enregistré, on corrige : rien n'est retenu d'office, l'utilisateur choisit toujours.
+	const correcting = !!plugin.references.linkFor(ref);
 	switch (ref.kind) {
 		case "decision":
-			return refineUnresolved(plugin, ref);
+			return refineUnresolved(plugin, ref, correcting);
 		case "texte":
-			// Un texte cité par son numéro n'a pas de choix à proposer : le formulaire suffit.
-			return ref.data.number ? refineLostText(plugin, ref) : chooseText(plugin, ref);
+			// Sans lien, un texte cité par son numéro n'a pas de choix à proposer : le formulaire suffit.
+			return ref.data.number && !correcting ? refineLostText(plugin, ref) : chooseText(plugin, ref, correcting);
 		case "article":
-			return refineLostText(plugin, ref);
+			return refineLostText(plugin, ref, correcting);
 		default:
 			return Promise.resolve(false);
 	}

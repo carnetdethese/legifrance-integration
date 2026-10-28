@@ -29,7 +29,7 @@ const urlOf = (key: string) => (key.startsWith("http") ? key : `${LEGIFRANCE_URL
  * complète sa fiche.
  * @returns `true` si la décision a été retrouvée.
  */
-export async function refineUnresolved(plugin: LegifrancePlugin, ref: LegalRef): Promise<boolean> {
+export async function refineUnresolved(plugin: LegifrancePlugin, ref: LegalRef, correcting = false): Promise<boolean> {
 	// Les précisions d'un essai précédent l'emportent sur ce que la note dit : l'utilisateur ne les ressaisit pas.
 	const saved = plugin.references.precisionsFor(ref.key);
 	const input = await refineDecision(plugin.app, ref.label, {
@@ -67,7 +67,15 @@ export async function refineUnresolved(plugin: LegifrancePlugin, ref: LegalRef):
 			new Notice(`Toujours introuvable${details.length ? ` (${details.join(" ; ")})` : ""}.`, 8000);
 			return false;
 		}
-		chosen = outcome.candidates.length === 1 ? outcome.candidates[0] : await pickCandidate(plugin.app, outcome.candidates);
+		if (outcome.candidates.length === 1 && !correcting) {
+			chosen = outcome.candidates[0];
+		} else {
+			// Pour corriger un lien, même un seul résultat est présenté : c'est peut-être la mauvaise décision, déjà liée.
+			const current = plugin.references.linkFor(ref)?.url;
+			const shown = outcome.candidates.map((c) => (c.url === current ? { ...c, title: `${c.title} (lien actuel)` } : c));
+			const picked = await pickCandidate(plugin.app, shown, correcting ? { placeholder: `Corriger « ${ref.label} » : choisissez la bonne décision (${shown.length})` } : {});
+			chosen = picked && (outcome.candidates.find((c) => c.key === picked.key) ?? picked);
+		}
 		if (!chosen) return false;
 	}
 
