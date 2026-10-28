@@ -10,7 +10,8 @@ import { LegalRef, decidedIso, normalizedName, parseCitations } from "./parser";
 import type { GraphInput } from "./graph";
 import { cleanTheme, topTheme } from "./themes";
 import { DecisionFeatures, RelatedDecision, relatedDecisions, termCounts } from "./similarity";
-import { DecisionRecord, Signatures, betterDate, ccYear, cleanLabel, courtGroup, dateFromLabel, mergeAliases, nameFromNote, numberSignature } from "./timeline";
+import { DecisionRecord, betterDate, ccYear, cleanLabel, dateFromLabel, nameFromNote } from "./timeline";
+import { Signatures, courtGroup, mergeAliases, numberSignature } from "./merge";
 
 interface Row {
 	key: string;

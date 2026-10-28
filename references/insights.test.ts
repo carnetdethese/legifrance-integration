@@ -1,7 +1,8 @@
 /** Tests des thèmes, de la similarité et des écarts de fiches. Lancer : `npm test`. */
 import { extractSummary, extractThemes, solutionFromTitle, topTheme } from "./themes";
 import { DecisionFeatures, relatedDecisions, termCounts } from "./similarity";
-import { DecisionRecord, Signatures, betterDate, mergeAliases, ccYear, cleanLabel, dateFromLabel, decisionsTable, displayDate, filterRecords, groupByYear, themeCounts } from "./timeline";
+import { DecisionRecord, betterDate, ccYear, cleanLabel, dateFromLabel, decisionsTable, displayDate, filterRecords, groupByYear, themeCounts } from "./timeline";
+import { Signatures, mergeAliases } from "./merge";
 import { ficheDifferences, ficheValues } from "./fiches";
 
 let fail = 0;
@@ -154,7 +155,7 @@ eq("rapprochement manuel : la décision conservée absorbe la fiche et les notes
 eq("rapprochement manuel : identifiant disparu ignoré", ids(mergeAliases([{ ...manualA }], [["absent", "Arcelor"]])), ["Arcelor"]);
 
 // Suggestions de rapprochement (cas litigieux).
-import { suggestMerges } from "./timeline";
+import { suggestMerges } from "./merge";
 const pairs = (records: DecisionRecord[], dismissed: [string, string][] = []) => suggestMerges(records, dismissed).map((s) => [s.a.id, s.b.id]);
 const typo = [rec2("a", sig([], [["ce", "1923-01-17", "piccoli"]])), rec2("b", sig([], [["ce", "1923-01-17", "piccioli"]]))];
 eq("suggestion : faute de frappe le même jour", pairs(typo), [["a", "b"]]);

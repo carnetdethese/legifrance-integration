@@ -1,7 +1,7 @@
 /** Tests des fiches de décisions. Lancer : `npm test`. */
 import { ariaValues, completableCount, courtCode, ficheDifferences, ficheId, ficheQuery, ficheUpdates, isFiche, missingProperties } from "./fiches";
 import { decisionKey } from "./ids";
-import { numberSignature } from "./timeline";
+import { numberSignature } from "./merge";
 
 let fail = 0;
 const eq = (name: string, got: unknown, want: unknown) => { const g = JSON.stringify(got), w = JSON.stringify(want); if (g !== w) { fail++; console.log("ÉCHEC", name, "\n   obtenu :", g, "\n   attendu:", w); } };

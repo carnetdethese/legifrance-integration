@@ -1,5 +1,6 @@
 import { App, Modal, Setting } from "obsidian";
-import { DecisionRecord, displayDate, RESOLVED_ID } from "references/timeline";
+import { DecisionRecord, displayDate } from "references/timeline";
+import { RESOLVED_ID } from "references/merge";
 
 /** Rend la décision à conserver parmi `records` (celle qui absorbe les autres), ou `null` si l'utilisateur annule. */
 export function chooseMain(app: App, records: DecisionRecord[]): Promise<DecisionRecord | null> {

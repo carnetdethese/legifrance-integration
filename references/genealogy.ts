@@ -4,7 +4,8 @@
  */
 import { LegalRef, citationSpans } from "./parser";
 import { plain } from "./dates";
-import { DecisionRecord, courtGroup, numberSignature } from "./timeline";
+import { DecisionRecord } from "./timeline";
+import { courtGroup, numberSignature } from "./merge";
 
 /** Rapport d'une décision à une autre, du plus fort au plus neutre. */
 export type RelationKind = "renverse" | "precise" | "confirme" | "cite";

@@ -12,7 +12,8 @@ import { citationIssues } from "references/checks";
 import { loadCitationChecks, staleArticles, statusLabel } from "references/corpus";
 import { FicheDiscrepancy, createFiche, ficheDiscrepancies, fixFiche, missingFiches, orphanFiches } from "references/insights";
 import { FICHE_FIELDS } from "references/fiches";
-import { DecisionRecord, RESOLVED_ID } from "references/timeline";
+import { DecisionRecord } from "references/timeline";
+import { RESOLVED_ID } from "references/merge";
 import { usePlugin } from "views/hooks";
 import { Card, DecisionRow, Row, noteName, useOpenNote } from "./Shared";
 
