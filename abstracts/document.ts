@@ -1,4 +1,4 @@
-import { agentSearch } from "api/utilities";
+import type { LegifranceApi } from "api/legifrance";
 import { sectionsResultats } from "./searches";
 import { getDecisionInfo } from "./decisions";
 import { consultDocument } from "./consult";
@@ -86,7 +86,7 @@ export interface Sommaire {
  * Complète la fiche d'un document trouvé par une recherche (texte, métadonnées) : décisions de
  * justice par `getDecisionInfo`, tous les autres fonds par `consultDocument`.
  */
-export async function getDocumentInfo(document: legalDocument, valeurRecherche: string, apiClient: agentSearch) {
-	if (isCaselawOrigin(document.origin)) return getDecisionInfo(document, valeurRecherche, apiClient);
-	return consultDocument(document, valeurRecherche, apiClient);
+export async function getDocumentInfo(document: legalDocument, valeurRecherche: string, api: LegifranceApi) {
+	if (isCaselawOrigin(document.origin)) return getDecisionInfo(document, valeurRecherche, api);
+	return consultDocument(document, valeurRecherche, api);
 }

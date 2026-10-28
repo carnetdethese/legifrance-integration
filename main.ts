@@ -1,5 +1,5 @@
 import { Events, MarkdownView, Notice, Plugin, TFile, debounce, normalizePath } from "obsidian";
-import { agentSearch } from "api/utilities";
+import { LegifranceApi } from "api/legifrance";
 import { legalDocument } from "abstracts/document";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import { createNote } from "creation/newNote";
@@ -69,7 +69,8 @@ const DATABASE_FILE = "legifrance.sqlite";
 export default class LegifrancePlugin extends Plugin {
 	static instance: LegifrancePlugin;
 	settings: LegifranceSettings;
-	agent: agentSearch;
+	/** Appels à l'API Légifrance (`api/legifrance.ts`). */
+	api: LegifranceApi;
 	/** Événements internes : les vues React s'y abonnent via `useHistorique`. */
 	readonly events = new Events();
 	/** Documents consultés. Toujours remplacé, jamais muté, pour le rendu React. */
@@ -97,7 +98,7 @@ export default class LegifrancePlugin extends Plugin {
 	async onload() {
 		LegifrancePlugin.instance = this;
 		const legacy = await this.loadSettings();
-		this.agent = new agentSearch(this.settings);
+		this.api = new LegifranceApi(this.settings);
 		await this.openDatabase(legacy);
 
 		this.registerView(RESEARCH_TEXT_VIEW, (leaf) => new ResearchTextView(leaf, this));
@@ -432,7 +433,7 @@ export default class LegifrancePlugin extends Plugin {
 			const report = await run(this, (done, total, label) => {
 				this.taskState = { name, done, total, label, startedAt: this.taskState?.startedAt ?? Date.now() };
 				this.events.trigger(TASK_EVENT);
-				const pause = this.agent.dilaApi.limiter.nextSlot;
+				const pause = this.api.limiter.nextSlot;
 				const wait = pause > Date.now() ? `\n(pause pour respecter la limite de requêtes : ${Math.ceil((pause - Date.now()) / 1000)} s)` : "";
 				notice.setMessage(`${name} : ${done}/${total}\n${label}${wait}`);
 			});
@@ -475,7 +476,7 @@ export default class LegifrancePlugin extends Plugin {
 			settings: this.settings,
 			graph: this.graphSettings,
 		} satisfies PluginData);
-		this.agent.dilaApi.updateConfig(this.settings);
+		this.api.updateConfig(this.settings);
 	}
 
 	/**
@@ -611,7 +612,7 @@ export default class LegifrancePlugin extends Plugin {
 				if (this.settings.debugRefs) console.debug(`[Légifrance] ${ref.label} ${line}`);
 			};
 			try {
-				const link = this.referenceAuthFailed ? null : await resolveReference(this.agent, ref, log, lane, this.settings.ficheUseRgd);
+				const link = this.referenceAuthFailed ? null : await resolveReference(this.api, ref, log, lane, this.settings.ficheUseRgd);
 				if (link) this.references.setLink(ref, link);
 				else if (!this.referenceAuthFailed) this.references.setMiss(ref);
 			} catch (error) {

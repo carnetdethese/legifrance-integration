@@ -38,13 +38,13 @@ export async function loadArticleVersions(plugin: LegifrancePlugin, key: string,
 	const ref = articleRef(key, label);
 	if (!ref) return undefined;
 
-	const link = plugin.references.linkFor(ref) ?? (await resolveReference(plugin.agent, ref, undefined, lane, plugin.settings.ficheUseRgd));
+	const link = plugin.references.linkFor(ref) ?? (await resolveReference(plugin.api, ref, undefined, lane, plugin.settings.ficheUseRgd));
 	const id = link && ARTICLE_ID.exec(link.url)?.[0];
 	if (!id) {
 		plugin.references.saveArticleVersions(key, []);
 		return [];
 	}
-	const response = await plugin.agent.dilaApi.fetch<object>({ path: "/consult/getArticle", params: { id }, lane });
+	const response = await plugin.api.consultArticle(id, lane);
 	const versions = parseVersions(response);
 	plugin.references.saveArticleVersions(key, versions);
 	return versions;
@@ -57,7 +57,7 @@ export async function loadArticleVersions(plugin: LegifrancePlugin, key: string,
  */
 export async function storeArticleVersion(plugin: LegifrancePlugin, version: ArticleVersion, label: string, lane?: Lane) {
 	if (storedLegalDocument(plugin, version.id)) return true;
-	const text = await fetchArticleText(plugin.agent, version.id, lane);
+	const text = await fetchArticleText(plugin.api, version.id, lane);
 	if (!text) return false;
 	const period = `${version.start ?? "origine"} → ${version.end ?? "aujourd'hui"}`;
 	plugin.references.saveDocument({

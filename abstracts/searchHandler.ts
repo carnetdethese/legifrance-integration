@@ -255,7 +255,7 @@ export class documentSearchFieldsClass {
 	}
 
 	async search() {
-		return LegifrancePlugin.instance.agent.advanceSearchText<resultatsRecherche>(
+		return LegifrancePlugin.instance.api.search<resultatsRecherche>(
 			this.toObject()
 		);
 	}

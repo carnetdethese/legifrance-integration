@@ -1,74 +1,59 @@
+/**
+ * Fiche d'une décision de justice trouvée par une recherche : son texte et ses métadonnées sont demandés à
+ * l'API (`LegifranceApi.consultDecision`) et reportés sur le `legalDocument`.
+ */
+import type { LegifranceApi } from "api/legifrance";
+import { removeTags } from "lib/tools";
+import { htmlToMarkdown } from "obsidian";
 import { legalDocument, resumeDocument } from "./document";
 import { reponseDocument } from "./searches";
-import { agentSearch } from "api/utilities";
-import { removeTags } from "lib/tools";
-import { legifranceUrl } from "api/urls";
-import { htmlToMarkdown } from "obsidian";
 
+/** Nom de juridiction d'après le code de l'API (certains codes ne sont pas présentables tels quels). */
 export const codeJuridiction = new Map<string, string>([
 	["CONSEIL_ETAT", "Conseil d'État"],
 	["Conseil constitutionnel", "Conseil constitutionnel"],
 	["Cour de cassation", "Cour de cassation"],
-	["COURS_APPEL", "Cour d'appel"]
+	["COURS_APPEL", "Cour d'appel"],
 ]);
 
-/** Adresse Légifrance d'un document trouvé par une recherche. */
-export function findLink(origine: string, id: string, nature?: string) {
-	return legifranceUrl(id, nature);
-}
+/**
+ * Complète `document` (modifié sur place) avec la réponse de l'API : titre, texte intégral (HTML et Markdown),
+ * date (AAAA-MM-JJ), juridiction, formation, sommaires, numéro. `search` est le terme à surligner dans le texte.
+ * Pour le Conseil constitutionnel, le numéro est suivi de la nature du contrôle (« 2018-765 DC ») et le lien
+ * vers le site du Conseil est conservé.
+ *
+ * @returns le document complété, ou `undefined` si la réponse ne contient pas de texte.
+ */
+export async function getDecisionInfo(document: legalDocument, search: string, api: LegifranceApi): Promise<legalDocument | undefined> {
+	const response = (await api.consultDecision(document.id, { searchedString: search, cnil: document.origin === "CNIL" })) as reponseDocument;
 
-export async function getDecisionInfo(document:legalDocument, valeurRecherche:string, apiClient:agentSearch):Promise<legalDocument | undefined> {
-	// objet Document qui récupère une copie de l'objet passé en argument
-	const infoDocument:legalDocument = document;
+	document.titre = removeTags(document.titre);
+	const text = response.text;
+	if (!text) return undefined;
 
-	// Variable qui contient la réponse de la requête 
-	const response:reponseDocument = await apiClient.fetchText(document, valeurRecherche) as reponseDocument; // requête à l'API
+	document.texteIntegralHTML = text.texteHtml;
+	if (text.texteHtml) document.texteIntegral = htmlToMarkdown(text.texteHtml);
 
-
-	infoDocument.titre = removeTags(document.titre);
-	// Texte intégral au format markdown
-
-	if (!response.text) return;
-
-	if (response.text.texteHtml) infoDocument.texteIntegral = htmlToMarkdown(response.text.texteHtml);
-	infoDocument.texteIntegralHTML = response.text.texteHtml;
-
-	// Date au format YYYY-MM-DD
-	if (response.text.dateTexte) {
-		const dateDec = new Date(response.text.dateTexte)
-		const formattedDate = dateDec.toISOString().split('T')[0];
-		infoDocument.date = formattedDate;
-		infoDocument.annee = dateDec.getFullYear();
+	if (text.dateTexte) {
+		const date = new Date(text.dateTexte);
+		document.date = date.toISOString().split("T")[0];
+		document.annee = date.getFullYear();
 	}
 
-	// Juridiction - je passe par une variable Map parce que certaines juridiction ne sont pas formattées comme je le veux !
-	if (response.text.natureJuridiction != null) {
-		infoDocument.juridiction = codeJuridiction.get(response.text.natureJuridiction);
+	if (text.natureJuridiction != null) document.juridiction = codeJuridiction.get(text.natureJuridiction);
+	if (text.formation != null) document.formation = text.formation;
+
+	if (document.sommaires !== undefined) {
+		for (const entry of text.sommaire ?? ([] as resumeDocument[])) {
+			if (entry.resumePrincipal) document.sommaires.push({ resume: entry.resumePrincipal });
+		}
 	}
 
-	// La formation de la juridiction
-	if (response.text.formation != null) {
-		infoDocument.formation = response.text.formation;
+	if (text.num) {
+		const number = removeTags(text.num);
+		document.numero = document.origin === "CONSTIT" ? `${number} ${text.nature}` : number;
 	}
+	if (document.origin === "CONSTIT") document.urlCC = text.urlCC;
 
-	if (infoDocument.sommaires !== undefined) {
-		if (response.text.sommaire !== undefined) {
-			response.text.sommaire.forEach((elt: resumeDocument) => {
-				if (elt.resumePrincipal) {
-					const content = elt.resumePrincipal;
-					infoDocument.sommaires?.push({ resume: content });
-				}});
-			}
-	}
-
-	// Numéro de la décision. Si c'est le Conseil constitutionnel - on affiche "numéro natureContrôle".
-	if (document.origin == "CONSTIT") {
-		if (response.text.num) infoDocument.numero = `${removeTags(response.text.num)} ${response.text.nature}`;
-		infoDocument.urlCC = response.text.urlCC;
-	}
-	else {
-		if (response.text.num) infoDocument.numero = removeTags(response.text.num);
-	}
-
-	return infoDocument;
+	return document;
 }

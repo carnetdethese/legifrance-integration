@@ -62,7 +62,7 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 				await plugin.openDocument(await plugin.addToHistory(stored));
 				return;
 			}
-			const full = await getDocumentInfo(selected, searchHandler.getSearchedString(), plugin.agent);
+			const full = await getDocumentInfo(selected, searchHandler.getSearchedString(), plugin.api);
 			if (!full) throw new Error("Document vide");
 			// Le texte consulté rejoint la base : le lecteur et les fiches pourront le relire sans requête.
 			if (full.texteIntegralHTML || full.texteIntegral) plugin.references.saveDocument(documentRow(full));

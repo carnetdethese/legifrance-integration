@@ -63,7 +63,7 @@ export class LiveStatus {
 		this.stop.toggle(!!state);
 		this.stop.disabled = plugin.taskCancelled;
 
-		const limiter = plugin.agent.dilaApi.limiter;
+		const limiter = plugin.api.limiter;
 		const limit = limiter.maxPerWindow;
 		const lines = [`${limiter.used}${limit > 0 ? ` / ${limit}` : ""} requête${limiter.used > 1 ? "s" : ""} dans la dernière minute · ${limiter.total} depuis le démarrage d'Obsidian`];
 		if (limiter.suspendedUntil) lines.push(`Quota dépassé : envois suspendus jusqu'à ${clock(limiter.suspendedUntil)}.`);

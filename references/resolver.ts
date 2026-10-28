@@ -8,7 +8,7 @@
 import { htmlToMarkdown } from "obsidian";
 import { ApiError } from "api/client";
 import type { Lane } from "api/rateLimiter";
-import { agentSearch } from "api/utilities";
+import type { LegifranceApi } from "api/legifrance";
 import { findCcSiteDecision } from "./conseilConstitutionnel";
 import { findRgdByName, findRgdByNumber } from "./rgd";
 import { findAriaDecision } from "./ariane";
@@ -351,12 +351,8 @@ function build(ref: LegalRef, useRgd = true): Resolution | null {
 export const canResolve = (ref: LegalRef) => !ref.url && build(ref) !== null;
 
 /** Texte Markdown d'un article (`POST /consult/getArticle`), borné. */
-export async function fetchArticleText(agent: agentSearch, id: string, lane?: Lane) {
-	const response = await agent.dilaApi.fetch<{ article?: ArticleBody } & ArticleBody>({
-		path: "/consult/getArticle",
-		params: { id },
-		lane,
-	});
+export async function fetchArticleText(api: LegifranceApi, id: string, lane?: Lane) {
+	const response = await api.consultArticle<{ article?: ArticleBody } & ArticleBody>(id, lane);
 	const article = response.article ?? response;
 	const html = article.texteHtml ?? article.texte;
 	return html ? htmlToMarkdown(html).trim().slice(0, MAX_TEXT_LENGTH) : undefined;
@@ -375,7 +371,7 @@ interface ArticleBody {
  * @throws ApiError si les identifiants sont refusés, le quota dépassé ou le service injoignable.
  */
 export async function resolveReference(
-	agent: agentSearch,
+	api: LegifranceApi,
 	ref: LegalRef,
 	trace: (line: string) => void = () => undefined,
 	lane?: Lane,
@@ -393,7 +389,7 @@ export async function resolveReference(
 	for (const query of resolution.queries) {
 		trace(`→ POST ${query.path} ${JSON.stringify(query.body)}`);
 		try {
-			const response = await agent.dilaApi.fetch<SearchResponse>({ path: query.path, params: query.body, lane });
+			const response = await api.consult<SearchResponse>(query.path, query.body, lane);
 			match = resolution.read(response);
 			answered = true;
 			trace(`← ${resolution.describe?.(response) ?? describeSearch(response)}${match ? " → correspondance trouvée" : " → aucune correspondance"}`);
@@ -419,7 +415,7 @@ export async function resolveReference(
 		return null;
 	}
 
-	const texte = match.articleId ? await fetchArticleText(agent, match.articleId, lane).catch(() => undefined) : undefined;
+	const texte = match.articleId ? await fetchArticleText(api, match.articleId, lane).catch(() => undefined) : undefined;
 	trace(`✔ ${match.url}${texte ? " (texte récupéré)" : match.articleId ? " (texte de l'article indisponible)" : ""}`);
 	return { url: match.url, titre: match.titre, texte, statut: match.status };
 }

@@ -13,56 +13,6 @@ export const operateursRecherche = new Map<string, string>([ // Opérateur de ce
 ]);
 
 
-export const champRecherche = new Map<string, string>([ // Type du champ dans lequel chercher.
-	["ALL", ""],
-	["TITLE", ""],
-	["TABLE", ""],
-	["NOR", ""],
-	["NUM", ""],
-	["ADVANCED_TEXTE_ID", ""],
-	["NUM_DELIB", ""],
-	["NUM_DEC", ""],
-	["NUM_ARTICLE", ""],
-	["ARTICLE", ""],
-	["MINISTERE", ""],
-	["VISA", ""],
-	["NOTICE", ""],
-	["VISA_NOTICE", ""],
-	["TRAVAUX_PREP", ""],
-	["SIGNATURE", ""],
-	["NOTA", ""],
-	["NUM_AFFAIRE", ""],
-	["ABSTRATS", ""],
-	["RESUMES", ""],
-	["TEXTE", ""],
-	["ECLI", ""],
-	["NUM_LOI_DEF", ""],
-	["TYPE_DECISION", ""],
-	["NUMERO_INTERNE", ""],
-	["REF_PUBLI", ""],
-	["RESUME_CIRC", ""],
-	["TEXTE_REF", ""],
-	["TITRE_LOI_DEF", ""],
-	["RAISON_SOCIALE", ""],
-	["MOTS_CLES", ""],
-	["IDCC", ""]
-]);
-
-export const listRouteConsult = new Map<string, string>([
-	["CODE", "/consult/getArticle"],
-	["CNIL", "/consult/cnil"],
-	["JUFI", "/consult/juri"],
-	["LEGI", "/consult/legiPart"],
-	["JURI", "/consult/juri"],
-	["CETA", "/consult/juri"],
-	["CONS", "/consult/juri"],
-	["JORF", "/consult/jorf"],
-	["KALI", "/consult/kaliText"],
-	["LODA", "/consult/lawDecree"],
-	["ACCO", "/consult/acco"],
-	["CIRC", "/consult/circulaire"]
-])
-
 export const dateJour = new Map<string, string>();
 
 for (let i = 0; i <= 31; i++) {
@@ -104,22 +54,3 @@ for (let i = currentYear+1; i >= 1899; i--) {
 }
 
 
-
-// Définition des filtres par fond
-
-export const filtresAll = {
-	origine: "FOND"
-}
-
-export const FiltresJorf = {
-	nature: "NATURE",
-	dateSignature: "DATE_SIGNATURE",
-	datePublication: "DATE_PUBLICATION",
-	ministere: "MINISTERE",
-	emetteur: "EMETTEUR",
-	nor: "NOR",
-	num: "NUM_TEXTE",
-	numArticle: "NUM_ARTICLE",
-	decoration: "DECORATION",
-	delegation: "DELEGATION"
-}

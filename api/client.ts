@@ -2,7 +2,7 @@ import { requestUrl, RequestUrlResponse } from "obsidian";
 import { LegifranceSettings } from "settings/settings";
 import { Lane, RateLimiter } from "./rateLimiter";
 
-type ConnectionSettings = Pick<
+export type ConnectionSettings = Pick<
 	LegifranceSettings,
 	"clientId" | "clientSecret" | "apiHost" | "tokenHost" | "maxRequestsPerMinute"
 >;
@@ -109,7 +109,7 @@ export class DilaApiClient {
 			const token = await this.getAccessToken(lane);
 			await this.limiter.acquire(lane);
 			const response: RequestUrlResponse = await requestUrl({
-				url: `${this.connection.apiHost}/${path}`,
+				url: `${this.connection.apiHost.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`,
 				method,
 				contentType: "application/json",
 				headers: { Authorization: `Bearer ${token}` },

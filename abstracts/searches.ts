@@ -1,7 +1,7 @@
 import { legalDocument, statuteArticles } from "abstracts/document";
 import { isCaselawOrigin } from "./fonds";
 import { dateFormat } from "lib/dateHandler";
-import { findLink } from "./decisions";
+import { legifranceUrl } from "api/urls";
 
 export interface rechercheAvStructure {
 	// Base
@@ -114,7 +114,7 @@ export class resultatsRechercheClass {
 					titre: entree.title,
 					id: entree.id,
 					texte: result.text,
-					lien: findLink(origine, entree.id, result.nature),
+					lien: legifranceUrl(entree.id, result.nature),
 					origin: origine,
 					nature: result.nature ?? "",
 					date: result.date,

@@ -6,7 +6,7 @@
  */
 import { htmlToMarkdown } from "obsidian";
 import { ApiError } from "api/client";
-import { agentSearch } from "api/utilities";
+import type { LegifranceApi } from "api/legifrance";
 import { idPrefix } from "api/urls";
 import { removeTags } from "lib/tools";
 import { legalDocument } from "./document";
@@ -169,13 +169,13 @@ export function readConsultation(response: Json): Consultation {
  *
  * @throws Error si aucune route ne donne le document.
  */
-export async function consultDocument(document: legalDocument, search: string, agent: agentSearch): Promise<legalDocument> {
+export async function consultDocument(document: legalDocument, search: string, api: LegifranceApi): Promise<legalDocument> {
 	let failure: unknown;
 	for (const route of routesFor(document.id, search)) {
 		const attempts = "searchedString" in route.params ? [route.params, { ...route.params, searchedString: undefined }] : [route.params];
 		for (const params of attempts) {
 			try {
-				const response = await agent.dilaApi.fetch<Json>({ path: route.path, params });
+				const response = await api.consult<Json>(route.path, params);
 				applyConsultation(document, readConsultation(response));
 				return document;
 			} catch (error) {

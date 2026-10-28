@@ -19,7 +19,7 @@ const ALL_COURTS: CourtCode[] = ["ce", "cassation", "cc"];
 /** Une recherche refusée (400) ou sans objet (404) n'empêche pas d'essayer la suivante. */
 async function search(plugin: LegifrancePlugin, body: ReturnType<typeof searchQuery>, lane?: Lane) {
 	try {
-		return await plugin.agent.dilaApi.fetch<SearchResponse>({ path: body.path, params: body.body, lane });
+		return await plugin.api.consult<SearchResponse>(body.path, body.body, lane);
 	} catch (error) {
 		if (error instanceof ApiError && [400, 404].includes(error.status ?? 0)) return undefined;
 		throw error;
@@ -113,7 +113,7 @@ export const legifranceSource: DecisionSource = {
 
 	/** Métadonnées de la décision et lien (`/consult/juri`). */
 	async values(plugin, key, lane): Promise<DecisionValues> {
-		const response = await plugin.agent.dilaApi.fetch({ path: "/consult/juri", params: { textId: key }, lane });
+		const response = await plugin.api.consultDecision(key, { lane });
 		const decision = readDecision(response);
 		if (!decision) throw new Error("Légifrance n'a pas renvoyé le texte de cette décision.");
 		return {

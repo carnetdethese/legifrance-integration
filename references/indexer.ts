@@ -133,7 +133,7 @@ export async function enrichDecisions(plugin: LegifrancePlugin, progress: Progre
 					markdown: read.markdown,
 				};
 			} else {
-				decision = readDecision(await plugin.agent.dilaApi.fetch({ path: "/consult/juri", params: { textId }, lane: "background" })) ?? undefined;
+				decision = readDecision(await plugin.api.consultDecision(textId, { lane: "background" })) ?? undefined;
 			}
 			if (!decision) {
 				index.saveDecision(ref.key, { status: "error", legifranceId: textId, error: "Réponse sans texte." });
