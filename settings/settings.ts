@@ -10,8 +10,18 @@ import { confirmAction } from "views/ConfirmModal";
 import { LiveStatus, renderDataStatus } from "./status";
 import { FICHE_FIELDS, FicheField, FicheMapping } from "references/fiches";
 import { COMPLETE_FICHES_TASK, SIMULATE_FICHES_TASK } from "references/ficheSync";
-import { ARTICLES_TASK, ENRICH_TASK, GENEALOGY_TASK, INDEX_TASK, REFRESH_TASK, RETRY_UNRESOLVED_TASK } from "references/indexer";
+import { ARTICLES_TASK, ENRICH_TASK, GENEALOGY_TASK, INDEX_TASK, REFRESH_TASK, RETRY_UNRESOLVED_TASK, Task } from "references/indexer";
 
+
+/** Tâches lançables depuis l'onglet « Base de données » des réglages : nom, description, bouton, tâche (`references/indexer.ts`). */
+const TASK_SETTINGS: [string, string, string, Task<unknown>][] = [
+	["Indexer le coffre", "Analyse toutes les notes et enregistre leurs références juridiques. Seules les notes modifiées depuis la dernière analyse sont relues.", "Indexer", INDEX_TASK],
+	["Compléter les décisions, articles et textes", "Retrouve chaque décision citée sur Légifrance puis enregistre ses métadonnées (date, formation, solution, ECLI) et son texte intégral ; retrouve ensuite l'adresse, le texte et le statut de vigueur des articles et textes cités. Demande une ou deux requêtes par référence ; peut être relancé, la tâche reprend où elle s'est arrêtée.", "Compléter", ENRICH_TASK],
+	["Retrouver les articles et textes cités", "Seulement les articles et textes (les plus cités d'abord), sans toucher aux décisions : adresse Légifrance, texte et statut de vigueur (abrogé ou non).", "Retrouver", ARTICLES_TASK],
+	["Analyser la généalogie de la jurisprudence", "Relève dans le texte des décisions complétées les décisions qu'elles citent et comment (revient sur, précise, confirme). Local, sans requête ; lancé aussi à la fin de « Compléter ».", "Analyser", GENEALOGY_TASK],
+	["Actualiser les articles et textes cités", "Revérifie sur Légifrance les articles et textes dont le lien date de plus de six mois, et signale dans « À faire » ceux dont le statut (abrogé, modifié) ou le texte a changé.", "Actualiser", REFRESH_TASK],
+	["Réessayer les décisions introuvables", "« Compléter » ne relance pas la recherche d'une décision déjà marquée introuvable. Ce bouton la relance pour toutes (chaque décision coûte une à deux requêtes).", "Réessayer", RETRY_UNRESOLVED_TASK],
+];
 
 /** Réglages persistés du plugin (`data.json`, clef `settings`). */
 export interface LegifranceSettings {
@@ -308,65 +318,17 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			.setDesc("Ouvre un onglet listant le contenu de chaque table : références analysées, liens, fiches de décisions.")
 			.addButton((button) => button.setButtonText("Ouvrir").onClick(() => plugin.activateDatabaseView()));
 
-		new Setting(containerEl)
-			.setName("Indexer le coffre")
-			.setDesc("Analyse toutes les notes et enregistre leurs références juridiques. Seules les notes modifiées depuis la dernière analyse sont relues.")
-			.addButton((button) =>
-				button.setButtonText("Indexer").onClick(async () => {
-					await plugin.tasks.run(INDEX_TASK);
-					this.display();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName("Compléter les décisions, articles et textes")
-			.setDesc("Retrouve chaque décision citée sur Légifrance puis enregistre ses métadonnées (date, formation, solution, ECLI) et son texte intégral ; retrouve ensuite l'adresse, le texte et le statut de vigueur des articles et textes cités. Demande une ou deux requêtes par référence ; peut être relancé, la tâche reprend où elle s'est arrêtée.")
-			.addButton((button) =>
-				button.setButtonText("Compléter").onClick(async () => {
-					await plugin.tasks.run(ENRICH_TASK);
-					this.display();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName("Retrouver les articles et textes cités")
-			.setDesc("Seulement les articles et textes (les plus cités d'abord), sans toucher aux décisions : adresse Légifrance, texte et statut de vigueur (abrogé ou non).")
-			.addButton((button) =>
-				button.setButtonText("Retrouver").onClick(async () => {
-					await plugin.tasks.run(ARTICLES_TASK);
-					this.display();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName("Analyser la généalogie de la jurisprudence")
-			.setDesc("Relève dans le texte des décisions complétées les décisions qu'elles citent et comment (revient sur, précise, confirme). Local, sans requête ; lancé aussi à la fin de « Compléter ».")
-			.addButton((button) =>
-				button.setButtonText("Analyser").onClick(async () => {
-					await plugin.tasks.run(GENEALOGY_TASK);
-					this.display();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName("Actualiser les articles et textes cités")
-			.setDesc("Revérifie sur Légifrance les articles et textes dont le lien date de plus de six mois, et signale dans « À faire » ceux dont le statut (abrogé, modifié) ou le texte a changé.")
-			.addButton((button) =>
-				button.setButtonText("Actualiser").onClick(async () => {
-					await plugin.tasks.run(REFRESH_TASK);
-					this.display();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName("Réessayer les décisions introuvables")
-			.setDesc("« Compléter » ne relance pas la recherche d'une décision déjà marquée introuvable. Ce bouton la relance pour toutes (chaque décision coûte une à deux requêtes).")
-			.addButton((button) =>
-				button.setButtonText("Réessayer").onClick(async () => {
-					await plugin.tasks.run(RETRY_UNRESOLVED_TASK);
-					this.display();
-				})
-			);
+		for (const [name, description, button, task] of TASK_SETTINGS) {
+			new Setting(containerEl)
+				.setName(name)
+				.setDesc(description)
+				.addButton((b) =>
+					b.setButtonText(button).onClick(async () => {
+						await plugin.tasks.run(task);
+						this.display();
+					})
+				);
+		}
 
 		new Setting(containerEl)
 			.setName("Vider la base")
