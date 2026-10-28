@@ -86,7 +86,7 @@ export async function refineLostText(plugin: LegifrancePlugin, ref: LegalRef): P
 			new Notice("Lien non reconnu : attendu une page Légifrance ou un identifiant (LEGITEXT…, LEGIARTI…, JORFTEXT…).", 8000);
 			return false;
 		}
-		plugin.references.setLink(ref, await linkFromId(plugin, ref, id));
+		plugin.references.setLink(ref, await linkFromId(plugin, ref, id), true);
 		new Notice(`Lien enregistré : ${ref.label}`, 6000);
 		return true;
 	}
@@ -104,7 +104,7 @@ export async function refineLostText(plugin: LegifrancePlugin, ref: LegalRef): P
 			const data = article ? { ...ref.data, number: number || ref.data.number } : { ...ref.data, nature: input.nature || ref.data.nature || "loi", ...(number ? { number } : { date: spokenDate(date!) }) };
 			const found = await resolveReference(plugin.api, { ...ref, data }, undefined, undefined, plugin.settings.ficheUseRgd);
 			if (found) {
-				plugin.references.setLink(ref, found);
+				plugin.references.setLink(ref, found, true);
 				new Notice(`Retrouvé : ${found.titre}`, 6000);
 				return true;
 			}
@@ -119,7 +119,7 @@ export async function refineLostText(plugin: LegifrancePlugin, ref: LegalRef): P
 			notice.hide();
 			const chosen = candidates.length === 1 ? candidates[0] : await pickCandidate(plugin.app, candidates);
 			if (!chosen) return false;
-			plugin.references.setLink(ref, { url: chosen.url, titre: chosen.title });
+			plugin.references.setLink(ref, { url: chosen.url, titre: chosen.title }, true);
 			new Notice(`Lien enregistré : ${chosen.title}`, 6000);
 			return true;
 		}
@@ -155,7 +155,7 @@ export async function chooseText(plugin: LegifrancePlugin, ref: LegalRef): Promi
 	}
 	if (found.length === 0) return refineLostText(plugin, ref);
 	if (found.length === 1) {
-		plugin.references.setLink(ref, found[0]);
+		plugin.references.setLink(ref, found[0], true);
 		new Notice(`Retrouvé : ${found[0].titre}`, 6000);
 		return true;
 	}
@@ -166,7 +166,7 @@ export async function chooseText(plugin: LegifrancePlugin, ref: LegalRef): Promi
 	});
 	if (!chosen) return false;
 	if (chosen.key === OTHER_CHOICE_KEY) return refineLostText(plugin, ref);
-	plugin.references.setLink(ref, { url: chosen.url, titre: chosen.title });
+	plugin.references.setLink(ref, { url: chosen.url, titre: chosen.title }, true);
 	new Notice(`Lien enregistré : ${chosen.title}`, 6000);
 	return true;
 }

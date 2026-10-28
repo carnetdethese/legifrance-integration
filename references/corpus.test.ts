@@ -131,6 +131,30 @@ const check = (name: string, ok: boolean, detail = "") => { if (!ok) { fail++; c
 	index.remove("Articles/renommee.md");
 	check("note d'article supprimée", index.articleNotes().length === 0);
 
+	// Lien choisi par l'utilisateur : la recherche automatique ne le remplace pas.
+	const art = { key: "article|code=code civil|number=1240", kind: "article" as const, label: "Code civil, art. 1240", query: "", data: { code: "Code civil", number: "1240" } };
+	db.run("INSERT OR REPLACE INTO refs (key, kind, label, query, data) VALUES (?, 'article', ?, '', '{}')", [art.key, art.label]);
+	db.run("INSERT OR REPLACE INTO citations (note_path, ref_key, ord, count) VALUES ('n.md', ?, 0, 1)", [art.key]);
+	index.setLink(art, { url: "https://exemple/auto-1", titre: "Auto 1" });
+	index.setLink(art, { url: "https://exemple/auto-2", titre: "Auto 2" });
+	check("recherche automatique : le lien est remplacé", index.linkFor(art)?.url === "https://exemple/auto-2" && !index.linkFor(art)?.manuel);
+	index.setLink(art, { url: "https://exemple/choisi", titre: "Choisi" }, true);
+	index.setLink(art, { url: "https://exemple/auto-3", titre: "Auto 3" });
+	check("lien choisi : la recherche automatique ne le remplace pas", index.linkFor(art)?.url === "https://exemple/choisi" && index.linkFor(art)?.manuel === true);
+	check("lien choisi : pas revérifié automatiquement", index.articlesToRefresh(Date.now() + 1000).every((r) => r.key !== art.key));
+	const reopened = new ReferenceIndex(db);
+	check("lien choisi : conservé à la réouverture", reopened.linkFor(art)?.manuel === true && reopened.linkFor(art)?.url === "https://exemple/choisi");
+	index.setLink(art, { url: "https://exemple/autre", titre: "Autre" }, true);
+	check("lien choisi : un nouveau choix le remplace", index.linkFor(art)?.url === "https://exemple/autre");
+	index.clearLink(art);
+	check("lien oublié", index.linkFor(art) === undefined && new ReferenceIndex(db).linkFor(art) === undefined);
+	index.setLink(art, { url: "https://exemple/auto-4", titre: "Auto 4" });
+	check("après oubli, la recherche automatique reprend", index.linkFor(art)?.url === "https://exemple/auto-4");
+	// Changer de document ne signale pas un « changement » du statut.
+	index.setLink(art, { url: "https://exemple/a", titre: "A", statut: "VIGUEUR" });
+	index.setLink(art, { url: "https://exemple/b", titre: "B", statut: "ABROGE" });
+	check("autre document : pas de changement signalé", index.changedArticles().every((c) => c.key !== art.key));
+
 	console.log(fail ? `${fail} échec(s)` : "tout passe");
 	process.exit(fail ? 1 : 0);
 })();

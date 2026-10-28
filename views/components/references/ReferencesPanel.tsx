@@ -171,8 +171,15 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 	else if (pending) status = "Recherche sur Légifrance…";
 	else if (missed) status = "Introuvable via l'API : lien de recherche.";
 
-	/** Sans lien retrouvé : l'utilisateur peut préciser la référence ou choisir parmi les résultats. */
-	const canPrecise = !link && !pending && ["decision", "texte", "article"].includes(reference.kind);
+	/** Préciser la référence ou choisir parmi les résultats ; avec un lien déjà retrouvé, pour le corriger quand la recherche s'est trompée. */
+	const canPrecise = !pending && ["decision", "texte", "article"].includes(reference.kind);
+	/** Oublie le lien choisi : la recherche automatique reprend. */
+	async function restore() {
+		plugin.references.clearLink(reference);
+		plugin.events.trigger(REFERENCES_EVENT);
+		await plugin.links.resolve([reference], true);
+	}
+
 	/** Nouvelle recherche via l'API ; un texte cité par sa date qui désigne plusieurs textes est ensuite proposé au choix. */
 	async function retry() {
 		await onResolve();
@@ -201,8 +208,9 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 					{reference.label}
 					{reference.kind === "decision" && <SourceBadge fiche={fiche instanceof TFile} notes={1} />}
 				</div>
-				{(link?.statut || applying > 0) && (
+				{(link?.statut || link?.manuel || applying > 0) && (
 					<div className="legifrance-ref-chips">
+						{link?.manuel && <span className="legifrance-chip" title="Vous avez choisi ce lien : la recherche automatique ne le remplace pas">Choisi par vous</span>}
 						{link?.statut && (
 							<span className={`legifrance-chip ${inForce ? "is-ok" : "is-warn"}`} title={inForce ? undefined : "Version en vigueur introuvable sur Légifrance"}>
 								{statusLabel(link.statut)}
@@ -215,13 +223,19 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 						)}
 					</div>
 				)}
-				{(status || canPrecise) && (
+				{(status || (canPrecise && !link) || link?.manuel) && (
 					<div className="legifrance-ref-sub">
 						{status}
-						{canPrecise && (
+						{canPrecise && !link && (
 							<>
 								{status ? " " : ""}
 								<a onClick={() => void precise()}>Préciser ou choisir…</a>
+							</>
+						)}
+						{link?.manuel && (
+							<>
+								{status ? " " : ""}
+								<a onClick={() => void restore()}>Rétablir la recherche automatique</a>
 							</>
 						)}
 					</div>
@@ -268,7 +282,7 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 					</button>
 				)}
 				{canPrecise && (
-					<button className="clickable-icon" aria-label="Préciser la référence ou choisir parmi les résultats" onClick={() => void precise()}>
+					<button className="clickable-icon" aria-label={link ? "Corriger le lien : ce n'est pas le bon document" : "Préciser la référence ou choisir parmi les résultats"} onClick={() => void precise()}>
 						<SlidersHorizontal size={16} />
 					</button>
 				)}

@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS article_notes (
  * Colonnes ajoutées après la première version du schéma (ajoutées aux bases existantes à l'ouverture) :
  * - v2 : thèmes (JSON), résumé et vocabulaire (JSON) des décisions ; statut de vigueur d'un article lié.
  * - veille : statut précédent et date du dernier changement (statut ou texte) d'un article lié.
+ * - lien choisi par l'utilisateur (`manual`) : la recherche automatique ne le remplace plus.
  */
 const ADDED_COLUMNS: [table: string, column: string, type: string][] = [
 	["decisions", "themes", "TEXT"],
@@ -172,6 +173,7 @@ const ADDED_COLUMNS: [table: string, column: string, type: string][] = [
 	["links", "previous_status", "TEXT"],
 	["links", "changed_at", "INTEGER"],
 	["decisions", "relations_at", "INTEGER"],
+	["links", "manual", "INTEGER"],
 ];
 
 /** Valeur acceptée en paramètre d'une requête. */

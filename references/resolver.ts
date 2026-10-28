@@ -31,6 +31,8 @@ export interface ResolvedLink {
 	texte?: string;
 	/** Statut de l'article trouvé (`VIGUEUR`, `ABROGE`, `MODIFIE`…) ; absent pour les autres documents. */
 	statut?: string;
+	/** Lien choisi ou corrigé par l'utilisateur : la recherche automatique ne le remplace jamais. */
+	manuel?: boolean;
 }
 
 /** Une requête de résolution : endpoint (`/search`, ou la route de consultation d'un texte) et corps. */

@@ -71,7 +71,7 @@ export async function refineUnresolved(plugin: LegifrancePlugin, ref: LegalRef):
 		if (!chosen) return false;
 	}
 
-	plugin.references.setLink(ref, { url: chosen.url, titre: chosen.title });
+	plugin.references.setLink(ref, { url: chosen.url, titre: chosen.title }, true);
 	plugin.references.saveDecision(ref.key, { status: "pending" });
 	const report = await enrichDecisions(plugin, () => undefined, { retryUnresolved: true, only: [ref] });
 	new Notice(report.stopped ? `Lien enregistré, fiche à compléter plus tard (${report.stopped}).` : `Décision retrouvée : ${chosen.title}`, 6000);

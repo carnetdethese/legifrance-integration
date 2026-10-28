@@ -3,10 +3,12 @@
  * les décisions de la base qui l'appliquent (et la phrase où elles le citent), ses versions, et sa note d'article.
  * Le panneau des références donne la liste de tout ce que la note cite ; celui-ci s'attache aux seuls articles.
  */
-import { ExternalLink, FilePlus, FileText, RefreshCw } from "lucide-react";
+import { ExternalLink, FilePlus, FileText, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { Notice } from "obsidian";
 import { useMemo, useState } from "react";
 import { createMissingArticleNotes, openArticleNote } from "references/articleNotes";
+import { REFERENCES_EVENT } from "lib/events";
+import { preciseReference } from "references/refineText";
 import { loadArticleVersions, storeArticleVersion } from "references/articleVersions";
 import { articleExcerpts, countApplying, statusLabel } from "references/corpus";
 import { LegalRef } from "references/parser";
@@ -79,6 +81,10 @@ const ArticleCard = ({ reference, onNoteChange }: { reference: LegalRef; onNoteC
 	const text = link?.texte;
 
 	async function refresh() {
+		if (link?.manuel) {
+			new Notice("Vous avez choisi ce lien : la recherche automatique ne le remplace pas (« Rétablir la recherche automatique » dans le panneau des références).", 8000);
+			return;
+		}
 		if (!plugin.hasCredentials) {
 			new Notice("Renseignez vos identifiants PISTE dans les réglages du plugin.");
 			return;
@@ -86,6 +92,11 @@ const ArticleCard = ({ reference, onNoteChange }: { reference: LegalRef; onNoteC
 		setRefreshing(true);
 		await plugin.links.resolve([reference], true);
 		setRefreshing(false);
+	}
+
+	/** La recherche s'est trompée de document : l'utilisateur donne le bon numéro ou le bon lien. */
+	async function correct() {
+		if (await preciseReference(plugin, reference)) plugin.events.trigger(REFERENCES_EVENT);
 	}
 
 	async function toNote() {
@@ -114,6 +125,9 @@ const ArticleCard = ({ reference, onNoteChange }: { reference: LegalRef; onNoteC
 				<div className="legifrance-ref-actions">
 					<button className="clickable-icon" aria-label={notePath ? "Ouvrir la note de l'article" : "Créer la note de l'article"} onClick={() => void toNote()}>
 						{notePath ? <FileText size={16} /> : <FilePlus size={16} />}
+					</button>
+					<button className="clickable-icon" aria-label={link ? "Corriger le lien : ce n'est pas le bon article" : "Préciser le lien de l'article"} onClick={() => void correct()}>
+						<SlidersHorizontal size={16} />
 					</button>
 					<button className="clickable-icon" aria-label="Revérifier sur Légifrance" disabled={refreshing} onClick={() => void refresh()}>
 						<RefreshCw size={16} />

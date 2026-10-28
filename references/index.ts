@@ -138,8 +138,8 @@ export class ReferenceIndex {
 		for (const row of db.all<{ ref_key: string; note_path: string }>("SELECT ref_key, note_path FROM article_notes")) {
 			this.articleNotePaths.set(row.note_path, row.ref_key);
 		}
-		for (const row of db.all<{ ref_key: string; url: string; title: string; text: string | null; status: string | null }>("SELECT ref_key, url, title, text, status FROM links")) {
-			this.links.set(row.ref_key, { url: row.url, titre: stripMarks(row.title), texte: row.text ?? undefined, statut: row.status ?? undefined });
+		for (const row of db.all<{ ref_key: string; url: string; title: string; text: string | null; status: string | null; manual: number | null }>("SELECT ref_key, url, title, text, status, manual FROM links")) {
+			this.links.set(row.ref_key, { url: row.url, titre: stripMarks(row.title), texte: row.text ?? undefined, statut: row.status ?? undefined, ...(row.manual && { manuel: true }) });
 		}
 		for (const row of db.all<{ ref_key: string; at: number }>("SELECT ref_key, at FROM misses")) {
 			this.misses.set(row.ref_key, row.at);
@@ -400,20 +400,37 @@ export class ReferenceIndex {
 		return ref.url ? { url: ref.url, titre: ref.label } : this.links.get(ref.key);
 	}
 
-	setLink(ref: LegalRef, link: ResolvedLink) {
+	/**
+	 * Enregistre le lien d'une référence. Un lien choisi par l'utilisateur (`manual`) n'est jamais remplacé par une
+	 * recherche automatique : seul un nouveau choix (`manual`) ou `clearLink` le change.
+	 */
+	setLink(ref: LegalRef, link: ResolvedLink, manual = false) {
 		const before = this.links.get(ref.key);
-		link = { ...link, titre: stripMarks(link.titre) };
+		if (before?.manuel && !manual) return;
+		link = { ...link, titre: stripMarks(link.titre), ...(manual && { manuel: true }) };
 		this.links.set(ref.key, link);
 		this.misses.delete(ref.key);
-		// Veille : un statut de vigueur ou un texte qui change entre deux consultations est signalé.
-		const changed = !!before && (before.statut !== link.statut || (!!before.texte && !!link.texte && before.texte !== link.texte));
+		// Veille : un statut de vigueur ou un texte qui change entre deux consultations du même document est signalé.
+		const changed = !!before && before.url === link.url && (before.statut !== link.statut || (!!before.texte && !!link.texte && before.texte !== link.texte));
 		this.db.transaction(() => {
 			this.db.run(
-				`INSERT INTO links (ref_key, url, title, text, resolved_at, status) VALUES (?, ?, ?, ?, ?, ?)
-				 ON CONFLICT(ref_key) DO UPDATE SET url = excluded.url, title = excluded.title, text = excluded.text, resolved_at = excluded.resolved_at, status = excluded.status`,
-				[ref.key, link.url, link.titre, link.texte ?? null, Date.now(), link.statut ?? null]
+				`INSERT INTO links (ref_key, url, title, text, resolved_at, status, manual) VALUES (?, ?, ?, ?, ?, ?, ?)
+				 ON CONFLICT(ref_key) DO UPDATE SET url = excluded.url, title = excluded.title, text = excluded.text, resolved_at = excluded.resolved_at, status = excluded.status, manual = excluded.manual`,
+				[ref.key, link.url, link.titre, link.texte ?? null, Date.now(), link.statut ?? null, manual ? 1 : 0]
 			);
+			// Un autre document : l'ancien statut et l'ancien signalement de changement ne le concernent pas.
+			if (before && before.url !== link.url) this.db.run("UPDATE links SET previous_status = NULL, changed_at = NULL WHERE ref_key = ?", [ref.key]);
 			if (changed) this.db.run("UPDATE links SET previous_status = ?, changed_at = ? WHERE ref_key = ?", [before!.statut ?? null, Date.now(), ref.key]);
+			this.db.run("DELETE FROM misses WHERE ref_key = ?", [ref.key]);
+		});
+	}
+
+	/** Oublie le lien d'une référence (même choisi par l'utilisateur) : la recherche automatique la reprendra. */
+	clearLink(ref: LegalRef) {
+		this.links.delete(ref.key);
+		this.misses.delete(ref.key);
+		this.db.transaction(() => {
+			this.db.run("DELETE FROM links WHERE ref_key = ?", [ref.key]);
 			this.db.run("DELETE FROM misses WHERE ref_key = ?", [ref.key]);
 		});
 	}
@@ -424,7 +441,7 @@ export class ReferenceIndex {
 			.all<RefRow>(
 				`SELECT r.* FROM refs r JOIN links l ON l.ref_key = r.key
 				 LEFT JOIN (SELECT ref_key, SUM(count) AS total FROM citations GROUP BY ref_key) c ON c.ref_key = r.key
-				 WHERE r.kind IN ('article', 'texte') AND l.resolved_at < ?
+				 WHERE r.kind IN ('article', 'texte') AND l.resolved_at < ? AND COALESCE(l.manual, 0) = 0
 				 ORDER BY COALESCE(c.total, 0) DESC, l.resolved_at`,
 				[before]
 			)

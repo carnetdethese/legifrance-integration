@@ -149,6 +149,11 @@ seule date propose tous les textes de ce jour (`findTextCandidates`, lecture dan
 texte cité par son numéro passe par le formulaire. La résolution automatique ne devine jamais entre plusieurs textes
 du même jour.
 
+**Corriger un lien** : une référence déjà liée peut être corrigée (icône « Corriger le lien » du panneau). Le lien
+choisi est marqué `manual` (colonne `links.manual`, `ResolvedLink.manuel`) : `setLink` refuse de le remplacer par un
+résultat automatique, la veille (`articlesToRefresh`) et `LinkResolver.resolve` l'ignorent. Seuls un nouveau choix
+ou `clearLink` (« Rétablir la recherche automatique ») le changent.
+
 La commande **« Compléter les fiches de décisions »** (`ENRICH_TASK`) enchaîne les étapes ③, ② puis ④ ; chaque
 étape peut aussi être lancée seule depuis la vue ou la palette de commandes.
 

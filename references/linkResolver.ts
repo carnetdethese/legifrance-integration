@@ -59,6 +59,8 @@ export class LinkResolver {
 			(ref) =>
 				canResolve(ref) &&
 				(force || !plugin.references.linkFor(ref)) &&
+				// Un lien choisi par l'utilisateur n'est pas rechargé : il l'a corrigé, la recherche ne le défait pas.
+				!plugin.references.linkFor(ref)?.manuel &&
 				!this.pending.has(ref.key) &&
 				(force || plugin.settings.debugRefs || !plugin.references.isRecentMiss(ref))
 		);
