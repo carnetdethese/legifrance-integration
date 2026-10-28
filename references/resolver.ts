@@ -32,7 +32,6 @@ export interface ResolvedLink {
 	statut?: string;
 }
 
-/** Requête à l'API : chemin et corps JSON. */
 /** Une requête de résolution : endpoint (`/search`, ou la route de consultation d'un texte) et corps. */
 export interface Query {
 	path: string;
@@ -243,109 +242,123 @@ function buildTextArticle(ref: LegalRef): Resolution {
 	};
 }
 
-function build(ref: LegalRef, useRgd = true): Resolution | null {
+/** Article d'un code : trois recherches de plus en plus larges, en préférant la version en vigueur. */
+function buildCodeArticle(ref: LegalRef): Resolution {
 	const { data } = ref;
-
-	if (ref.kind === "article") {
-		if (LEGIFRANCE_TEXTS[data.code]) return buildTextArticle(ref);
-		if (!data.code.startsWith("Code ")) return null;
-		const number = compact(data.number);
-		const codeFilter = { facette: "NOM_CODE", valeurs: [data.code] };
-		/** Extraits (articles) de la réponse, à plat. */
-		const extractsOf = (response: SearchResponse) =>
-			(response.results ?? []).flatMap((r) => (r.sections ?? []).flatMap((sec) => sec.extracts ?? []));
-		/** Articles de la réponse : extraits (cas habituel) ou titres `LEGIARTI…` (autre forme de réponse). */
-		const articlesOf = (response: SearchResponse) => [
-			...extractsOf(response),
-			...(response.results ?? []).flatMap((r) =>
-				(r.titles ?? [])
-					.filter((t) => t.id?.startsWith("LEGIARTI"))
-					.map((t) => ({ id: t.id, num: /(\d[\w.-]*)\s*$/.exec(t.title ?? "")?.[1] ?? "", legalStatus: undefined as string | undefined }))
-			),
-		];
-		return {
-			queries: [
-				// 1. Version en vigueur aujourd'hui (requête vérifiée par Marginalia).
-				searchQuery("CODE_DATE", [field("NUM_ARTICLE", number)], [codeFilter, { facette: "DATE_VERSION", singleDate: Date.now() }]),
-				// 2. Sans filtre de date, au cas où celui-ci écarte l'article.
-				searchQuery("CODE_DATE", [field("NUM_ARTICLE", number)], [codeFilter]),
-				// 3. Recherche libre du numéro dans le code, si le champ NUM_ARTICLE ne donne rien.
-				searchQuery("CODE_DATE", [field("ALL", number)], [codeFilter]),
-			],
-			// On préfère la version en vigueur ; à défaut, n'importe quelle version (article abrogé, toujours citable).
-			read: (raw) => {
-				const candidates = articlesOf(raw as SearchResponse).filter(
-					(e) => compact(e.num ?? "") === number && e.id?.startsWith("LEGIARTI")
-				);
-				const best = candidates.find((e) => !e.legalStatus || e.legalStatus === "VIGUEUR") ?? candidates[0];
-				return best ? { url: `${BASE_URL}/codes/article_lc/${best.id}`, titre: ref.label, articleId: best.id, status: best.legalStatus ?? (best.id ? "VIGUEUR" : undefined) } : null;
-			},
-			describe: (raw) => {
-				const response = raw as SearchResponse;
-				const articles = articlesOf(response);
-				const seen = articles.slice(0, 8).map((e) => `${e.num || "?"} [${e.legalStatus ?? "?"}]`).join(", ");
-				const codes = (response.results ?? []).flatMap((r) => (r.titles ?? []).map((t) => t.title ?? t.id ?? "?")).slice(0, 3).join(" | ");
-				return `${response.results?.length ?? 0} résultat(s) (total API : ${response.totalResultNumber ?? "?"}), ${articles.length} article(s) lisible(s)${seen ? ` : ${seen}` : ""}${codes ? ` ; titres : ${codes}` : ""}`;
-			},
-		};
-	}
-
-	if (ref.kind === "texte") {
-		if (!data.number) return buildDated(ref);
-		const nature = LAW_NATURES[data.nature];
-		return {
-			queries: [searchQuery("LODA_DATE", [field("NUM", data.number)], nature ? [{ facette: "NATURE", valeurs: [nature] }] : [])],
-			read: (raw) => {
+	const number = compact(data.number);
+	const codeFilter = { facette: "NOM_CODE", valeurs: [data.code] };
+	/** Extraits (articles) de la réponse, à plat. */
+	const extractsOf = (response: SearchResponse) =>
+		(response.results ?? []).flatMap((r) => (r.sections ?? []).flatMap((sec) => sec.extracts ?? []));
+	/** Articles de la réponse : extraits (cas habituel) ou titres `LEGIARTI…` (autre forme de réponse). */
+	const articlesOf = (response: SearchResponse) => [
+		...extractsOf(response),
+		...(response.results ?? []).flatMap((r) =>
+			(r.titles ?? [])
+				.filter((t) => t.id?.startsWith("LEGIARTI"))
+				.map((t) => ({ id: t.id, num: /(\d[\w.-]*)\s*$/.exec(t.title ?? "")?.[1] ?? "", legalStatus: undefined as string | undefined }))
+		),
+	];
+	return {
+		queries: [
+			// 1. Version en vigueur aujourd'hui (requête vérifiée par Marginalia).
+			searchQuery("CODE_DATE", [field("NUM_ARTICLE", number)], [codeFilter, { facette: "DATE_VERSION", singleDate: Date.now() }]),
+			// 2. Sans filtre de date, au cas où celui-ci écarte l'article.
+			searchQuery("CODE_DATE", [field("NUM_ARTICLE", number)], [codeFilter]),
+			// 3. Recherche libre du numéro dans le code, si le champ NUM_ARTICLE ne donne rien.
+			searchQuery("CODE_DATE", [field("ALL", number)], [codeFilter]),
+		],
+		// On préfère la version en vigueur ; à défaut, n'importe quelle version (article abrogé, toujours citable).
+		read: (raw) => {
+			const candidates = articlesOf(raw as SearchResponse).filter(
+				(e) => compact(e.num ?? "") === number && e.id?.startsWith("LEGIARTI")
+			);
+			const best = candidates.find((e) => !e.legalStatus || e.legalStatus === "VIGUEUR") ?? candidates[0];
+			return best ? { url: `${BASE_URL}/codes/article_lc/${best.id}`, titre: ref.label, articleId: best.id, status: best.legalStatus ?? (best.id ? "VIGUEUR" : undefined) } : null;
+		},
+		describe: (raw) => {
 			const response = raw as SearchResponse;
-				for (const result of response.results ?? []) {
-					for (const title of result.titles ?? []) {
-						const id = title.cid || title.id;
-						if (id) return { url: `${BASE_URL}/loda/id/${id}`, titre: title.title ?? ref.label };
-					}
-				}
-				return null;
-			},
-		};
-	}
+			const articles = articlesOf(response);
+			const seen = articles.slice(0, 8).map((e) => `${e.num || "?"} [${e.legalStatus ?? "?"}]`).join(", ");
+			const codes = (response.results ?? []).flatMap((r) => (r.titles ?? []).map((t) => t.title ?? t.id ?? "?")).slice(0, 3).join(" | ");
+			return `${response.results?.length ?? 0} résultat(s) (total API : ${response.totalResultNumber ?? "?"}), ${articles.length} article(s) lisible(s)${seen ? ` : ${seen}` : ""}${codes ? ` ; titres : ${codes}` : ""}`;
+		},
+	};
+}
 
-	if (ref.kind === "decision") {
-		if (!data.number) return buildNamed(ref, useRgd);
-		const court = COURTS[data.court];
-		if (!court) return null;
-		const values = { number: data.number, bare: data.number.split(" ")[0] };
-		const isCc = data.court === "cc";
-		return {
-			queries: [
-				...court.fields.map(([typeChamp, value]) => searchQuery(court.fond, [field(typeChamp, values[value])])),
-				// Certaines décisions du Conseil constitutionnel ne sont qu'au Journal officiel (« Décision n° 2017-670 QPC du… »).
-				...(isCc ? [searchQuery("JORF", [field("ALL", data.number)])] : []),
-			],
-			read: (raw) => {
-				const response = raw as SearchResponse;
-				for (const result of response.results ?? []) {
-					for (const title of result.titles ?? []) {
-						if (title.id?.startsWith(court.prefix) && cites(title.title ?? "", data.number)) {
-							return { url: `${BASE_URL}/${court.page}/id/${title.id}`, titre: title.title ?? ref.label };
-						}
-						const jorf = isCc && /^JORFTEXT\d{12}/.exec(title.cid || title.id || "")?.[0];
-						if (jorf && /^décision n°/i.test(title.title ?? "") && cites(title.title ?? "", data.number)) {
-							return { url: `${BASE_URL}/jorf/id/${jorf}`, titre: title.title ?? ref.label };
-						}
+/** Texte (loi, ordonnance, décret…) cité par son numéro, ou par sa seule date. */
+function buildText(ref: LegalRef): Resolution | null {
+	const { data } = ref;
+	if (!data.number) return buildDated(ref);
+	const nature = LAW_NATURES[data.nature];
+	return {
+		queries: [searchQuery("LODA_DATE", [field("NUM", data.number)], nature ? [{ facette: "NATURE", valeurs: [nature] }] : [])],
+		read: (raw) => {
+			const response = raw as SearchResponse;
+			for (const result of response.results ?? []) {
+				for (const title of result.titles ?? []) {
+					const id = title.cid || title.id;
+					if (id) return { url: `${BASE_URL}/loda/id/${id}`, titre: title.title ?? ref.label };
+				}
+			}
+			return null;
+		},
+	};
+}
+
+/** Décision citée par son numéro (ou, sans numéro, par ses parties). */
+function buildDecision(ref: LegalRef, useRgd: boolean): Resolution | null {
+	const { data } = ref;
+	if (!data.number) return buildNamed(ref, useRgd);
+	const court = COURTS[data.court];
+	if (!court) return null;
+	const values = { number: data.number, bare: data.number.split(" ")[0] };
+	const isCc = data.court === "cc";
+	return {
+		queries: [
+			...court.fields.map(([typeChamp, value]) => searchQuery(court.fond, [field(typeChamp, values[value])])),
+			// Certaines décisions du Conseil constitutionnel ne sont qu'au Journal officiel (« Décision n° 2017-670 QPC du… »).
+			...(isCc ? [searchQuery("JORF", [field("ALL", data.number)])] : []),
+		],
+		read: (raw) => {
+			const response = raw as SearchResponse;
+			for (const result of response.results ?? []) {
+				for (const title of result.titles ?? []) {
+					if (title.id?.startsWith(court.prefix) && cites(title.title ?? "", data.number)) {
+						return { url: `${BASE_URL}/${court.page}/id/${title.id}`, titre: title.title ?? ref.label };
+					}
+					const jorf = isCc && /^JORFTEXT\d{12}/.exec(title.cid || title.id || "")?.[0];
+					if (jorf && /^décision n°/i.test(title.title ?? "") && cites(title.title ?? "", data.number)) {
+						return { url: `${BASE_URL}/jorf/id/${jorf}`, titre: title.title ?? ref.label };
 					}
 				}
-				return null;
-			},
-			// Dernier recours : la page du site du Conseil constitutionnel, d'adresse prévisible.
-			fallback: async () => {
-				const site = isCc ? await findCcSiteDecision(data.number) : null;
-				if (site) return { url: site.url, titre: site.titre };
-				if (!useRgd) return null;
-				const found = await findRgdByNumber(data.number, data.court);
-				return found.length === 1 ? { url: found[0].key, titre: found[0].title } : null;
-			},
-		};
+			}
+			return null;
+		},
+		// Dernier recours : la page du site du Conseil constitutionnel, d'adresse prévisible.
+		fallback: async () => {
+			const site = isCc ? await findCcSiteDecision(data.number) : null;
+			if (site) return { url: site.url, titre: site.titre };
+			if (!useRgd) return null;
+			const found = await findRgdByNumber(data.number, data.court);
+			return found.length === 1 ? { url: found[0].key, titre: found[0].title } : null;
+		},
+	};
+}
+
+/** Requêtes et lecture des réponses pour la référence, ou `null` si l'API ne peut pas la retrouver. */
+function build(ref: LegalRef, useRgd = true): Resolution | null {
+	switch (ref.kind) {
+		case "article":
+			if (LEGIFRANCE_TEXTS[ref.data.code]) return buildTextArticle(ref);
+			return ref.data.code.startsWith("Code ") ? buildCodeArticle(ref) : null;
+		case "texte":
+			return buildText(ref);
+		case "decision":
+			return buildDecision(ref, useRgd);
+		default:
+			return null;
 	}
-	return null;
 }
 
 /** L'API peut-elle retrouver cette référence ? (Pas les identifiants, déjà directs.) */
