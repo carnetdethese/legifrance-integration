@@ -156,6 +156,12 @@ constitutionnel citées par leur date seule (« CC, 16 juillet 1971 ») sont des
 plusieurs décisions peuvent partager la date, d'où le choix proposé (`buildCcByDate`). Les fiches citées par un lien
 (`[[fiche]]`) n'ont pas de référence dans le texte : le panneau les liste à part (`linkedFiches`).
 
+**Textes cités par leur nom** : les lois par leur nom usuel (« loi Informatique et Libertés », « LCEN ») sont dans la
+table `LAW_ALIASES` (`lawAliases.ts`), les textes de l'Union (RGPD, DSA, DMA, ePrivacy…) dans `EU_TEXTS` (`eulaw.ts`) ;
+ajouter une entrée suffit. Un texte de l'Union cité sans article est une mention (`scanEuMentions`) ; les sigles trop
+courants (`AMBIGUOUS_ACRONYMS`) ne comptent qu'avec un article. Les décisions du Conseil constitutionnel peuvent aussi
+être citées par l'adresse de leur page (`scanCcSiteUrls`).
+
 **Corriger un lien** : une référence déjà liée peut être corrigée (icône « Corriger le lien » du panneau). Le lien
 choisi est marqué `manual` (colonne `links.manual`, `ResolvedLink.manuel`) : `setLink` refuse de le remplacer par un
 résultat automatique, la veille (`articlesToRefresh`) et `LinkResolver.resolve` l'ignorent. Seuls un nouveau choix

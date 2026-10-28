@@ -45,6 +45,30 @@ export const EU_TEXTS: Record<string, EuText> = {
 		label: "Règlement sur l'IA",
 		aliases: ["règlement sur l'intelligence artificielle", "AI Act", "RIA"],
 	},
+	"32002L0058": {
+		label: "Directive ePrivacy",
+		aliases: ["directive vie privée et communications électroniques", "ePrivacy", "directive 2002/58/CE"],
+	},
+	"31995L0046": {
+		label: "Directive 95/46/CE",
+		aliases: ["directive sur la protection des données de 1995"],
+	},
+	"32023R2854": {
+		label: "Data Act",
+		aliases: ["règlement sur les données"],
+	},
+	"32022R0868": {
+		label: "Data Governance Act",
+		aliases: ["règlement sur la gouvernance des données", "DGA"],
+	},
+	"32022L2555": {
+		label: "NIS 2",
+		aliases: ["directive NIS 2", "directive NIS2", "NIS2"],
+	},
+	"32014R0910": {
+		label: "eIDAS",
+		aliases: ["règlement eIDAS"],
+	},
 };
 
 /** Désignation normalisée (minuscules, sans points ni espaces) → CELEX. */

@@ -3,7 +3,7 @@
  * complétés par des citations réelles de notes (décisions sans recueil, titres de section).
  * Lancer : `npm test`.
  */
-import { citationSpans, parseReferences } from "./parser";
+import { citationSpans, parseCitations, parseReferences } from "./parser";
 const labels = (t: string) => parseReferences(t).map((r) => r.label);
 let fail = 0;
 const eq = (name: string, got: unknown, want: unknown) => { const g = JSON.stringify(got), w = JSON.stringify(want); if (g !== w) { fail++; console.log("ÉCHEC", name, "\n   obtenu :", g, "\n   attendu:", w); } };
@@ -66,7 +66,8 @@ eq("RGPD", labels("Art. 32 RGPD ; article 6, § 1, du règlement (UE) 2016/679 ;
 	["RGPD, art. 32", "RGPD, art. 6", "RGPD, art. 5", "TFUE, art. 267", "TUE, art. 2", "Charte des droits fondamentaux de l'UE, art. 47", "RGPD, art. 17"]);
 eq("règlement (UE) non listé", labels("art. 3 du règlement (UE) 2019/1020"), ["règlement (UE) 2019/1020, art. 3"]);
 eq("Charte de l'environnement inchangée", labels("l'article 4 de la Charte de l'environnement"), ["Charte de l'environnement de 2004, art. 4"]);
-eq("aucun faux positif", labels("la tue ; une DSA ; art. 32 de la loi"), []);
+eq("aucun faux positif : « la tue » et un article sans texte", labels("la tue ; art. 32 de la loi"), []);
+eq("un sigle seul est une mention du texte", labels("une DSA"), ["DSA"]);
 
 // Décisions citées par leur nom sans recueil, dans un titre de section, avec l'année seule.
 eq("titre de section", parseReferences("## Document n° 1 : C.E., 21 décembre 2001, M. Hoffmann - article 34 / 37 - compétence PM").map((r) => r.data), [{ court: "ce", name: "M. Hoffmann", decided: "2001-12-21" }]);
@@ -149,6 +150,32 @@ for (const text of ["Le 2023-07-02 L'article 3 est entré en vigueur.", "du 2001
 eq("numéro de décision réel après une date", parseReferences("Le 2010-05-28 Décision n° 2010-1 QPC").map((r) => r.label), ["Décision n° 2010-1 QPC"]);
 eq("numéros réels conservés", parseReferences("Cons. const., n° 2011-210 QPC, et la décision n° 71-44 DC, et 2012-647 DC.").map((r) => r.data.number), ["2011-210 QPC", "71-44 DC", "2012-647 DC"]);
 eq("délégalisation conservée", parseReferences("Décision n° 2005-202 L").map((r) => r.data.number), ["2005-202 L"]);
+
+// Textes cités par leur nom usuel, sans article ni numéro (extraits de notes réelles).
+const lil = parseReferences("La Loi informatique et libertés du 6 janv 1978 :");
+eq("loi Informatique et Libertés avec sa date", lil.map((r) => [r.kind, r.data, r.label]), [["texte", { nature: "loi", number: "78-17" }, "Loi informatique et libertés du 6 janv 1978"]]);
+eq("loi Informatique et Libertés sans date", parseReferences("la loi Informatique et Libertés").map((r) => r.data), [{ nature: "loi", number: "78-17" }]);
+eq("même clef que la citation par le numéro", parseReferences("loi informatique et libertés")[0].key, parseReferences("loi n° 78-17 du 6 janvier 1978")[0].key);
+eq("loi pour la Confiance dans l'Economie Numérique", parseReferences("Loi de 2004, Loi pour la Confiance dans l'Economie Numérique (v. décision)").map((r) => r.data), [{ nature: "loi", number: "2004-575" }]);
+eq("LCEN", parseReferences("la LCEN prévoit").map((r) => r.data), [{ nature: "loi", number: "2004-575" }]);
+eq("apostrophe typographique", parseReferences("loi pour la confiance dans l’économie numérique").map((r) => r.data.number), ["2004-575"]);
+eq("décret « le » une date", parseReferences("Décret le 14 octobre 1991 qui précise les conditions").map((r) => r.data), [{ nature: "décret", date: "14 octobre 1991" }]);
+eq("décret « du » une date inchangé", parseReferences("le décret du 14 octobre 1991").map((r) => r.data), [{ nature: "décret", date: "14 octobre 1991" }]);
+eq("directive à l'ancienne", parseReferences("transposition de la directive 95/46/CE sur la protection").map((r) => [r.kind, r.data, r.label]), [["eu", { celex: "31995L0046" }, "directive 95/46/CE"]]);
+eq("directive 2002/58/CE", parseReferences("directive 2002/58/CE").map((r) => r.data.celex), ["32002L0058"]);
+eq("directive ePrivacy (2002)", parseReferences("Directive ePrivacy (2002)").map((r) => [r.data.celex, r.label]), [["32002L0058", "Directive ePrivacy"]]);
+const mentions = parseReferences("RGPD (2016, applicable 2018)\nDSA - Digital Services Act (2022)\nDMA - Digital Markets Act (2022)");
+eq("RGPD, DSA, DMA par leur nom", mentions.map((r) => [r.label, r.data.celex]), [["RGPD", "32016R0679"], ["DSA", "32022R2065"], ["DMA", "32022R1925"]]);
+eq("DSA et son nom : une seule référence, citée deux fois", parseCitations("DSA - Digital Services Act").map((c) => [c.ref.label, c.count]), [["DSA", 2]]);
+eq("article du RGPD : une seule référence", labels("art. 32 RGPD"), ["RGPD, art. 32"]);
+eq("mention d'un texte de l'Union : adresse EUR-Lex", parseReferences("le RGPD")[0].url, "https://eur-lex.europa.eu/legal-content/FR/TXT/?uri=CELEX:32016R0679");
+// Page du Conseil constitutionnel citée par son adresse.
+eq("adresse d'une décision du Conseil constitutionnel", parseReferences("[décision du Conseil constitutionnel](https://www.conseil-constitutionnel.fr/decision/2004/2004499DC.htm)").map((r) => [r.kind, r.data]), [["decision", { court: "cc", number: "2004-499 DC" }]]);
+eq("adresse d'une QPC", parseReferences("http://www.conseil-constitutionnel.fr/decision/2020/2020841QPC.htm").map((r) => r.data.number), ["2020-841 QPC"]);
+eq("adresse : même clef que la citation par le numéro", parseReferences("https://www.conseil-constitutionnel.fr/decision/2004/2004499DC.htm")[0].key, parseReferences("décision n° 2004-499 DC")[0].key);
+
+eq("sigles ambigus : pas seuls", labels("la DGA et le RIA"), []);
+eq("sigles ambigus : avec un article", labels("art. 5 RIA").length, 1);
 
 console.log(fail ? `${fail} échec(s)` : "tout passe");
 process.exit(fail ? 1 : 0);

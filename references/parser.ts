@@ -8,12 +8,13 @@ import { ID_PATHS } from "api/urls";
 import { CODE_PATTERN, LEGIFRANCE_PAGES, PREAMBLE_1946, officialCodeName } from "./codes";
 import { FULL_DATE_PATTERN, MONTH_PATTERN, parseCitedDate, plain } from "./dates";
 import { EU_PATTERN, euArticleUrl, euCelexOf, euLabelOf } from "./eulaw";
+import { LAW_ALIAS_PATTERN, lawAliasOf } from "./lawAliases";
 
 /**
  * Version de l'analyse des notes. À incrémenter quand le parseur change ce qu'il reconnaît : au démarrage, les
  * notes sont alors relues (en local) pour que leurs références soient celles du nouveau parseur.
  */
-export const PARSER_VERSION = 2;
+export const PARSER_VERSION = 3;
 
 export type RefKind = "decision" | "texte" | "article" | "eu" | "identifiant";
 
@@ -86,7 +87,9 @@ const LAW = new RegExp(
 	"giu"
 );
 /** Texte cité par sa seule date (« la loi du 6 janvier 1978 »), rattaché à sa citation complète s'il y en a une. */
-const SHORT_LAW = new RegExp(`(?<nature>${NATURES})\\s+du\\s+(?<date>${FULL_DATE_PATTERN})`, "giu");
+const SHORT_LAW = new RegExp(`(?<nature>${NATURES})\\s+(?:en\\s+date\\s+du|du|le)\\s+(?<date>${FULL_DATE_PATTERN})`, "giu");
+/** Loi citée par son nom usuel (« loi Informatique et Libertés »), suivie ou non de sa date. */
+const LAW_BY_NAME = new RegExp(`(?<name>${LAW_ALIAS_PATTERN})(?:\\s*,?\\s*(?:\\(\\s*)?(?:en\\s+date\\s+du|du)\\s+(?<date>${FULL_DATE_PATTERN}))?`, "gu");
 
 const CASSATION = new RegExp(
 	`(?:\\bCass\\.|\\bCour de cassation|\\b(?:Civ|Soc|Com|Crim)\\.|\\bAss\\. plén\\.|\\bCh\\. mixte)${PAYLOAD}(?:pourvoi\\s+)?n\\s?[°º]\\s*(?<number>\\d{2}-\\d{2}[.\\s]?\\d{3})`,
@@ -157,6 +160,10 @@ const SHORT_EU_ACT = new RegExp(
 	"giu"
 );
 const EU_ACT_LETTER: Record<string, string> = { règlement: "R", directive: "L", décision: "D" };
+/** Directive citée à l'ancienne, année d'abord : « directive 95/46/CE », « directive 2002/58/CE ». */
+const EU_DIRECTIVE_OLD = /(?<![\w/])[Dd]irective\s+(?:n\s?[°º]\s*)?(?<year>\d{2}|\d{4})\/(?<number>\d{1,4})\/(?:CE|CEE|UE|Euratom)\b/g;
+/** Texte de l'Union cité par son nom ou son sigle, sans article (« le RGPD », « le DSA »). */
+const EU_MENTION = new RegExp(`(?<![\\wÀ-ÿ])(?:${EU_PATTERN})`, "gu");
 
 /** Texte de l'Union visé par un article : sigle ou nom (« RGPD »), ou acte cité par son numéro. */
 const EU_TARGET = `(?:(?<alias>${EU_PATTERN})|(?<type>[Rr]èglement|[Dd]irective|[Dd]écision)\\s+(?:d['’]exécution\\s+)?\\((?:UE|CE|CEE|Euratom)\\)\\s*(?:n\\s?[°º]\\s*)?(?<a>\\d{1,4})/(?<b>\\d{1,4}))`;
@@ -280,12 +287,15 @@ function scan(text: string): Candidate[] {
 		...scanCodeArticles(text),
 		...scanEuArticles(text),
 		...scanPreamble(text),
+		...scanLawAliases(text),
 		...scanLaws(text),
 		...scanDecisions(text),
+		...scanCcSiteUrls(text),
 		...scanDecisionsByName(text),
 		...scanCcByDate(text),
 		...scanEcli(text),
 		...scanEuLaw(text),
+		...scanEuMentions(text),
 		...scanIdentifiers(text),
 	];
 }
@@ -350,6 +360,16 @@ function scanPreamble(text: string): Candidate[] {
 	return found;
 }
 
+/** Lois citées par leur nom usuel : retrouvées par leur numéro, la date écrite à la suite est reprise dans la citation. */
+function scanLawAliases(text: string): Candidate[] {
+	return [...text.matchAll(LAW_BY_NAME)].flatMap((match) => {
+		const alias = lawAliasOf(match.groups!.name);
+		if (!alias) return [];
+		const { nature, number } = alias;
+		return [candidate(match, "texte", clean(match[0]), `${nature} n° ${number}`, { nature, number })];
+	});
+}
+
 /** Lois, ordonnances, décrets et arrêtés, par leur numéro ou par leur seule date. */
 function scanLaws(text: string): Candidate[] {
 	const found: Candidate[] = [];
@@ -404,6 +424,17 @@ function scanDecisions(text: string): Candidate[] {
 	return found;
 }
 
+/** Décision du Conseil constitutionnel citée par l'adresse de sa page : « …/decision/2004/2004499DC.htm » (2004-499 DC). */
+const CC_SITE_URL = /conseil-constitutionnel\.fr\/decision\/\d{4}\/(?<year>\d{4})(?<order>\d{1,4})(?<kind>QPC|DC|LOM|LP|AN|SEN|ELEC|FNR|PDR|ORGA|AUTO|AR16|L|I|D)(?:\.htm)?/gi;
+
+function scanCcSiteUrls(text: string): Candidate[] {
+	return [...text.matchAll(CC_SITE_URL)].map((match) => {
+		const { year, order, kind } = match.groups!;
+		const number = `${year}-${Number(order)} ${kind.toUpperCase()}`;
+		return candidate(match, "decision", `Décision n° ${number}`, number, { court: "cc", number }, { key: makeKey("decision", { court: "cc", number }) });
+	});
+}
+
 /** Décisions du Conseil d'État ou du Tribunal des conflits citées par leurs parties et leur date. */
 function scanDecisionsByName(text: string): Candidate[] {
 	const found: Candidate[] = [];
@@ -456,11 +487,28 @@ function scanEuLaw(text: string): Candidate[] {
 		const eu = match.groups!.case;
 		found.push(candidate(match, "eu", `aff. ${eu}`, eu, { case: eu }, { url: CURIA_SEARCH + encodeURIComponent(eu) }));
 	}
+	for (const match of text.matchAll(EU_DIRECTIVE_OLD)) {
+		const { year, number } = match.groups!;
+		const full = year.length === 2 ? (Number(year) >= 57 ? 1900 : 2000) + Number(year) : Number(year);
+		euRef(match, `3${full}L${number.padStart(4, "0")}`, clean(match[0]));
+	}
 	for (const match of text.matchAll(SHORT_EU_ACT)) {
 		const celex = euActs.get(`${EU_ACT_LETTER[match.groups!.type.toLowerCase()]}|${dateKey(match.groups!.date)}`);
 		if (celex) euRef(match, celex, clean(match[0]));
 	}
 	return found;
+}
+
+/** Sigles reconnus avec un article (« art. 5 RIA ») mais trop courants pour être pris seuls (« DGA » : Direction générale de l'armement). */
+const AMBIGUOUS_ACRONYMS = new Set(["RIA", "DGA"]);
+
+/** Textes de l'Union cités par leur nom ou leur sigle, sans article. */
+function scanEuMentions(text: string): Candidate[] {
+	return [...text.matchAll(EU_MENTION)].flatMap((match) => {
+		if (AMBIGUOUS_ACRONYMS.has(match[0])) return [];
+		const celex = euCelexOf(match[0]);
+		return celex ? [candidate(match, "eu", euLabelOf(celex) ?? clean(match[0]), celex, { celex }, { url: EURLEX_CELEX + encodeURIComponent(celex) })] : [];
+	});
 }
 
 /** Identifiants Légifrance (LEGIARTI…, JURITEXT…) : adresse directe. */
