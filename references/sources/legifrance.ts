@@ -19,7 +19,7 @@ const ALL_COURTS: CourtCode[] = ["ce", "cassation", "cc"];
 /** Une recherche refusée (400) ou sans objet (404) n'empêche pas d'essayer la suivante. */
 async function search(plugin: LegifrancePlugin, body: ReturnType<typeof searchQuery>, lane?: Lane) {
 	try {
-		return await plugin.api.consult<SearchResponse>(body.path, body.body, lane);
+		return await plugin.api.search<SearchResponse>(body.body, lane);
 	} catch (error) {
 		if (error instanceof ApiError && [400, 404].includes(error.status ?? 0)) return undefined;
 		throw error;

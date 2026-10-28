@@ -33,6 +33,7 @@ export interface ResolvedLink {
 }
 
 /** Requête à l'API : chemin et corps JSON. */
+/** Une requête de résolution : endpoint (`/search`, ou la route de consultation d'un texte) et corps. */
 export interface Query {
 	path: string;
 	body: object;

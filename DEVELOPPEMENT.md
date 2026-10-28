@@ -29,15 +29,52 @@ Le plugin fait deux choses, qui se rejoignent dans la base SQLite :
 
 | Dossier | Rôle |
 |---|---|
-| `main.ts` | Point d'entrée : charge les réglages et la base, enregistre vues, commandes, événements ; lance les tâches de fond. |
-| `api/` | Client PISTE (OAuth, requêtes), limiteur de débit (`rateLimiter.ts`), URLs, façade `utilities.ts`. |
+| `main.ts` | Point d'entrée : charge les réglages, ouvre la base, enregistre vues et événements, tient l'historique et ouvre les vues. Le reste est délégué (voir ci-dessous). |
+| `commands.ts` | Commandes de la palette et icône du ruban. |
+| `api/` | **Tous les appels à l'API Légifrance** (`legifrance.ts`), transport PISTE (`client.ts` : OAuth, erreurs), limiteur de débit (`rateLimiter.ts`), adresses des pages (`urls.ts`), constantes du formulaire de recherche (`constants.ts`). |
 | `abstracts/` | Partie « recherche » : registre des fonds (`fonds.ts`), construction des requêtes (`searchHandler.ts`, `searches.ts`), lecture des documents (`consult.ts`, `document.ts`, `decisions.ts`). |
 | `creation/` | Création d'une note à partir d'un document (`newNote.ts`, modèles Handlebars). |
 | `references/` | **Le cœur récent** : parseur, base, résolution par l'API, tâches, analyses. Voir §3 à §5. |
 | `references/sources/` | Sources pour retrouver la décision d'une fiche sans identifiant : Légifrance, ArianeWeb, RGD. |
 | `settings/` | Onglet de réglages (`settings.ts`) et blocs d'état (`status.ts`). |
 | `views/` | Vues Obsidian (classes `ItemView`) et composants React (`views/components/`). |
-| `lib/` | Petits utilitaires (dates, suggestion de dossiers). |
+| `lib/` | Petits utilitaires (dates, suggestion de dossiers) et constantes d'événements (`events.ts`). |
+
+### Ce que fait chaque objet du plugin
+
+`main.ts` ne contient plus de logique métier : il assemble des objets qui ont chacun un sujet et un fichier.
+
+| Objet | Fichier | Sujet |
+|---|---|---|
+| `plugin.api` | `api/legifrance.ts` | Appels à l'API (voir « Appels à l'API » ci-dessous). |
+| `plugin.references` | `references/index.ts` | Lecture et écriture de la base des références (liens, fiches, décisions, articles). |
+| `plugin.links` | `references/linkResolver.ts` | Retrouve via l'API le lien de chaque référence ; état affiché par les vues : `pending` (recherches en cours), `traces` (journal de débogage), `authFailed` (identifiants refusés). |
+| `plugin.fiches` | `references/ficheEditor.ts` | Fiches de décisions dans les notes : reconnaissance (`sync`), bouton « Compléter », complément à l'ouverture. |
+| `plugin.tasks` | `references/taskRunner.ts` | Tâches longues : `run(task)`, `cancel()`, `running`, `cancelled`, `state`. |
+| `plugin.events` | `lib/events.ts` | `REFERENCES_EVENT`, `TASK_EVENT`, `HISTORY_EVENT`. |
+| (privé) | `references/databaseFile.ts` | Fichier SQLite : ouverture tolérante, migration, écriture sûre. |
+
+### Appels à l'API
+
+Tout appel à Légifrance passe par `plugin.api` (`api/legifrance.ts`), **une méthode par endpoint** ; aucun autre
+module ne connaît les chemins (`/search`, `/consult/juri`…) ni le jeton OAuth2.
+
+| Méthode | Endpoint | Utilisée par |
+|---|---|---|
+| `search(request, lane?)` | `POST /search` | formulaire de recherche (`searchHandler.ts`) ; recherche d'une décision pour une fiche (`sources/legifrance.ts`). |
+| `consultDecision(textId, { searchedString?, cnil?, lane? })` | `POST /consult/juri` (`/consult/cnil`) | lecture d'une décision (`abstracts/decisions.ts`), analyse (`indexer.ts`), métadonnées d'une fiche. |
+| `consultArticle(id, lane?)` | `POST /consult/getArticle` | texte d'un article (`resolver.ts`), versions (`articleVersions.ts`). |
+| `consult(route, params, lane?)` | `POST /consult/<route>` | lecture des autres fonds (`abstracts/consult.ts` choisit la route d'après l'identifiant) ; requêtes de résolution des références (`resolver.ts` : `/search`, ou la route d'un texte). |
+
+Le transport (`api/client.ts`) fait le reste : jeton mis en cache et renouvelé sur un 401 (une seule relance),
+attente du limiteur de débit, pause générale sur un 429 (`Retry-After`), erreurs HTTP en `ApiError` (le code est
+dans `status`). Les appelants distinguent « requête refusée » (400/404 : on essaie la suivante) de « identifiants
+refusés ou quota » (401/403/429 : on prévient et on arrête). `lane: "background"` marque un travail de fond, qui
+passe après les requêtes de l'utilisateur.
+
+**Ajouter un appel** : une méthode dans `LegifranceApi` (chemin, corps, ligne dans le tableau ci-dessus), pas de
+`fetch` ailleurs. Les réponses sont renvoyées brutes ; leur lecture se fait par fond dans `abstracts/` ou
+`references/` (`caselaw.ts` pour les décisions, `consult.ts` pour les textes).
 
 ### Modules « purs » et modules Obsidian
 
@@ -46,7 +83,7 @@ Règle importante pour que les tests tournent sous Node : **un module de `refere
 `timeline`, `genealogy`, `checks`, `fiches`, `rgdTitle`, `migrate`, `database`, `rateLimiter`. Le plugin leur
 passe ce qu'il lit (frontmatter, texte des notes) et applique ce qu'ils décident. Quand vous ajoutez de la
 logique, mettez-la dans un module pur et gardez les fichiers qui touchent à Obsidian (`insights.ts`,
-`ficheSync.ts`, `indexer.ts`, `main.ts`, vues) minces.
+`ficheSync.ts`, `ficheEditor.ts`, `linkResolver.ts`, `indexer.ts`, `main.ts`, vues) minces.
 
 ## 3. Le cycle de la donnée
 
@@ -84,7 +121,7 @@ sa commande, ses tables et son compteur dans la vue **Base de données → Cycle
   │  Relations   │  « revient sur », « précise », « confirme »… entre décisions
   └──────┬───────┘
          │ ⑤ RELIER LES FICHES           tâche COMPLETE_FICHES_TASK  fiches.ts · ficheSync.ts
-         ▼                               table fiches (+ main.ts : syncFiche à chaque modification)
+         ▼                               table fiches (+ ficheEditor.ts : à chaque modification)
   ┌──────────────┐
   │   Fiches     │  note dont une propriété désigne une décision, reliée par l'identifiant Légifrance
   │   reliées    │  = ÉTAT « FICHÉE » (vert)
@@ -212,7 +249,7 @@ texte) ; `unresolved` (introuvable, retentée plus tard) ; `error` (échec rése
 ## 4. La base SQLite (`references/database.ts`)
 
 sql.js (SQLite en WebAssembly) : la base **vit en mémoire** ; le plugin écrit le fichier `legifrance.sqlite` du
-dossier du plugin à chaque série de modifications (`saveDatabaseSoon` dans `main.ts`, dernière écriture à la
+dossier du plugin à chaque série de modifications (`DatabaseFile.save` dans `references/databaseFile.ts`, planifiée par `main.ts`, dernière écriture à la
 fermeture). Conséquences :
 
 - une requête sur toute la base n'est pas coûteuse en disque, mais le **travail en JavaScript autour** l'est.
@@ -246,9 +283,9 @@ seulement dans `SCHEMA`. **Ajouter une table** : `CREATE TABLE IF NOT EXISTS` da
 
 ### Tâches (`references/indexer.ts`)
 
-Chaque tâche est un objet `Task` lancé par `plugin.runTask` (`main.ts`) : elle rend la main à l'interface
-régulièrement, signale sa progression (`taskState`, événement `TASK_EVENT`), et peut être annulée
-(`cancelTask`). Toutes passent par le **limiteur de débit** (`api/rateLimiter.ts`) : jamais plus de N requêtes
+Chaque tâche est un objet `Task` lancé par `plugin.tasks.run` (`references/taskRunner.ts`) : elle rend la main à
+l'interface régulièrement, signale sa progression (`plugin.tasks.state`, événement `TASK_EVENT`), et peut être
+annulée (`plugin.tasks.cancel`, que la tâche lit dans `plugin.tasks.cancelled`). Toutes passent par le **limiteur de débit** (`api/rateLimiter.ts`) : jamais plus de N requêtes
 par minute, priorité aux actions interactives sur les travaux de fond (`Lane`).
 
 | Tâche | Commande | Effet |
@@ -271,8 +308,8 @@ Quand le parseur change (clefs, libellés), `PARSER_VERSION` est incrémenté et
 
 - **Vues** (`views/*.tsx`) : chacune est un `ItemView` qui monte un composant React (`ReactItemView.tsx`) dans un
   `PluginContext`. `usePlugin()` (`views/hooks.tsx`) donne accès au plugin.
-- **Événements** : `REFERENCES_EVENT` (lien retrouvé, base modifiée), `TASK_EVENT` (progression d'une tâche),
-  `HISTORY_EVENT`. `useDatabaseVersion()` renvoie un numéro qui change quand la base change (lissé par un
+- **Événements** (`lib/events.ts`) : `REFERENCES_EVENT` (lien retrouvé, base modifiée), `TASK_EVENT` (progression
+  d'une tâche), `HISTORY_EVENT`. `useDatabaseVersion()` renvoie un numéro qui change quand la base change (lissé par un
   `debounce`) : les analyses en dépendent pour se recalculer.
 - **Panneau des références** (`components/references/`) : références de la note active, avec la pastille
   d'état des décisions ; pour une fiche, `FicheInsights`.

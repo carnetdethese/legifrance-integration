@@ -14,7 +14,6 @@
  * Toutes acceptent une file (`lane`) : `"background"` pour une tâche de fond, qui passe après les requêtes que
  * l'utilisateur attend.
  */
-import type { rechercheAvStructure } from "abstracts/searches";
 import { ConnectionSettings, DilaApiClient } from "./client";
 import type { Lane } from "./rateLimiter";
 
@@ -35,8 +34,8 @@ export class LegifranceApi {
 		this.client.updateConfig(settings);
 	}
 
-	/** Recherche avancée dans un fond (`POST /search`). `request` est le corps construit par `documentSearchFieldsClass.toObject()`. */
-	search<T = object>(request: rechercheAvStructure, lane?: Lane) {
+	/** Recherche avancée dans un fond (`POST /search`). `request` est le corps d'une recherche : celui du formulaire (`documentSearchFieldsClass.toObject()`) ou d'une recherche de référence (`searchQuery` dans `resolver.ts`). */
+	search<T = object>(request: object, lane?: Lane) {
 		return this.client.fetch<T>({ path: "/search", params: request, lane });
 	}
 
