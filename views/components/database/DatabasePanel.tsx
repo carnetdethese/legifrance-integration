@@ -128,7 +128,7 @@ const TablesPanel = () => {
 				<input type="search" placeholder="Filtrer…" value={filter} onChange={(e) => setFilter(e.target.value)} />
 				<button onClick={refresh}>Actualiser</button>
 				<span className="setting-item-description">
-					{shown.length} ligne{shown.length > 1 ? "s" : ""} · {plugin.manifest.dir}/legifrance.sqlite
+					{shown.length} ligne{shown.length > 1 ? "s" : ""} — {plugin.manifest.dir}/legifrance.sqlite
 				</span>
 			</div>
 

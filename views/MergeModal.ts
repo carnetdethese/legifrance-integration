@@ -21,7 +21,7 @@ export function chooseMain(app: App, records: DecisionRecord[]): Promise<Decisio
 				for (const record of records) {
 					const details = [displayDate(record.date), record.court, record.number && `n° ${record.number}`, `${record.notes.length} note${record.notes.length > 1 ? "s" : ""}`, record.fichePath && "fiche", record.complete && "texte intégral"]
 						.filter(Boolean)
-						.join(" · ");
+						.join(" — ");
 					const label = list.createEl("label", { cls: "legifrance-merge-choice" });
 					const radio = label.createEl("input", { type: "radio", attr: { name: "legifrance-merge-main" } });
 					radio.checked = record === main;
@@ -33,7 +33,7 @@ export function chooseMain(app: App, records: DecisionRecord[]): Promise<Decisio
 					const more = [
 						record.formation && `Formation : ${record.formation}`,
 						record.solution && `Solution : ${record.solution}`,
-						record.cited?.length && `Cité comme : ${record.cited.slice(0, 5).join(" · ")}`,
+						record.cited?.length && `Cité comme : ${record.cited.slice(0, 5).join(" — ")}`,
 						record.fichePath && `Fiche : ${record.fichePath.replace(/\.md$/, "")}`,
 						record.notes.length && `Notes : ${record.notes.slice(0, 5).map((p) => p.replace(/\.md$/, "").split("/").pop()).join(", ")}${record.notes.length > 5 ? ` (+${record.notes.length - 5})` : ""}`,
 						record.summary && (record.summary.length > 220 ? `${record.summary.slice(0, 220)}…` : record.summary),

@@ -97,10 +97,10 @@ sa commande, ses tables et son compteur dans la vue **Base de données → Cycle
   ┌──────────────┐
   │    Notes     │  citent des décisions, des textes, des articles ; certaines notes sont des fiches
   └──────┬───────┘
-         │ ① ANALYSER LES NOTES          tâche INDEX_TASK            parser.ts · indexer.ts (indexVault)
+         │ ① ANALYSER LES NOTES          tâche INDEX_TASK            parser.ts — indexer.ts (indexVault)
          ▼                               tables notes, refs, citations
   ┌──────────────┐
-  │  Références  │  « CE, 1923, Couitéas » · « art. 1240 C. civ. » · « art. 32 RGPD »
+  │  Références  │  « CE, 1923, Couitéas » — « art. 1240 C. civ. » — « art. 32 RGPD »
   │   citées     │  = ÉTAT « CITÉE » (jaune)
   └──────┬───────┘
          │ ② RETROUVER LES TEXTES        tâche ARTICLES_TASK         resolver.ts (articles, textes)
@@ -120,15 +120,15 @@ sa commande, ses tables et son compteur dans la vue **Base de données → Cycle
   ┌──────────────┐
   │  Relations   │  « revient sur », « précise », « confirme »… entre décisions
   └──────┬───────┘
-         │ ⑤ RELIER LES FICHES           tâche COMPLETE_FICHES_TASK  fiches.ts · ficheSync.ts
+         │ ⑤ RELIER LES FICHES           tâche COMPLETE_FICHES_TASK  fiches.ts — ficheSync.ts
          ▼                               table fiches (+ ficheEditor.ts : à chaque modification)
   ┌──────────────┐
   │   Fiches     │  note dont une propriété désigne une décision, reliée par l'identifiant Légifrance
   │   reliées    │  = ÉTAT « FICHÉE » (vert)
   └──────┬───────┘
-         │ recensement : loadDecisions / decisionsOf        corpus.ts · insights.ts
+         │ recensement : loadDecisions / decisionsOf        corpus.ts — insights.ts
          ▼
-   Analyses : Articles, Chronologie (vue Jurisprudence) · À faire, Cycle, Tables (vue Base de données)
+   Analyses : Articles, Chronologie (vue Jurisprudence) — À faire, Cycle, Tables (vue Base de données)
 ```
 
 Ce que l'on tire du recensement pour les notes : table des décisions (`timeline.ts`), **plan de cours**
@@ -330,8 +330,8 @@ Quand le parseur change (clefs, libellés), `PARSER_VERSION` est incrémenté et
   demande par un bouton), Chronologie et Graphe (ils recensent toutes les décisions à l'ouverture) et Recherche (dans les
   textes, sans recensement). Le bouton « À faire → » mène à la vue Base de données.
 - **Vue Base de données** (`components/database/`) : trois onglets — *Cycle de la donnée* (`CycleOverview` : les cinq
-  étapes, leur avancement, un bouton par tâche, la légende des pastilles), *À faire* (`TodoTab` : fiches à
-  créer, écarts, articles abrogés, citations à vérifier) et *Tables* (contenu brut de la base).
+  étapes, leur avancement, un bouton par tâche, la légende des pastilles), *À faire* (`TodoTab`, menu des rubriques à gauche : fiches à
+  créer, décisions et textes introuvables à préciser, écarts, articles abrogés, citations à vérifier) et *Tables* (contenu brut de la base).
 - `Shared.tsx` rassemble les briques communes (`Card`, `Row`, `DecisionRow`, `DecisionInfo`, `Genealogy`).
 
 ## 7. Performances : ce qu'il faut savoir
@@ -344,6 +344,12 @@ Quand le parseur change (clefs, libellés), `PARSER_VERSION` est incrémenté et
   directement, en paginant (`articlePage`).
 - Ajouter une analyse sur toutes les décisions = ajouter un coût à l'ouverture : préférez une requête SQL, ou
   chargez à la demande (au clic).
+- Ne rendez jamais toutes les lignes d'une liste potentiellement longue : calculer des milliers de décisions est
+  instantané (12 000 en ~350 ms), les afficher d'un coup fige l'interface. La chronologie rend une fenêtre de
+  lignes qui s'agrandit au défilement (`IntersectionObserver`), avec un saut par année ; l'onglet Articles pagine
+  les décisions d'un article (25 à la fois).
+- Pour retrouver la phrase d'une décision qui cite un article (`citingSentence`), on n'analyse que les passages
+  autour du numéro de l'article, jamais le texte entier (un texte entier × 100 décisions = plusieurs secondes).
 - `ReferenceIndex` garde en mémoire tous les liens (`links`) : l'interface les lit à chaque affichage.
 
 ## 8. Les tests
@@ -406,3 +412,9 @@ Obsidian, avec `npm run dev`.
   autre document, d'où le contrôle du numéro, de la date et des parties dans `resolver.ts`.
 - **Numéros de décisions** : comparés sans espaces, points, tirets ni zéros de tête (`04749` = `4749`) ; au
   Conseil constitutionnel, sans le type (`DC`, `QPC`).
+
+## Le graphe des citations est désactivé
+
+L'onglet « Graphe » de l'analyse de la jurisprudence n'est plus affiché (`GRAPH_ENABLED = false` dans
+`JurisprudencePanel.tsx`) : il n'était pas assez intuitif. Tout le code est conservé (`GraphTab`, `graph.ts`,
+`graphRenderer.ts`, réglages et tests) ; remettre l'indicateur à `true` le réaffiche.

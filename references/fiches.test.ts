@@ -1,6 +1,6 @@
 /** Tests des fiches de décisions. Lancer : `npm test`. */
 import { ariaValues, completableCount, courtCode, ficheDifferences, ficheId, ficheQuery, ficheUpdates, isFiche, missingProperties } from "./fiches";
-import { decisionKey } from "./ids";
+import { decisionKey, legifranceIdOf, spokenDate } from "./ids";
 import { numberSignature } from "./merge";
 
 let fail = 0;
@@ -150,6 +150,13 @@ eq("numéro à zéros de tête : même numéro", ficheDifferences({ numero: "047
 eq("numéro différent signalé", ficheDifferences({ numero: "04749" }, settings, { number: "4750" }).length, 1);
 eq("signature à zéros de tête", numberSignature("ce", "04749"), numberSignature("ce", "4749"));
 eq("signature : le zéro seul reste", numberSignature("cc", "0"), "cc|0");
+
+// Identifiant d'un texte ou d'un article saisi par l'utilisateur, et date « parlée ».
+eq("identifiant d'un lien", legifranceIdOf("https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000886460/"), "JORFTEXT000000886460");
+eq("identifiant seul", legifranceIdOf(" LEGIARTI000006419280 "), "LEGIARTI000006419280");
+eq("lien sans identifiant", legifranceIdOf("https://www.legifrance.gouv.fr/"), undefined);
+eq("date parlée", [spokenDate("1978-01-06"), spokenDate("2016-10-07"), spokenDate("2020-02-29")], ["6 janvier 1978", "7 octobre 2016", "29 février 2020"]);
+eq("premier du mois", spokenDate("1978-01-01"), "1er janvier 1978");
 
 console.log(fail ? `${fail} échec(s)` : "tout passe");
 import { significantWords } from "./dates";

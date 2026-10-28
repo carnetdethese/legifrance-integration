@@ -130,7 +130,7 @@ function matches(index: ReferenceIndex, scope: SearchScope, terms: string[]): Ma
 			SELECT id, title, court, number, date FROM t WHERE ${where}`,
 			terms
 		)) {
-			found.push({ kind: "decision", id: row.id, title: row.title ?? row.id, detail: [row.court, row.number && `n° ${row.number}`].filter(Boolean).join(" · "), date: row.date ?? undefined });
+			found.push({ kind: "decision", id: row.id, title: row.title ?? row.id, detail: [row.court, row.number && `n° ${row.number}`].filter(Boolean).join(" — "), date: row.date ?? undefined });
 		}
 	}
 

@@ -25,5 +25,17 @@ const long = `${"mot ".repeat(200)}vu l'article 1240 du code civil ${"suite ".re
 const cut = citingSentence(long, parseCitations(long)[0].ref.key)!;
 eq("contexte borné", cut.before.length <= 190 && cut.after.length <= 230, true);
 
+// Un long texte, avec un numéro qui apparaît d'abord hors citation : l'extrait est trouvé vite et au bon endroit.
+const filler = "La cour d'appel a relevé que la somme de 1240 euros restait due. ".repeat(1500);
+const big = `${filler}Selon l'article L. 121-1 du code de la route et l'article 1240 du code civil, il faut réparer. ${filler}`;
+const bigKey = parseCitations("article 1240 du code civil")[0].ref.key;
+const started = Date.now();
+const inBig = citingSentence(big, bigKey)!;
+eq("long texte : bonne citation", inBig.cited, "article 1240 du code civil");
+eq("long texte : phrase", inBig.after.includes("il faut réparer"), true);
+eq("long texte : rapide", Date.now() - started < 200, true);
+eq("article à numéro composé", citingSentence("Vu l'article L121-1 du code de la route, la cour juge.", parseCitations("article L. 121-1 du code de la route")[0].ref.key)?.cited, "article L121-1 du code de la route");
+eq("citation sans numéro repérable (alinéa en lettres)", citingSentence("Selon le onzième alinéa du Préambule de 1946, tous ont droit.", parseCitations("onzième alinéa du Préambule de 1946")[0].ref.key)?.cited, "onzième alinéa du Préambule de 1946");
+
 if (fail) { console.log(`${fail} échec(s)`); process.exit(1); }
 console.log("tout passe");

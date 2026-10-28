@@ -46,7 +46,7 @@ export const Mentions = ({ record, version }: { record: DecisionRecord; version:
 	if (record.notes.length === 0) return <Section id="mentions" title="Citée dans" count={0}><div className="setting-item-description">Aucune note.</div></Section>;
 	const total = notes?.reduce((sum, n) => sum + Math.max(1, n.mentions.length), 0);
 	return (
-		<Section id="mentions" title="Citée dans" count={notes ? `${notes.length} note${notes.length > 1 ? "s" : ""} · ${total}` : record.notes.length}>
+		<Section id="mentions" title="Citée dans" count={notes ? `${notes.length} note${notes.length > 1 ? "s" : ""} — ${total}` : record.notes.length}>
 		<div className="legifrance-mentions">
 			{(notes ?? []).map(({ path, mentions }) => {
 				const closed = collapsed.has(path);

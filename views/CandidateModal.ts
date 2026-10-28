@@ -25,7 +25,7 @@ class CandidateModal extends SuggestModal<DecisionCandidate> {
 	renderSuggestion(candidate: DecisionCandidate, el: HTMLElement) {
 		el.createDiv({ text: candidate.title });
 		const source = SOURCES.find((s) => s.id === candidate.source)?.label ?? candidate.source;
-		el.createEl("small", { text: `${source} · ${candidate.url}`, cls: "setting-item-description" });
+		el.createEl("small", { text: `${source} — ${candidate.url}`, cls: "setting-item-description" });
 	}
 
 	onChooseSuggestion(candidate: DecisionCandidate) {

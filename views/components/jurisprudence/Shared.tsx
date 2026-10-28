@@ -79,7 +79,7 @@ export const DecisionRow = ({
 	const [showRelated, setShowRelated] = useState(false);
 	const [showInfo, setShowInfo] = useState(false);
 	const themes = [...new Set(record.themes.map(topTheme))].slice(0, 3);
-	const details = [record.court, record.formation, record.solution].filter(Boolean).join(" · ");
+	const details = [record.court, record.formation, record.solution].filter(Boolean).join(" — ");
 
 	return (
 		<Row
@@ -94,7 +94,7 @@ export const DecisionRow = ({
 				<>
 					{record.name && <div>{record.title ?? record.label}</div>}
 					{details}
-					{details && record.notes.length > 0 && " · "}
+					{details && record.notes.length > 0 && " — "}
 					{record.notes.length > 0 && `${record.notes.length} note${record.notes.length > 1 ? "s" : ""}`}
 					{themes.length > 0 && (
 						<div>
@@ -149,7 +149,7 @@ export const DecisionInfo = ({ record, records }: { record: DecisionRecord; reco
 		["Formation", record.formation],
 		["Solution", record.solution],
 		["Fiche", record.fichePath ? noteName(record.fichePath) : undefined],
-		["Cité comme", record.cited?.length ? record.cited.slice(0, 6).join(" · ") + (record.cited.length > 6 ? ` · +${record.cited.length - 6}` : "") : undefined],
+		["Cité comme", record.cited?.length ? record.cited.slice(0, 6).join(" — ") + (record.cited.length > 6 ? ` — +${record.cited.length - 6}` : "") : undefined],
 		["Identifiant", record.id.startsWith("fiche:") ? undefined : record.id],
 	];
 	return (
@@ -186,7 +186,7 @@ export const RelatedList = ({ record, records }: { record: DecisionRecord; recor
 				return (
 					<li key={item.id}>
 						<a onClick={() => (other?.fichePath ? openNote(other.fichePath) : other?.url && window.open(other.url))}>{other?.title ?? item.label}</a>
-						<div className="legifrance-row-meta">{Math.round(item.score * 100)} % · {item.reasons.join(" · ")}</div>
+						<div className="legifrance-row-meta">{Math.round(item.score * 100)} % — {item.reasons.join(" — ")}</div>
 					</li>
 				);
 			})}

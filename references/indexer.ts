@@ -324,6 +324,6 @@ export const ENRICH_TASK: Task<EnrichReport & { articles?: ArticlesReport }> = {
 		const decisions = r.stopped
 			? `interrompu (${r.stopped}) après ${r.complete} complètes, ${r.external} hors Légifrance, ${r.unresolved} introuvables, ${r.errors} erreurs`
 			: `${r.complete} complètes, ${r.external} hors Légifrance, ${r.unresolved} introuvables, ${r.errors} erreurs`;
-		return r.articles ? `${decisions} · articles et textes : ${r.articles.resolved} retrouvés, ${r.articles.missing} introuvables${r.articles.stopped ? ` (interrompu : ${r.articles.stopped})` : ""}.` : `${decisions}.`;
+		return r.articles ? `${decisions} — articles et textes : ${r.articles.resolved} retrouvés, ${r.articles.missing} introuvables${r.articles.stopped ? ` (interrompu : ${r.articles.stopped})` : ""}.` : `${decisions}.`;
 	},
 };

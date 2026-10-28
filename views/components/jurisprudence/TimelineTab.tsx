@@ -4,7 +4,7 @@
  */
 import { Notice, getAllTags } from "obsidian";
 import { FilePlus, Link2, Unlink } from "lucide-react";
-import { CSSProperties, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { REFERENCES_EVENT } from "lib/events";
 import { DecisionRecord, filterRecords, groupByYear, themeCounts } from "references/timeline";
 import { manualMerges, suggestMerges, RESOLVED_ID } from "references/merge";
@@ -12,6 +12,12 @@ import { createFiche, writeFicheIds } from "references/insights";
 import { chooseMain } from "views/MergeModal";
 import { usePlugin } from "views/hooks";
 import { DecisionInfo, DecisionRow, noteName } from "./Shared";
+
+/** Nombre de lignes (décisions et titres d'année) rendues d'un coup ; la suite arrive en faisant défiler. */
+const WINDOW = 60;
+
+/** Une ligne de la frise : titre d'année ou décision. */
+type TimelineRow = { kind: "year"; year: string } | { kind: "decision"; record: DecisionRecord };
 
 /** Frise chronologique des décisions, filtrable par thème, étiquette, note et juridiction. */
 export const TimelineTab = ({ records }: { records: DecisionRecord[] }) => {
@@ -66,6 +72,43 @@ export const TimelineTab = ({ records }: { records: DecisionRecord[] }) => {
 	);
 	const { years, undated } = useMemo(() => groupByYear(shown), [shown]);
 	const noThemes = records.length > 0 && themes.length === 0;
+
+	/**
+	 * La frise à plat. Seule une fenêtre est rendue (début `from`, `limit` lignes) : afficher des milliers de
+	 * décisions d'un coup fige l'interface, alors que le calcul de la liste complète est instantané. La suite se
+	 * charge au défilement ; « Aller à l'année » déplace le début de la fenêtre.
+	 */
+	const rows = useMemo(() => {
+		const flat: TimelineRow[] = [];
+		for (const { year, items } of years) {
+			flat.push({ kind: "year", year });
+			for (const record of items) flat.push({ kind: "decision", record });
+		}
+		if (undated.length) {
+			flat.push({ kind: "year", year: "Sans date" });
+			for (const record of undated) flat.push({ kind: "decision", record });
+		}
+		return flat;
+	}, [years, undated]);
+	const [from, setFrom] = useState(0);
+	const [limit, setLimit] = useState(WINDOW);
+	// Un autre filtre repart du début.
+	useEffect(() => {
+		setFrom(0);
+		setLimit(WINDOW);
+	}, [theme, note, tag, court, search]);
+	const visible = rows.slice(from, from + limit);
+	const more = from + limit < rows.length;
+	/** Sentinelle en bas de la fenêtre : la faire apparaître charge la suite. */
+	const sentinel = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		const el = sentinel.current;
+		if (!el || !more) return;
+		const observer = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && setLimit((n) => n + WINDOW), { rootMargin: "400px" });
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [more, from, limit, rows]);
+	const yearStarts = useMemo(() => rows.flatMap((row, i) => (row.kind === "year" ? [[row.year, i] as const] : [])), [rows]);
 
 	const toggle = (id: string) => setSelected((current) => {
 		const next = new Set(current);
@@ -152,7 +195,7 @@ export const TimelineTab = ({ records }: { records: DecisionRecord[] }) => {
 			<div className="legifrance-timeline-bar" ref={barRef}>
 				<p className="legifrance-count">
 					{shown.length} décision{shown.length > 1 ? "s" : ""}
-					{noThemes && " · les thèmes arrivent avec « Compléter les fiches de décisions » (Réglages → Général)."}
+					{noThemes && " — les thèmes arrivent avec « Compléter les fiches de décisions » (Réglages → Général)."}
 				</p>
 				{selecting ? (
 					<div className="legifrance-row-actions">
@@ -190,22 +233,25 @@ export const TimelineTab = ({ records }: { records: DecisionRecord[] }) => {
 				</details>
 			)}
 
-			{years.map(({ year, items }) => (
-				<section key={year} className="legifrance-year">
-					<h5 className="legifrance-year-label">{year}</h5>
-					<div className="legifrance-year-items">
-						{items.map((record) => <DecisionRow key={record.id} record={record} records={records} withRelated extra={rowExtra(record)} />)}
-					</div>
-				</section>
-			))}
-			{undated.length > 0 && (
-				<section className="legifrance-year">
-					<h5 className="legifrance-year-label">Sans date</h5>
-					<div className="legifrance-year-items">
-						{undated.map((record) => <DecisionRow key={record.id} record={record} records={records} withRelated extra={rowExtra(record)} />)}
-					</div>
-				</section>
+			{rows.length > WINDOW && (
+				<div className="legifrance-timeline-jump">
+					<select value="" onChange={(e) => { if (e.target.value) { setFrom(Number(e.target.value)); setLimit(WINDOW); } }} className="dropdown" aria-label="Aller à l'année">
+						<option value="">Aller à l'année…</option>
+						{yearStarts.map(([year, index]) => <option key={year} value={index}>{year}</option>)}
+					</select>
+					{from > 0 && <button onClick={() => setFrom(Math.max(0, from - WINDOW))}>Années précédentes ({from} lignes plus haut)</button>}
+				</div>
 			)}
+			<div className="legifrance-year-items">
+				{visible.map((row) =>
+					row.kind === "year" ? (
+						<h5 key={`y${row.year}`} className="legifrance-year-label">{row.year}</h5>
+					) : (
+						<DecisionRow key={row.record.id} record={row.record} records={records} withRelated extra={rowExtra(row.record)} />
+					)
+				)}
+			</div>
+			{more && <div ref={sentinel} className="legifrance-empty">Suite…</div>}
 		</div>
 	);
 };

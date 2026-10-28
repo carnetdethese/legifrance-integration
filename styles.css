@@ -1267,3 +1267,185 @@
 	flex-direction: column;
 	gap: var(--size-4-2);
 }
+
+/* Chronologie : frise à plat, un titre d'année collant avant les décisions de l'année */
+.legifrance-year-items > .legifrance-year-label {
+	z-index: 1;
+	margin: var(--size-4-3) 0 0;
+	padding: var(--size-2-2) 0;
+	background: var(--background-primary);
+}
+
+.legifrance-timeline-jump {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+}
+
+/* À faire : menu des rubriques à gauche, rubrique choisie à droite */
+.legifrance-todo {
+	display: grid;
+	grid-template-columns: minmax(150px, 200px) minmax(0, 1fr);
+	gap: var(--size-4-4);
+	align-items: start;
+}
+
+.legifrance-todo-menu {
+	position: sticky;
+	top: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-3);
+}
+
+.legifrance-todo-group {
+	margin-bottom: var(--size-2-1);
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.legifrance-todo-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: var(--size-4-2);
+	width: 100%;
+	height: auto;
+	padding: var(--size-2-2) var(--size-4-2);
+	border: 1px solid transparent;
+	border-radius: var(--radius-m);
+	background: none;
+	box-shadow: none;
+	color: var(--text-muted);
+	text-align: left;
+	white-space: normal;
+}
+
+.legifrance-todo-item:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.legifrance-todo-item.is-active {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-active-hover);
+	color: var(--text-normal);
+	font-weight: var(--font-medium);
+}
+
+@media (max-width: 700px) {
+	.legifrance-todo {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.legifrance-todo-menu {
+		position: static;
+	}
+}
+
+/* --- Panneaux latéraux : une référence ou un article = un titre, des pastilles, des actions discrètes --- */
+
+.legifrance-ref {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: var(--size-4-2);
+	padding: var(--size-4-2) 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.legifrance-ref:last-child {
+	border-bottom: none;
+}
+
+.legifrance-ref-main {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-2);
+	min-width: 0;
+	flex: 1;
+}
+
+.legifrance-ref-title {
+	font-weight: var(--font-medium);
+	line-height: 1.3;
+	overflow-wrap: anywhere;
+}
+
+.legifrance-ref-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-2);
+}
+
+.legifrance-ref-chips .legifrance-chip {
+	margin: 0;
+}
+
+.legifrance-ref-sub {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	overflow-wrap: anywhere;
+}
+
+/* Actions : petites, en colonne si le panneau est étroit, plus visibles au survol. */
+.legifrance-ref-actions {
+	display: flex;
+	flex: none;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--size-2-1);
+	max-width: 76px;
+	opacity: 0.55;
+	transition: opacity 120ms;
+}
+
+.legifrance-ref:hover .legifrance-ref-actions,
+.legifrance-article-card:hover .legifrance-ref-actions,
+.legifrance-ref-actions:focus-within {
+	opacity: 1;
+}
+
+.legifrance-ref-actions .clickable-icon {
+	padding: var(--size-2-2);
+}
+
+/* Pastilles d'état */
+.legifrance-chip.is-ok {
+	background: rgba(var(--color-green-rgb), 0.15);
+	color: var(--color-green);
+}
+
+.legifrance-chip.is-warn {
+	background: rgba(var(--color-orange-rgb), 0.18);
+	color: var(--color-orange);
+}
+
+.legifrance-chip.is-link {
+	cursor: pointer;
+	text-decoration: none;
+}
+
+.legifrance-chip.is-link:hover {
+	background: var(--background-modifier-active-hover);
+	color: var(--text-normal);
+}
+
+/* Aperçu de texte : deux lignes au plus */
+.legifrance-ref .legifrance-excerpt {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	margin-top: 0;
+	color: var(--text-muted);
+}
+
+.legifrance-ref-main .legifrance-applying summary {
+	margin-top: 0;
+}

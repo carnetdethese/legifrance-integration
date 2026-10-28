@@ -186,7 +186,7 @@ export const COMPLETE_FICHES_TASK: Task<BatchReport> = {
 	name: "Compléter les fiches",
 	run: completeAllFiches,
 	summarize: (r) =>
-		`${r.stopped ? `interrompu (${r.stopped}) · ` : ""}${r.completed} complétées, ${r.already} déjà complètes, ${r.noId} sans identifiant, ${r.ambiguous} à choisir à la main, ${r.notFound} introuvables, ${r.errors} erreurs.`,
+		`${r.stopped ? `interrompu (${r.stopped}) — ` : ""}${r.completed} complétées, ${r.already} déjà complètes, ${r.noId} sans identifiant, ${r.ambiguous} à choisir à la main, ${r.notFound} introuvables, ${r.errors} erreurs.`,
 };
 
 /**

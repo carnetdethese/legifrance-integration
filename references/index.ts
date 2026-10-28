@@ -544,6 +544,18 @@ export class ReferenceIndex {
 			.sort((a, b) => b.citations - a.citations || a.label.localeCompare(b.label));
 	}
 
+	/**
+	 * Articles et textes cités sans adresse retrouvée, les plus cités d'abord : ceux dont la recherche a échoué
+	 * (`tried`), ceux pas encore cherchés et ceux que l'API ne sait pas retrouver (code inconnu…).
+	 */
+	unlinkedTexts(): (LegalRef & { citations: number; notes: string[]; tried: boolean })[] {
+		const notes = this.notesByRef("SELECT c.ref_key, c.note_path FROM citations c JOIN refs r ON r.key = c.ref_key WHERE r.kind IN ('article', 'texte') ORDER BY c.note_path");
+		return [...this.allReferences("article"), ...this.allReferences("texte")]
+			.filter((ref) => !this.linkFor(ref))
+			.map((ref) => ({ ...ref, notes: notes.get(ref.key) ?? [], tried: this.hasMiss(ref.key) }))
+			.sort((a, b) => b.citations - a.citations || a.label.localeCompare(b.label));
+	}
+
 	/** Toutes les références du coffre, avec leur nombre total de citations. */
 	allReferences(kind?: LegalRef["kind"]): (LegalRef & { citations: number })[] {
 		return this.db

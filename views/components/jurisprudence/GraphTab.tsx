@@ -134,7 +134,7 @@ export const GraphExplorer = ({ input, records }: { input: GraphInput; records: 
 	return (
 		<div className="legifrance-graph">
 			<p className="legifrance-count">
-				{shown} décision{shown > 1 ? "s" : ""} sur {graph.available.decisions} · {graph.nodes.filter((n) => n.kind === "article").length} article(s) · {graph.nodes.filter((n) => n.kind === "note").length} note(s)
+				{shown} décision{shown > 1 ? "s" : ""} sur {graph.available.decisions} — {graph.nodes.filter((n) => n.kind === "article").length} article(s) — {graph.nodes.filter((n) => n.kind === "note").length} note(s)
 			</p>
 			<div className="legifrance-graph-body">
 				<div className="legifrance-graph-canvas" ref={box}>

@@ -30,8 +30,8 @@ const GROUPS: { kind: RefKind; title: string }[] = [
 	{ kind: "identifiant", title: "Identifiants Légifrance" },
 ];
 
-/** Longueur de l'aperçu d'un article dans la liste ; le texte entier s'affiche au survol et au clic. */
-const EXCERPT_LENGTH = 50;
+/** Longueur de l'aperçu d'un article dans la liste (deux lignes) ; le texte entier s'affiche au survol et au clic. */
+const EXCERPT_LENGTH = 180;
 /** Longueur maximale du texte de l'infobulle (les articles peuvent être très longs). */
 const TOOLTIP_LENGTH = 800;
 
@@ -182,21 +182,27 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 	const trace = plugin.settings.debugRefs ? plugin.links.traces.get(reference.key) : undefined;
 
 	return (
-		<div className="setting-item">
-			<div className="setting-item-info">
-				<div className="setting-item-name">
+		<div className="legifrance-ref">
+			<div className="legifrance-ref-main">
+				<div className="legifrance-ref-title">
 					{reference.label}
 					{reference.kind === "decision" && <SourceBadge fiche={fiche instanceof TFile} notes={1} />}
 				</div>
-				{status && <div className="setting-item-description">{status}</div>}
-				{!inForce && <div className="setting-item-description legifrance-warning">⚠ Version en vigueur introuvable (statut : {statusLabel(link?.statut).toLowerCase()}).</div>}
-				{applying > 0 && (
-					<div className="setting-item-description">
-						<a onClick={() => void plugin.activateJurisprudenceView({ tab: "articles", articleKey: reference.key })}>
-							Appliqué par {applying} décision{applying > 1 ? "s" : ""} de votre base
-						</a>
+				{(link?.statut || applying > 0) && (
+					<div className="legifrance-ref-chips">
+						{link?.statut && (
+							<span className={`legifrance-chip ${inForce ? "is-ok" : "is-warn"}`} title={inForce ? undefined : "Version en vigueur introuvable sur Légifrance"}>
+								{statusLabel(link.statut)}
+							</span>
+						)}
+						{applying > 0 && (
+							<a className="legifrance-chip is-link" title="Décisions de votre base qui appliquent cet article" onClick={() => void plugin.activateJurisprudenceView({ tab: "articles", articleKey: reference.key })}>
+								{applying} décision{applying > 1 ? "s" : ""}
+							</a>
+						)}
 					</div>
 				)}
+				{status && <div className="legifrance-ref-sub">{status}</div>}
 				{applying > 0 && <ApplyingExcerpts articleKey={reference.key} />}
 				{plugin.settings.debugRefs && (
 					<details className="legifrance-trace">
@@ -218,7 +224,7 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 					</div>
 				)}
 			</div>
-			<div className="setting-item-control">
+			<div className="legifrance-ref-actions">
 				{fiche instanceof TFile && (
 					<button
 						className="clickable-icon"
@@ -271,7 +277,7 @@ const ApplyingExcerpts = ({ articleKey }: { articleKey: string }) => {
 			{open && excerpts.length === 0 && <div className="setting-item-description">Aucun texte de décision à citer : complétez les décisions (Réglages → Base de données).</div>}
 			{excerpts.map(({ decisionId, title, date, excerpt }) => (
 				<div key={decisionId}>
-					<div className="setting-item-description">{title}{date ? ` · ${date}` : ""}</div>
+					<div className="setting-item-description">{title}{date ? ` — ${date}` : ""}</div>
 					<ExcerptQuote excerpt={excerpt} />
 				</div>
 			))}

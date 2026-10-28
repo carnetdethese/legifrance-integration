@@ -70,3 +70,14 @@ export function parseAriaKey(key: string) {
 	const aria = ARIANE_PATH.exec(key);
 	return aria ? { court: aria[1].toUpperCase(), date: aria[2], number: decodeURIComponent(aria[3]) } : undefined;
 }
+
+/** Identifiant Légifrance d'un texte ou d'un article dans un lien ou une saisie, s'il y en a un. */
+export const legifranceIdOf = (text: string) => /\b(?:LEGITEXT|LEGIARTI|JORFTEXT|JORFARTI|KALITEXT|KALIARTI|KALICONT|ACCOTEXT)\d{12}\b/.exec(text)?.[0];
+
+const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+/** « 2016-10-07 » en « 7 octobre 2016 » : la forme sous laquelle les textes sont cités et recherchés. */
+export function spokenDate(iso: string) {
+	const [year, month, day] = iso.split("-").map(Number);
+	return `${day === 1 ? "1er" : day} ${MONTHS[month - 1]} ${year}`;
+}

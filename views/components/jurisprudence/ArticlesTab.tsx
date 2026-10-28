@@ -14,6 +14,9 @@ import { DecisionRecord, byDate } from "references/timeline";
 import { usePlugin } from "views/hooks";
 import { Card, DecisionRow, ExcerptQuote } from "./Shared";
 
+/** Nombre de décisions affichées à la fois pour un article. */
+const DECISIONS_PAGE = 25;
+
 const frenchDate = (iso: string | null | undefined) => (iso ? iso.split("-").reverse().join("/") : "");
 
 /** Période de vigueur d'une version : « du 01/10/2016 à aujourd'hui ». */
@@ -42,9 +45,9 @@ const VersionLine = ({ label, versions, date }: { label: string; versions: Artic
 			{found.candidates.map((version) => (
 				<span key={version.id} className="legifrance-version-item">
 					{found.state === "exact" ? "Version applicable : " : ""}
-					{period(version)} · {statusLabel(version.status)}
+					{period(version)} — {statusLabel(version.status)}
 					{version.id !== current.id && <span className="legifrance-chip" title="La version en vigueur aujourd'hui est différente">≠ version actuelle</span>}
-					<a onClick={() => void read(version)}>Lire</a> · <a href={legifranceUrl(version.id)}>Légifrance</a>
+					<a onClick={() => void read(version)}>Lire</a> — <a href={legifranceUrl(version.id)}>Légifrance</a>
 				</span>
 			))}
 		</div>
@@ -68,6 +71,9 @@ export const ArticlesTab = ({ getRecords, version, focus }: { getRecords: () => 
 	const [limit, setLimit] = useState(PAGE_SIZE);
 	const [selected, setSelected] = useState<string | undefined>(focus);
 	useEffect(() => setSelected(focus), [focus]);
+	/** Décisions affichées : une page à la fois (un article très appliqué en a plus d'une centaine). */
+	const [decisionLimit, setDecisionLimit] = useState(DECISIONS_PAGE);
+	useEffect(() => setDecisionLimit(DECISIONS_PAGE), [selected]);
 	useEffect(() => setLimit(PAGE_SIZE), [filter, text, vigor, sort]);
 
 	const texts = useMemo(() => articleTexts(plugin.references), [plugin, version]);
@@ -146,13 +152,14 @@ export const ArticlesTab = ({ getRecords, version, focus }: { getRecords: () => 
 				)}
 				{current && versions && versions.length === 0 && <p className="legifrance-empty">Aucune version de cet article n'a été retrouvée sur Légifrance.</p>}
 				{current && decisions.length === 0 && <p className="legifrance-empty">Aucune décision de votre base ne cite cet article.</p>}
-				{decisions.map((record) => (
+				{decisions.slice(0, decisionLimit).map((record) => (
 					<div key={record.id}>
 						<DecisionRow record={record} records={getRecords()} />
 						{current && <DecisionExcerpt record={record} articleKey={current.key} />}
 						{current && versions && versions.length > 0 && <VersionLine label={current.label} versions={versions} date={record.date} />}
 					</div>
 				))}
+				{decisions.length > decisionLimit && <button onClick={() => setDecisionLimit(decisionLimit + DECISIONS_PAGE)}>Afficher la suite ({decisions.length - decisionLimit})</button>}
 			</Card>
 		</div>
 	);

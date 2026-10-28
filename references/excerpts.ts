@@ -23,19 +23,25 @@ const ABBREVIATIONS = new Set(["cass", "sect", "const", "plén", "mlle", "mmes",
 /** Fin de phrase : ponctuation forte suivie d'un espace et d'une majuscule, d'un guillemet ou d'un tiret de liste. */
 const SENTENCE_END = /([.!?])\s+(?=[\p{Lu}«"(\-–])|\n\s*\n/gu;
 
+/** Combien de caractères autour de la citation on examine pour trouver les limites de la phrase (bien plus que ce qui est gardé). */
+const SEARCH_RADIUS = 600;
+
 /** Les indices (début, fin) de la phrase qui contient la plage `[start, end)`. */
 function sentenceBounds(text: string, start: number, end: number) {
-	let from = 0;
-	let to = text.length;
-	for (const match of text.matchAll(SENTENCE_END)) {
-		const at = match.index! + match[0].length;
+	const lo = Math.max(0, start - SEARCH_RADIUS);
+	const hi = Math.min(text.length, end + SEARCH_RADIUS);
+	const region = text.slice(lo, hi);
+	let from = lo;
+	let to = hi;
+	for (const match of region.matchAll(SENTENCE_END)) {
+		const at = lo + match.index! + match[0].length;
 		if (match[1]) {
-			const word = /(\p{L}+)$/u.exec(text.slice(0, match.index!))?.[1] ?? "";
+			const word = /(\p{L}+)$/u.exec(region.slice(Math.max(0, match.index! - 12), match.index!))?.[1] ?? "";
 			if (word.length <= 3 || ABBREVIATIONS.has(word.toLowerCase())) continue;
 		}
 		if (at <= start) from = at;
-		else if (match.index! >= end) {
-			to = match.index! + (match[1] ? 1 : 0);
+		else if (lo + match.index! >= end) {
+			to = lo + match.index! + (match[1] ? 1 : 0);
 			break;
 		}
 	}
@@ -44,12 +50,38 @@ function sentenceBounds(text: string, start: number, end: number) {
 
 const collapse = (text: string) => text.replace(/\s+/g, " ");
 
+/** Écart examiné avant et après un numéro d'article pour y reconnaître sa citation (« l'article », puis le nom du code). */
+const WINDOW_BEFORE = 40;
+const WINDOW_AFTER = 160;
+/** Au-delà, un numéro trop courant (« 1 ») ferait examiner tout le texte : on l'analyse en entier. */
+const MIN_NEEDLE = 2;
+const MAX_WINDOWS = 60;
+
+/** Plage de la première citation de `articleKey` dans `text`, en n'analysant que les passages qui contiennent son numéro. */
+function findSpan(text: string, articleKey: string) {
+	const number = /(?:^|\|)number=([^|]*)/.exec(articleKey)?.[1] ?? "";
+	// « L. 121-1 », « 1240 », « 61-1 » : le cœur numérique, qui figure tel quel dans le texte (« L121-1 », « article 61-1 »).
+	const needle = /\d[\d-]*\d|\d/.exec(number)?.[0] ?? "";
+	if (needle.length >= MIN_NEEDLE) {
+		let at = text.indexOf(needle);
+		for (let tried = 0; at >= 0 && tried < MAX_WINDOWS; tried++, at = text.indexOf(needle, at + needle.length)) {
+			let from = Math.max(0, at - WINDOW_BEFORE);
+			// Ne pas couper un mot en deux : le motif de « article » exige une limite de mot.
+			while (from > 0 && /\S/.test(text[from - 1])) from--;
+			const found = citationSpans(text.slice(from, at + needle.length + WINDOW_AFTER)).find((span) => span.ref.key === articleKey);
+			if (found) return { ...found, start: found.start + from, end: found.end + from };
+		}
+	}
+	// Numéro introuvable tel quel (alinéa écrit en toutes lettres…) : analyse du texte entier.
+	return citationSpans(text).find((span) => span.ref.key === articleKey);
+}
+
 /**
  * Première phrase de `text` qui cite l'article de clef `articleKey` (la clef de `parseCitations`,
  * « article|code=code civil|number=1240 »), ou `undefined` si le texte ne le cite pas.
  */
 export function citingSentence(text: string, articleKey: string): Excerpt | undefined {
-	const span = citationSpans(text).find((s) => s.ref.key === articleKey);
+	const span = findSpan(text, articleKey);
 	if (!span) return undefined;
 	const { from, to } = sentenceBounds(text, span.start, span.end);
 	let before = collapse(text.slice(from, span.start)).trimStart();

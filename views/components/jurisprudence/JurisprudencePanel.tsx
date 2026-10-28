@@ -7,6 +7,12 @@ import { GraphTab } from "./GraphTab";
 import { SearchTab } from "./SearchTab";
 import { TimelineTab } from "./TimelineTab";
 
+/**
+ * Le graphe des citations est désactivé (pas assez intuitif pour l'instant) : son code (`GraphTab`, `graph.ts`, ses
+ * réglages et ses tests) est conservé tel quel. Mettre `true` pour réafficher l'onglet.
+ */
+const GRAPH_ENABLED = false;
+
 type Tab = "timeline" | "articles" | "graph" | "search";
 
 /**
@@ -32,7 +38,7 @@ export const JurisprudencePanel = () => {
 
 	// `decisionsOf` garde son dernier recensement : le rappeler ne coûte rien tant que rien n'a changé.
 	const getRecords = () => decisionsOf(plugin);
-	const records = useMemo(() => (tab === "timeline" || tab === "graph" ? decisionsOf(plugin) : undefined), [plugin, version, tab]);
+	const records = useMemo(() => (tab === "timeline" || (GRAPH_ENABLED && tab === "graph") ? decisionsOf(plugin) : undefined), [plugin, version, tab]);
 	const stats: [number, string][] = records
 		? [
 				[records.length, "décisions"],
@@ -43,7 +49,7 @@ export const JurisprudencePanel = () => {
 	const tabs: [Tab, string][] = [
 		["articles", "Articles"],
 		["timeline", "Chronologie"],
-		["graph", "Graphe"],
+		...(GRAPH_ENABLED ? ([["graph", "Graphe"]] as [Tab, string][]) : []),
 		["search", "Recherche"],
 	];
 
@@ -70,7 +76,7 @@ export const JurisprudencePanel = () => {
 			</div>
 			<div className="legifrance-juris-body">
 				{tab === "timeline" && records && <TimelineTab records={records} />}
-				{tab === "graph" && records && <GraphTab records={records} />}
+				{GRAPH_ENABLED && tab === "graph" && records && <GraphTab records={records} />}
 				{tab === "search" && <SearchTab />}
 				{tab === "articles" && <ArticlesTab getRecords={getRecords} version={version} focus={articleKey} />}
 			</div>

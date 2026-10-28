@@ -71,7 +71,7 @@ export function cycleProgress(index: ReferenceIndex, notes: VaultNote[], canReso
 			what: "Les références juridiques sont repérées dans vos notes.",
 			done: analysed,
 			total: notes.length,
-			detail: `${analysed} / ${notes.length}${analysed < notes.length ? ` · ${notes.length - analysed} à analyser` : " · à jour"}${last ? ` · dernière analyse le ${new Date(last).toLocaleString("fr-FR")}` : ""}`,
+			detail: `${analysed} / ${notes.length}${analysed < notes.length ? ` — ${notes.length - analysed} à analyser` : " — à jour"}${last ? ` — dernière analyse le ${new Date(last).toLocaleString("fr-FR")}` : ""}`,
 			task: "index",
 		},
 		{
@@ -80,7 +80,7 @@ export function cycleProgress(index: ReferenceIndex, notes: VaultNote[], canReso
 			what: "Adresse Légifrance, texte et statut de vigueur de chaque article et texte cité.",
 			done: linked,
 			total: articles.length,
-			detail: `${linked} / ${articles.length} avec adresse · ${waiting} à retrouver · ${lost} introuvables (nouvel essai sous 24 h) · ${outOfReach} hors de portée de l'API (lien de recherche)`,
+			detail: `${linked} / ${articles.length} avec adresse — ${waiting} à retrouver — ${lost} introuvables (nouvel essai sous 24 h) — ${outOfReach} hors de portée de l'API (lien de recherche)`,
 			task: "articles",
 		},
 		{
@@ -89,7 +89,7 @@ export function cycleProgress(index: ReferenceIndex, notes: VaultNote[], canReso
 			what: "Chaque décision citée est retrouvée et lue : métadonnées, texte intégral, thèmes, articles visés.",
 			done: treated,
 			total: decisions.cited,
-			detail: `${decisions.complete} complètes · ${decisions.external} hors Légifrance · ${decisions.pending} à compléter · ${decisions.unresolved} introuvables · ${decisions.errors} en erreur (sur ${plural(decisions.cited, "décision citée", "décisions citées")})`,
+			detail: `${decisions.complete} complètes — ${decisions.external} hors Légifrance — ${decisions.pending} à compléter — ${decisions.unresolved} introuvables — ${decisions.errors} en erreur (sur ${plural(decisions.cited, "décision citée", "décisions citées")})`,
 			task: "enrich",
 		},
 		{

@@ -54,8 +54,8 @@ export const ArticlesPanel = () => {
 			<h4>{file.basename}</h4>
 			<div className="setting-item-description">
 				{articles.length} article{articles.length > 1 ? "s" : ""}
-				{stale.length > 0 && <span className="legifrance-warning"> · {stale.length} plus en vigueur</span>}
-				{" · "}{articles.length - withoutNote.length} avec note
+				{stale.length > 0 && <span className="legifrance-warning"> — {stale.length} plus en vigueur</span>}
+				{" — "}{articles.length - withoutNote.length} avec note
 			</div>
 			{withoutNote.length > 0 && (
 				<button disabled={busy} onClick={() => void createAll()}>
@@ -102,13 +102,16 @@ const ArticleCard = ({ reference, onNoteChange }: { reference: LegalRef; onNoteC
 			<div className="legifrance-article-card-head">
 				<div className="legifrance-article-card-title" role="button" tabIndex={0} aria-expanded={open} onClick={() => setOpen(!open)} onKeyDown={(e) => e.key === "Enter" && setOpen(!open)}>
 					<span>{reference.label}</span>
-					<div className="setting-item-description">
-						{link ? (link.statut ? statusLabel(link.statut) : "Statut inconnu") : "Lien non retrouvé"}
-						{!inForce(link?.statut) && <span className="legifrance-warning"> ⚠ plus en vigueur</span>}
-						{applying > 0 && ` · appliqué par ${applying} décision${applying > 1 ? "s" : ""}`}
+					<div className="legifrance-ref-chips">
+						{link ? (
+							<span className={`legifrance-chip ${link.statut ? (inForce(link.statut) ? "is-ok" : "is-warn") : ""}`}>{link.statut ? statusLabel(link.statut) : "Statut inconnu"}</span>
+						) : (
+							<span className="legifrance-chip">Lien non retrouvé</span>
+						)}
+						{applying > 0 && <span className="legifrance-chip">{applying} décision{applying > 1 ? "s" : ""}</span>}
 					</div>
 				</div>
-				<div className="legifrance-row-actions">
+				<div className="legifrance-ref-actions">
 					<button className="clickable-icon" aria-label={notePath ? "Ouvrir la note de l'article" : "Créer la note de l'article"} onClick={() => void toNote()}>
 						{notePath ? <FileText size={16} /> : <FilePlus size={16} />}
 					</button>
@@ -149,7 +152,7 @@ const ArticleDecisions = ({ articleKey, count }: { articleKey: string; count: nu
 			<div className="legifrance-row-meta">Décisions qui l'appliquent</div>
 			{excerpts.map(({ decisionId, title, date, excerpt }) => (
 				<div key={decisionId}>
-					<div className="setting-item-description">{title}{date ? ` · ${date}` : ""}</div>
+					<div className="setting-item-description">{title}{date ? ` — ${date}` : ""}</div>
 					<ExcerptQuote excerpt={excerpt} />
 				</div>
 			))}
@@ -195,7 +198,7 @@ const ArticleVersions = ({ reference }: { reference: LegalRef }) => {
 			<div className="legifrance-row-meta">Versions ({versions.length})</div>
 			{versions.map((version) => (
 				<div key={version.id} className="setting-item-description">
-					<a onClick={() => void read(version)}>{period(version)}</a> · {statusLabel(version.status)}
+					<a onClick={() => void read(version)}>{period(version)}</a> — {statusLabel(version.status)}
 				</div>
 			))}
 		</div>
