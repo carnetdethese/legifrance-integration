@@ -5,8 +5,10 @@
 import { Notice, TFile, normalizePath } from "obsidian";
 import { codeJuridiction } from "abstracts/decisions";
 import type LegifrancePlugin from "main";
-import { loadDecisions } from "./corpus";
+import { BIB_FORMATS, BibEntry, BibFormat, decisionEntries, formatBibliography } from "./bibliography";
+import { articlesByDecision, citedTexts, loadDecisions, statusLabel } from "./corpus";
 import { DecisionValues, FicheDifference, ficheDifferences, ficheValues } from "./fiches";
+import { coursePlan } from "./plan";
 import { DecisionRecord, decisionsTable, ficheFileName } from "./timeline";
 
 /** Dernier recensement des décisions, avec l'état de la base et des liens entre notes pour lequel il a été fait. */
@@ -155,4 +157,59 @@ export async function createFiche(plugin: LegifrancePlugin, record: DecisionReco
 	const yaml = Object.entries(front).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join("\n");
 	const file = await app.vault.create(path, `---\n${yaml}\n---\n\n## Fiche et commentaire\n\n${record.summary ? `### Résumé\n\n${record.summary}\n\n` : ""}`);
 	return file;
+}
+
+/** Lien interne vers une note, écrit comme Obsidian l'écrirait depuis `from`. */
+const internalLink = (plugin: LegifrancePlugin, from: string) => (path: string, alias: string) => {
+	const target = plugin.app.vault.getFileByPath(path);
+	return target ? plugin.app.fileManager.generateMarkdownLink(target, from, undefined, alias) : alias;
+};
+
+/** Plan « thème → décisions → articles » des décisions citées par une note, ou `undefined` si elle n'en cite aucune. */
+export function notePlan(plugin: LegifrancePlugin, file: TFile) {
+	const records = decisionsOf(plugin).filter((r) => r.notes.includes(file.path));
+	if (records.length === 0) return undefined;
+	return coursePlan(records, articlesByDecision(plugin.references, records), internalLink(plugin, file.path));
+}
+
+/** Décisions et textes cités par une note (`file`) ou par tout le coffre. */
+export function bibliographyOf(plugin: LegifrancePlugin, file?: TFile): BibEntry[] {
+	const records = decisionsOf(plugin).filter((r) => !file || r.notes.includes(file.path));
+	const texts = citedTexts(plugin.references, file?.path).map(
+		(t): BibEntry => ({
+			kind: "texte",
+			label: t.label,
+			url: t.link_url ?? t.url ?? t.fallback_url ?? undefined,
+			status: t.status ? statusLabel(t.status) : undefined,
+			notes: t.notes,
+		})
+	);
+	return [...decisionEntries(records), ...texts];
+}
+
+/** Bibliographie en Markdown d'une note, prête à insérer. */
+export function noteBibliography(plugin: LegifrancePlugin, file: TFile) {
+	const entries = bibliographyOf(plugin, file);
+	return entries.length ? formatBibliography(entries, "markdown", internalLink(plugin, file.path)) : undefined;
+}
+
+/**
+ * Écrit la bibliographie dans un nouveau fichier à la racine du coffre (« Bibliographie - note.bib ») ; un fichier
+ * existant n'est jamais écrasé.
+ * @returns le chemin du fichier, ou `undefined` si rien n'est cité
+ */
+export async function exportBibliography(plugin: LegifrancePlugin, format: BibFormat, file?: TFile) {
+	const entries = bibliographyOf(plugin, file);
+	if (entries.length === 0) {
+		new Notice("Rien à exporter : aucune décision ni aucun texte cité.");
+		return undefined;
+	}
+	const { extension } = BIB_FORMATS[format];
+	const base = safeName(`Bibliographie - ${file ? file.basename : "coffre"}`);
+	let path = normalizePath(`${base}.${extension}`);
+	if (plugin.app.vault.getFileByPath(path)) path = normalizePath(`${base} ${new Date().toISOString().slice(0, 10)} ${Date.now() % 100000}.${extension}`);
+	const content = formatBibliography(entries, format, internalLink(plugin, path));
+	await plugin.app.vault.create(path, `${content}\n`);
+	new Notice(`${entries.length} entrées exportées : ${path}`);
+	return path;
 }

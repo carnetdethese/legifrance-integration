@@ -7,7 +7,8 @@ import { Notice } from "obsidian";
 import type LegifrancePlugin from "main";
 import { COMPLETE_FICHES_TASK } from "references/ficheSync";
 import { ARTICLES_TASK, ENRICH_TASK, GENEALOGY_TASK, INDEX_TASK, REFRESH_TASK, RETRY_UNRESOLVED_TASK, Task } from "references/indexer";
-import { noteDecisionsTable } from "references/insights";
+import { noteBibliography, noteDecisionsTable, notePlan } from "references/insights";
+import { ExportModal } from "views/ExportModal";
 
 /** Commandes qui lancent une tâche longue : identifiant, libellé, tâche. */
 const TASK_COMMANDS: [string, string, Task<unknown>][] = [
@@ -44,6 +45,44 @@ export function registerCommands(plugin: LegifrancePlugin) {
 			editor.replaceRange(`\n${table}\n`, editor.getCursor("to"));
 		},
 	});
+
+	plugin.addCommand({
+		id: "plan-des-decisions",
+		name: "Insérer le plan des décisions citées dans la note (thème, décisions, articles)",
+		editorCallback: (editor, view) => {
+			const plan = view.file && notePlan(plugin, view.file);
+			if (!plan) {
+				new Notice("Aucune décision citée dans cette note (ou la note n'est pas encore analysée).");
+				return;
+			}
+			editor.replaceRange(`\n${plan}\n`, editor.getCursor("to"));
+		},
+	});
+	plugin.addCommand({
+		id: "bibliographie-de-la-note",
+		name: "Insérer la bibliographie des décisions et textes cités dans la note",
+		editorCallback: (editor, view) => {
+			const bibliography = view.file && noteBibliography(plugin, view.file);
+			if (!bibliography) {
+				new Notice("Aucune décision ni aucun texte cité dans cette note (ou la note n'est pas encore analysée).");
+				return;
+			}
+			editor.replaceRange(`\n${bibliography}\n`, editor.getCursor("to"));
+		},
+	});
+
+	// Export dans un fichier (Markdown, CSV, BibTeX, RIS)
+	plugin.addCommand({
+		id: "exporter-bibliographie-note",
+		name: "Exporter la bibliographie de la note (CSV, BibTeX, RIS…)",
+		checkCallback: (checking) => {
+			const file = plugin.app.workspace.getActiveFile();
+			if (!file) return false;
+			if (!checking) new ExportModal(plugin.app, plugin, file).open();
+			return true;
+		},
+	});
+	plugin.addCommand({ id: "exporter-bibliographie-coffre", name: "Exporter la bibliographie de tout le coffre (CSV, BibTeX, RIS…)", callback: () => new ExportModal(plugin.app, plugin).open() });
 
 	// Tâches longues sur la base
 	for (const [id, name, task] of TASK_COMMANDS) {

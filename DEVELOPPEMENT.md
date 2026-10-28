@@ -131,6 +131,12 @@ sa commande, ses tables et son compteur dans la vue **Base de données → Cycle
    Analyses : Articles, Chronologie (vue Jurisprudence) · À faire, Cycle, Tables (vue Base de données)
 ```
 
+Ce que l'on tire du recensement pour les notes : table des décisions (`timeline.ts`), **plan de cours**
+« thème → décisions → articles » (`plan.ts`), **bibliographie** Markdown, CSV, BibTeX et RIS
+(`bibliography.ts`, exportée par `ExportModal`), **phrase où une décision cite un article** (`excerpts.ts`,
+lue à la demande dans `text_markdown`). Les commandes sont dans `commands.ts` ; l'actualisation des articles
+au démarrage (rappel ou lancement en fond) dans `startup.ts`.
+
 La commande **« Compléter les fiches de décisions »** (`ENRICH_TASK`) enchaîne les étapes ③, ② puis ④ ; chaque
 étape peut aussi être lancée seule depuis la vue ou la palette de commandes.
 

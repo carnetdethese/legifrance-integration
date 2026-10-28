@@ -45,3 +45,5 @@ dist
 
 # Notes personnelles (jamais commitées)
 IDEES.md
+.excerpts-test.js
+.plan-test.js

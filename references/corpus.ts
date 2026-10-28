@@ -9,6 +9,8 @@ import { decisionKey } from "./ids";
 import { LegalRef, decidedIso, normalizedName, parseCitations } from "./parser";
 import type { GraphInput } from "./graph";
 import { cleanTheme, topTheme } from "./themes";
+import { Excerpt, citingSentence } from "./excerpts";
+import type { PlanArticle } from "./plan";
 import { DecisionFeatures, RelatedDecision, relatedDecisions, termCounts } from "./similarity";
 import { DecisionRecord, betterDate, ccYear, cleanLabel, dateFromLabel, nameFromNote } from "./timeline";
 import { Signatures, courtGroup, mergeAliases, numberSignature } from "./merge";
@@ -379,4 +381,75 @@ export function loadGraphInput(index: ReferenceIndex, records: DecisionRecord[])
 				"SELECT c.note_path AS note, r.key AS key, r.label AS label FROM citations c JOIN refs r ON r.key = c.ref_key WHERE r.kind IN ('article', 'eu')"
 			),
 	};
+}
+
+/** Décision qui applique un article, avec la phrase où elle le cite. */
+export interface ArticleExcerpt {
+	decisionId: string;
+	title: string;
+	date: string | null;
+	excerpt: Excerpt;
+}
+
+/**
+ * Phrases où les décisions de la base (texte intégral récupéré) citent l'article `key`, les plus récentes
+ * d'abord. Les textes sont lus et analysés à la demande, jamais conservés.
+ */
+export function articleExcerpts(index: ReferenceIndex, key: string, limit = 5): ArticleExcerpt[] {
+	const rows = index.db.all<{ legifrance_id: string; title: string | null; date: string | null; text_markdown: string }>(
+		`SELECT d.legifrance_id, d.title, d.date, d.text_markdown FROM decision_articles da
+		 JOIN decisions d ON d.legifrance_id = da.decision_id
+		 WHERE da.article_key = ? AND d.status = 'complete' AND d.text_markdown IS NOT NULL
+		 GROUP BY d.legifrance_id ORDER BY d.date DESC`,
+		[key]
+	);
+	const found: ArticleExcerpt[] = [];
+	for (const row of rows) {
+		const excerpt = citingSentence(row.text_markdown, key);
+		if (excerpt) found.push({ decisionId: row.legifrance_id, title: row.title ?? row.legifrance_id, date: row.date, excerpt });
+		if (found.length >= limit) break;
+	}
+	return found;
+}
+
+/** Phrase où l'une des décisions `ids` (une décision regroupée en a plusieurs) cite l'article `key`. */
+export function excerptFor(index: ReferenceIndex, ids: string[], key: string): Excerpt | undefined {
+	if (ids.length === 0) return undefined;
+	const rows = index.db.all<{ text_markdown: string }>(
+		`SELECT text_markdown FROM decisions WHERE status = 'complete' AND text_markdown IS NOT NULL AND legifrance_id IN (${ids.map(() => "?").join(",")})`,
+		ids
+	);
+	for (const row of rows) {
+		const excerpt = citingSentence(row.text_markdown, key);
+		if (excerpt) return excerpt;
+	}
+	return undefined;
+}
+
+/** Articles appliqués par chaque décision, par identifiant de `DecisionRecord` (les décisions regroupées sont réunies). */
+export function articlesByDecision(index: ReferenceIndex, records: DecisionRecord[]): Map<string, PlanArticle[]> {
+	const recordOf = new Map<string, string>();
+	for (const record of records) for (const member of record.members ?? [record.id]) recordOf.set(member, record.id);
+	const byRecord = new Map<string, Map<string, PlanArticle>>();
+	for (const row of index.db.all<{ decision_id: string; label: string; count: number }>("SELECT decision_id, label, count FROM decision_articles")) {
+		const id = recordOf.get(row.decision_id);
+		if (!id) continue;
+		const articles = byRecord.get(id) ?? new Map<string, PlanArticle>();
+		const known = articles.get(row.label);
+		if (known) known.count = Math.max(known.count, row.count);
+		else articles.set(row.label, { label: row.label, count: row.count });
+		byRecord.set(id, articles);
+	}
+	return new Map([...byRecord].map(([id, articles]) => [id, [...articles.values()]]));
+}
+
+/** Articles et textes cités par les notes (ou par une seule), avec leur adresse et leur statut de vigueur. */
+export function citedTexts(index: ReferenceIndex, notePath?: string) {
+	return index.db.all<{ label: string; url: string | null; fallback_url: string | null; link_url: string | null; status: string | null; notes: number }>(
+		`SELECT r.label, r.url, r.fallback_url, l.url AS link_url, l.status, COUNT(DISTINCT c.note_path) AS notes
+		 FROM refs r JOIN citations c ON c.ref_key = r.key LEFT JOIN links l ON l.ref_key = r.key
+		 WHERE r.kind IN ('article', 'texte', 'eu') ${notePath ? "AND c.note_path = ?" : ""}
+		 GROUP BY r.key ORDER BY r.label`,
+		notePath ? [notePath] : []
+	);
 }

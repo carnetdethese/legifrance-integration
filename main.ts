@@ -26,6 +26,7 @@ import { DatabaseFile } from "references/databaseFile";
 import { FicheEditor, isMarkdown } from "references/ficheEditor";
 import { DEFAULT_GRAPH_SETTINGS, GraphSettings, mergeGraphSettings } from "references/graph";
 import { INDEX_TASK } from "references/indexer";
+import { refreshOnStartup } from "references/startup";
 import { LinkResolver } from "references/linkResolver";
 import { MigrationReport } from "references/migrate";
 import { ResolvedLink } from "references/resolver";
@@ -151,6 +152,8 @@ export default class LegifrancePlugin extends Plugin {
 		}
 		// Textes déjà enregistrés : vocabulaire et articles visés, en local (décisions proches).
 		if (analyzeStoredDecisions(this.references) > 0) this.events.trigger(REFERENCES_EVENT);
+		// Liens d'articles anciens : rappel ou actualisation en fond, selon le réglage.
+		refreshOnStartup(this);
 	}
 
 	/** Charge les réglages et l'historique ; renvoie les anciennes données de références, à reprendre. */

@@ -1,7 +1,9 @@
 /** Tests de la lecture des articles dans la base (pagination, filtre, statuts). Lancer : `npm test`. */
 import { LegalDatabase } from "./database";
 import { ReferenceIndex } from "./index";
-import { articleByKey, articlePage, articleTexts, staleArticles, statusLabel } from "./corpus";
+import { articleByKey, articleExcerpts, articlePage, articleTexts, articlesByDecision, citedTexts, excerptFor, staleArticles, statusLabel } from "./corpus";
+import { parseCitations } from "./parser";
+import type { DecisionRecord } from "./timeline";
 
 let fail = 0;
 const check = (name: string, ok: boolean, detail = "") => { if (!ok) { fail++; console.log("ÉCHEC", name, detail); } };
@@ -83,6 +85,28 @@ const check = (name: string, ok: boolean, detail = "") => { if (!ok) { fail++; c
 	check("version de la base incrémentée", db.version === before + 1);
 	db.all("SELECT 1");
 	check("une lecture ne change pas la version", db.version === before + 1);
+
+	// Extraits, articles par décision, textes cités.
+	const text = "Faits. Aux termes de l'article 1240 du code civil, tout fait de l'homme oblige à réparer. Suite.";
+	const key = parseCitations(text).find(({ ref }) => ref.kind === "article")!.ref.key;
+	db.run("DELETE FROM decision_articles"); db.run("DELETE FROM refs"); db.run("DELETE FROM links");
+	db.run("INSERT INTO decisions (ref_key, status, legifrance_id, title, date, text_markdown) VALUES ('r1', 'complete', 'JURITEXT1', 'Cass. 1', '2025-06-04', ?)", [text]);
+	db.run("INSERT INTO decisions (ref_key, status, legifrance_id, title, date, text_markdown) VALUES ('r2', 'complete', 'JURITEXT2', 'Cass. 2', '2024-01-01', 'Aucun article ici.')");
+	db.run("INSERT INTO decision_articles (decision_id, article_key, label, count) VALUES ('JURITEXT1', ?, 'Code civil, art. 1240', 2)", [key]);
+	db.run("INSERT INTO decision_articles (decision_id, article_key, label, count) VALUES ('JURITEXT2', ?, 'Code civil, art. 1240', 1)", [key]);
+	const excerpts = articleExcerpts(index, key);
+	check("extraits : seule la décision qui cite l'article", excerpts.length === 1 && excerpts[0].decisionId === "JURITEXT1", JSON.stringify(excerpts));
+	check("extrait : la phrase citante", excerpts[0]?.excerpt.cited === "article 1240 du code civil" && excerpts[0].excerpt.after.includes("oblige à réparer"));
+	check("extrait d'une décision regroupée", excerptFor(index, ["JURITEXT2", "JURITEXT1"], key)?.cited === "article 1240 du code civil" && excerptFor(index, [], key) === undefined);
+	const record = { id: "JURITEXT1", label: "Cass. 1", themes: [], complete: true, notes: [], members: ["JURITEXT1", "JURITEXT2"] } as DecisionRecord;
+	const applied = articlesByDecision(index, [record]).get("JURITEXT1");
+	check("articles par décision : réunis, le plus grand nombre de citations", applied?.length === 1 && applied[0].count === 2, JSON.stringify(applied));
+	db.run("INSERT INTO refs (key, kind, label, query, data) VALUES ('k1', 'article', 'Code civil, art. 1240', '', '{}'), ('k2', 'decision', 'CE, n° 1', '', '{}')");
+	db.run("INSERT INTO citations (note_path, ref_key, ord, count) VALUES ('a.md', 'k1', 0, 1), ('b.md', 'k1', 0, 1), ('a.md', 'k2', 1, 1)");
+	db.run("INSERT INTO links (ref_key, url, title, resolved_at, status) VALUES ('k1', 'https://exemple/k1', 'Code civil, art. 1240', 1, 'VIGUEUR')");
+	const cited = citedTexts(index);
+	check("textes cités : articles seulement, nombre de notes", cited.length === 1 && cited[0].notes === 2 && cited[0].link_url === "https://exemple/k1" && cited[0].status === "VIGUEUR", JSON.stringify(cited));
+	check("textes cités par une note", citedTexts(index, "a.md")[0]?.notes === 1 && citedTexts(index, "c.md").length === 0);
 
 	console.log(fail ? `${fail} échec(s)` : "tout passe");
 	process.exit(fail ? 1 : 0);

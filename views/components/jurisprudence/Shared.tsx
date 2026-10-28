@@ -6,6 +6,7 @@
 import { BookOpen, ExternalLink, FileText, Info, Sparkles } from "lucide-react";
 import { ReactNode, useMemo, useState } from "react";
 import { relatedTo } from "references/corpus";
+import type { Excerpt } from "references/excerpts";
 import { sourceState } from "references/lifecycle";
 import { RELATION_LABELS, RELATION_ORDER, RelationItem, relationsFor } from "references/genealogy";
 import { DecisionRecord, displayDate } from "references/timeline";
@@ -228,3 +229,10 @@ export const Genealogy = ({ record, records }: { record: DecisionRecord; records
 		</div>
 	);
 };
+
+/** Phrase d'une décision où un article est cité, la citation en relief. */
+export const ExcerptQuote = ({ excerpt }: { excerpt: Excerpt }) => (
+	<blockquote className="legifrance-quote">
+		{excerpt.before} <mark>{excerpt.cited}</mark> {excerpt.after}
+	</blockquote>
+);

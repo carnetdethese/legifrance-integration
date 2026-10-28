@@ -63,6 +63,8 @@ export interface LegifranceSettings {
 	ficheOverwrite: boolean;
 	/** Complète une fiche dès son ouverture, sans attendre le clic sur le bouton. */
 	ficheAutoComplete: boolean;
+	/** À l'ouverture d'Obsidian : ne rien faire, rappeler les articles à revérifier, ou les actualiser en fond. */
+	refreshOnStartup: "off" | "remind" | "run";
 }
 
 export const DEFAULT_SETTINGS: LegifranceSettings = {
@@ -96,6 +98,7 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	ficheBatchSearch: false,
 	ficheOverwrite: false,
 	ficheAutoComplete: false,
+	refreshOnStartup: "remind",
 }
 
 
@@ -333,6 +336,19 @@ export class LegifranceSettingTab extends PluginSettingTab {
 					})
 				);
 		}
+
+		new Setting(containerEl)
+			.setName("Actualisation au démarrage")
+			.setDesc("Articles et textes cités dont le lien date de plus de six mois : un rappel avec un bouton, ou une actualisation en fond une minute après l'ouverture (une requête par article, au débit réglé plus haut).")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOptions({ off: "Ne rien faire", remind: "Me le rappeler", run: "Actualiser automatiquement" })
+					.setValue(plugin.settings.refreshOnStartup)
+					.onChange(async (value) => {
+						plugin.settings.refreshOnStartup = value as typeof plugin.settings.refreshOnStartup;
+						await plugin.saveSettings();
+					})
+			);
 
 		new Setting(containerEl)
 			.setName("Vider la base")

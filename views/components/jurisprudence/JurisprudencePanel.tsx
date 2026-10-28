@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { decisionsOf } from "references/insights";
+import { ExportModal } from "views/ExportModal";
 import { useDatabaseVersion, usePlugin } from "views/hooks";
 import { ArticlesTab } from "./ArticlesTab";
 import { GraphTab } from "./GraphTab";
@@ -64,6 +65,7 @@ export const JurisprudencePanel = () => {
 						{title}
 					</button>
 				))}
+				<button className="legifrance-tabs-aside" onClick={() => new ExportModal(plugin.app, plugin).open()}>Exporter…</button>
 				<button className="legifrance-tabs-aside" onClick={() => void plugin.activateDatabaseView("todo")}>À faire →</button>
 			</div>
 			<div className="legifrance-juris-body">

@@ -14,9 +14,9 @@ import { ArticleModal } from "views/ArticleModal";
 import { canResolve } from "references/resolver";
 import { LegalRef, RefKind } from "references/parser";
 import { isFiche } from "references/fiches";
-import { countApplying, statusLabel } from "references/corpus";
+import { articleExcerpts, countApplying, statusLabel } from "references/corpus";
 import { decisionsOf } from "references/insights";
-import { Genealogy, RelatedList, SourceBadge } from "views/components/jurisprudence/Shared";
+import { ExcerptQuote, Genealogy, RelatedList, SourceBadge } from "views/components/jurisprudence/Shared";
 import { useDatabaseVersion, useNoteReferences, usePlugin } from "views/hooks";
 import LegifrancePlugin from "main";
 
@@ -196,6 +196,7 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 						</a>
 					</div>
 				)}
+				{applying > 0 && <ApplyingExcerpts articleKey={reference.key} />}
 				{plugin.settings.debugRefs && (
 					<details className="legifrance-trace">
 						<summary>Diagnostic</summary>
@@ -250,5 +251,24 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 				</a>
 			</div>
 		</div>
+	);
+};
+
+/** Phrases où les décisions de la base citent l'article, lues à l'ouverture seulement (leur texte est analysé à la demande). */
+const ApplyingExcerpts = ({ articleKey }: { articleKey: string }) => {
+	const plugin = usePlugin();
+	const [open, setOpen] = useState(false);
+	const excerpts = useMemo(() => (open ? articleExcerpts(plugin.references, articleKey, 3) : []), [plugin, articleKey, open]);
+	return (
+		<details className="legifrance-applying" onToggle={(e) => setOpen(e.currentTarget.open)}>
+			<summary>Voir comment les décisions le citent</summary>
+			{open && excerpts.length === 0 && <div className="setting-item-description">Aucun texte de décision à citer : complétez les décisions (Réglages → Base de données).</div>}
+			{excerpts.map(({ decisionId, title, date, excerpt }) => (
+				<div key={decisionId}>
+					<div className="setting-item-description">{title}{date ? ` · ${date}` : ""}</div>
+					<ExcerptQuote excerpt={excerpt} />
+				</div>
+			))}
+		</details>
 	);
 };

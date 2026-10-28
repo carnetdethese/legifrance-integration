@@ -8,10 +8,10 @@ import { useEffect, useMemo, useState } from "react";
 import { legifranceUrl } from "api/urls";
 import { loadArticleVersions, storeArticleVersion } from "references/articleVersions";
 import { ArticleVersion, VersionAtDate, versionAt } from "references/versions";
-import { ArticleSort, ArticleVigor, articleByKey, articlePage, articleTexts, decisionsApplying, statusLabel } from "references/corpus";
+import { ArticleSort, ArticleVigor, articleByKey, articlePage, articleTexts, decisionsApplying, excerptFor, statusLabel } from "references/corpus";
 import { DecisionRecord, byDate } from "references/timeline";
 import { usePlugin } from "views/hooks";
-import { Card, DecisionRow } from "./Shared";
+import { Card, DecisionRow, ExcerptQuote } from "./Shared";
 
 const frenchDate = (iso: string | null | undefined) => (iso ? iso.split("-").reverse().join("/") : "");
 
@@ -147,10 +147,18 @@ export const ArticlesTab = ({ getRecords, version, focus }: { getRecords: () => 
 				{decisions.map((record) => (
 					<div key={record.id}>
 						<DecisionRow record={record} records={getRecords()} />
+						{current && <DecisionExcerpt record={record} articleKey={current.key} />}
 						{current && versions && versions.length > 0 && <VersionLine label={current.label} versions={versions} date={record.date} />}
 					</div>
 				))}
 			</Card>
 		</div>
 	);
+};
+
+/** Phrase où la décision cite l'article (lue dans le texte en base, seulement si la décision est complétée). */
+const DecisionExcerpt = ({ record, articleKey }: { record: DecisionRecord; articleKey: string }) => {
+	const plugin = usePlugin();
+	const excerpt = useMemo(() => (record.complete ? excerptFor(plugin.references, record.members ?? [record.id], articleKey) : undefined), [plugin, record, articleKey]);
+	return excerpt ? <ExcerptQuote excerpt={excerpt} /> : null;
 };
