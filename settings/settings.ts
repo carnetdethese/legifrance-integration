@@ -101,6 +101,10 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 
 type SettingsPage = "general" | "fiches";
 
+/** Clefs des réglages qui sont du texte libre (et non une liste de valeurs) ou un booléen. */
+type TextKey = { [K in keyof LegifranceSettings]: string extends LegifranceSettings[K] ? K : never }[keyof LegifranceSettings];
+type ToggleKey = { [K in keyof LegifranceSettings]: LegifranceSettings[K] extends boolean ? K : never }[keyof LegifranceSettings];
+
 export class LegifranceSettingTab extends PluginSettingTab {
 	private page: SettingsPage = "general";
 	/** Rafraîchissement de l'avancement tant que l'onglet des réglages est affiché. */
@@ -111,25 +115,38 @@ export class LegifranceSettingTab extends PluginSettingTab {
 	}
 
 	/**
-	 * Ajoute un champ texte lié à la clef `key` des réglages, enregistré à
-	 * chaque modification.
+	 * Ajoute un champ texte lié à la clef `key` des réglages, enregistré à chaque modification
+	 * (`save` remplace l'enregistrement simple quand il faut aussi réanalyser les fiches).
 	 */
 	private addTextSetting(
 		name: string,
 		desc: string,
-		key: "clientId" | "clientSecret" | "apiHost" | "tokenHost" | "fileTitle",
-		{ secret = false } = {}
+		key: TextKey,
+		{ secret = false, placeholder = "", save = () => this.plugin.saveSettings() } = {}
 	) {
 		return new Setting(this.containerEl)
 			.setName(name)
 			.setDesc(desc)
 			.addText((text) => {
 				if (secret) text.inputEl.type = "password";
-				text.setValue(this.plugin.settings[key]).onChange(async (value) => {
+				text.setPlaceholder(placeholder).setValue(this.plugin.settings[key]).onChange(async (value) => {
 					this.plugin.settings[key] = value.trim();
-					await this.plugin.saveSettings();
+					await save();
 				});
 			});
+	}
+
+	/** Ajoute un interrupteur lié à la clef booléenne `key` des réglages. */
+	private addToggleSetting(name: string, desc: string, key: ToggleKey, save = () => this.plugin.saveSettings()) {
+		return new Setting(this.containerEl)
+			.setName(name)
+			.setDesc(desc)
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings[key]).onChange(async (value) => {
+					this.plugin.settings[key] = value;
+					await save();
+				})
+			);
 	}
 
 	/** Arrête le rafraîchissement de l'avancement. */
@@ -259,32 +276,19 @@ export class LegifranceSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl).setName("Références juridiques").setHeading();
 
-		new Setting(containerEl)
-			.setName("Retrouver les liens automatiquement")
-			.setDesc(
-				"Interroge l'API pour chaque référence détectée dans la note (décisions, lois, articles). Désactivez pour limiter les requêtes : un bouton permet alors de les lancer à la demande."
-			)
-			.addToggle((toggle) =>
-				toggle.setValue(settings.autoResolveRefs).onChange(async (value) => {
-					settings.autoResolveRefs = value;
-					await this.plugin.saveSettings();
-				})
-			);
+		this.addToggleSetting(
+			"Retrouver les liens automatiquement",
+			"Interroge l'API pour chaque référence détectée dans la note (décisions, lois, articles). Désactivez pour limiter les requêtes : un bouton permet alors de les lancer à la demande.",
+			"autoResolveRefs"
+		);
 
-		new Setting(containerEl)
-			.setName("Mode débogage des références")
-			.setDesc(
-				"Affiche sous chaque référence le journal de sa recherche (requêtes envoyées, réponses de l'API, erreurs) et ajoute un bouton pour copier ce diagnostic. Le journal est aussi écrit dans la console du développeur."
-			)
-			.addToggle((toggle) =>
-				toggle.setValue(settings.debugRefs).onChange(async (value) => {
-					settings.debugRefs = value;
-					await this.plugin.saveSettings();
-				})
-			);
+		this.addToggleSetting(
+			"Mode débogage des références",
+			"Affiche sous chaque référence le journal de sa recherche (requêtes envoyées, réponses de l'API, erreurs) et ajoute un bouton pour copier ce diagnostic. Le journal est aussi écrit dans la console du développeur.",
+			"debugRefs"
+		);
 
 		this.displayDatabase();
-
 	}
 
 	/** Section « Base de données » : effectifs, indexation du coffre, fiches de décisions. */
@@ -364,25 +368,19 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			text: `${stats.fiches} fiche${stats.fiches > 1 ? "s" : ""} détectée${stats.fiches > 1 ? "s" : ""}, dont ${stats.identified} avec un identifiant Légifrance.`,
 		});
 
-		new Setting(containerEl)
-			.setName("Propriété qui désigne une fiche")
-			.setDesc("Toute note contenant cette propriété (même vide) est une fiche de décision.")
-			.addText((text) =>
-				text.setPlaceholder("juridiction").setValue(settings.ficheProperty).onChange(async (value) => {
-					settings.ficheProperty = value.trim();
-					await save();
-				})
-			);
+		this.addTextSetting(
+			"Propriété qui désigne une fiche",
+			"Toute note contenant cette propriété (même vide) est une fiche de décision.",
+			"ficheProperty",
+			{ placeholder: "juridiction", save }
+		);
 
-		new Setting(containerEl)
-			.setName("Propriété de l'identifiant Légifrance")
-			.setDesc("Reçoit l'identifiant de la décision (CETATEXT…, JURITEXT…) lors du complément. S'il est vide, l'identifiant est lu dans la propriété qui contient le lien Légifrance.")
-			.addText((text) =>
-				text.setPlaceholder("legifrance_id").setValue(settings.ficheIdProperty).onChange(async (value) => {
-					settings.ficheIdProperty = value.trim();
-					await save();
-				})
-			);
+		this.addTextSetting(
+			"Propriété de l'identifiant Légifrance",
+			"Reçoit l'identifiant de la décision (CETATEXT…, JURITEXT…) lors du complément. S'il est vide, l'identifiant est lu dans la propriété qui contient le lien Légifrance.",
+			"ficheIdProperty",
+			{ placeholder: "legifrance_id", save }
+		);
 
 		new Setting(containerEl).setName("Fiches sans identifiant").setHeading();
 		containerEl.createEl("p", {
@@ -406,77 +404,52 @@ export class LegifranceSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
-			.setName("Propriété du numéro")
-			.setDesc("Numéro de la décision (pourvoi, requête, décision du Conseil constitutionnel…). Plusieurs propriétés possibles, séparées par des virgules : la première qui est renseignée est utilisée.")
-			.addText((text) =>
-				text.setPlaceholder("numero").setValue(settings.ficheNumberProperty).onChange(async (value) => {
-					settings.ficheNumberProperty = value.trim();
-					await save();
-				})
-			);
+		this.addTextSetting(
+			"Propriété du numéro",
+			"Numéro de la décision (pourvoi, requête, décision du Conseil constitutionnel…). Plusieurs propriétés possibles, séparées par des virgules : la première qui est renseignée est utilisée.",
+			"ficheNumberProperty",
+			{ placeholder: "numero", save }
+		);
 
-		new Setting(containerEl)
-			.setName("Propriété de la citation")
-			.setDesc("Si aucune propriété du numéro n'est renseignée, le numéro (et la juridiction) sont lus dans cette citation, par exemple « Cons. const., 13 janv. 2012, n° 2011-210 QPC ». Plusieurs propriétés possibles, séparées par des virgules.")
-			.addText((text) =>
-				text.setPlaceholder("citation").setValue(settings.ficheCitationProperty).onChange(async (value) => {
-					settings.ficheCitationProperty = value.trim();
-					await save();
-				})
-			);
+		this.addTextSetting(
+			"Propriété de la citation",
+			"Si aucune propriété du numéro n'est renseignée, le numéro (et la juridiction) sont lus dans cette citation, par exemple « Cons. const., 13 janv. 2012, n° 2011-210 QPC ». Plusieurs propriétés possibles, séparées par des virgules.",
+			"ficheCitationProperty",
+			{ placeholder: "citation", save }
+		);
 
-		new Setting(containerEl)
-			.setName("Propriété du nom")
-			.setDesc("Nom de la décision ou des parties, pour la recherche par informations. Plusieurs propriétés possibles, séparées par des virgules. La date et la juridiction sont lues dans les propriétés de la correspondance ci-dessous.")
-			.addText((text) =>
-				text.setPlaceholder("nom").setValue(settings.ficheNameProperty).onChange(async (value) => {
-					settings.ficheNameProperty = value.trim();
-					await save();
-				})
-			);
+		this.addTextSetting(
+			"Propriété du nom",
+			"Nom de la décision ou des parties, pour la recherche par informations. Plusieurs propriétés possibles, séparées par des virgules. La date et la juridiction sont lues dans les propriétés de la correspondance ci-dessous.",
+			"ficheNameProperty",
+			{ placeholder: "nom", save }
+		);
 
-		new Setting(containerEl)
-			.setName("Chercher aussi sur ArianeWeb")
-			.setDesc("Si Légifrance ne trouve rien (ou refuse l'accès), interroge ArianeWeb, la base du Conseil d'État, qui a des décisions anciennes absentes de Légifrance. Sans identifiants.")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.ficheUseAriane).onChange(async (value) => {
-					settings.ficheUseAriane = value;
-					await save();
-				})
-			);
+		this.addToggleSetting(
+			"Chercher aussi sur ArianeWeb",
+			"Si Légifrance ne trouve rien (ou refuse l'accès), interroge ArianeWeb, la base du Conseil d'État, qui a des décisions anciennes absentes de Légifrance. Sans identifiants.",
+			"ficheUseAriane", save
+		);
 
-		new Setting(containerEl)
-			.setName("Chercher aussi sur la Revue générale du droit")
-			.setDesc("Derniers recours après Légifrance et ArianeWeb : la Revue publie le texte de nombreux grands arrêts (Blanco, Despujol…), anciens ou récents. Sans identifiants ; sert aussi à retrouver les décisions citées.")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.ficheUseRgd).onChange(async (value) => {
-					settings.ficheUseRgd = value;
-					await save();
-				})
-			);
+		this.addToggleSetting(
+			"Chercher aussi sur la Revue générale du droit",
+			"Derniers recours après Légifrance et ArianeWeb : la Revue publie le texte de nombreux grands arrêts (Blanco, Despujol…), anciens ou récents. Sans identifiants ; sert aussi à retrouver les décisions citées.",
+			"ficheUseRgd", save
+		);
 
 		new Setting(containerEl).setName("Complément").setHeading();
 
-		new Setting(containerEl)
-			.setName("Remplacer les valeurs existantes")
-			.setDesc("Désactivé : seules les propriétés absentes ou vides sont complétées, ce que vous avez saisi est conservé.")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.ficheOverwrite).onChange(async (value) => {
-					settings.ficheOverwrite = value;
-					await save();
-				})
-			);
+		this.addToggleSetting(
+			"Remplacer les valeurs existantes",
+			"Désactivé : seules les propriétés absentes ou vides sont complétées, ce que vous avez saisi est conservé.",
+			"ficheOverwrite", save
+		);
 
-		new Setting(containerEl)
-			.setName("Compléter à l'ouverture")
-			.setDesc("Complète automatiquement une fiche (dont l'identifiant est connu) quand vous l'ouvrez. Désactivé par défaut : un bouton, en haut de la fiche, permet de le faire à la demande. Chaque complément coûte une requête à l'API.")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.ficheAutoComplete).onChange(async (value) => {
-					settings.ficheAutoComplete = value;
-					await save();
-				})
-			);
+		this.addToggleSetting(
+			"Compléter à l'ouverture",
+			"Complète automatiquement une fiche (dont l'identifiant est connu) quand vous l'ouvrez. Désactivé par défaut : un bouton, en haut de la fiche, permet de le faire à la demande. Chaque complément coûte une requête à l'API.",
+			"ficheAutoComplete", save
+		);
 
 		new Setting(containerEl)
 			.setName("Simuler le complément")
@@ -494,15 +467,11 @@ export class LegifranceSettingTab extends PluginSettingTab {
 				})
 			);
 
-		new Setting(containerEl)
-			.setName("Inclure les fiches sans identifiant")
-			.setDesc("Le complément en lot cherche aussi la décision des fiches sans identifiant (numéro ou informations, voir plus haut). Seul un résultat unique est retenu : quand plusieurs décisions correspondent, la fiche est laissée de côté, à traiter avec le bouton de la fiche.")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.ficheBatchSearch).onChange(async (value) => {
-					settings.ficheBatchSearch = value;
-					await save();
-				})
-			);
+		this.addToggleSetting(
+			"Inclure les fiches sans identifiant",
+			"Le complément en lot cherche aussi la décision des fiches sans identifiant (numéro ou informations, voir plus haut). Seul un résultat unique est retenu : quand plusieurs décisions correspondent, la fiche est laissée de côté, à traiter avec le bouton de la fiche.",
+			"ficheBatchSearch", save
+		);
 
 		new Setting(containerEl).setName("Correspondance des propriétés").setHeading();
 		containerEl.createEl("p", {
