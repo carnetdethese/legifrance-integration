@@ -122,7 +122,7 @@ export async function completeAllFiches(plugin: LegifrancePlugin, progress: (don
 	const files = plugin.references.fichePaths().map((path) => plugin.app.vault.getFileByPath(path)).filter((f): f is TFile => !!f);
 
 	for (const [i, file] of files.entries()) {
-		if (plugin.taskCancelled) return { ...report, stopped: "arrêtée" };
+		if (plugin.tasks.cancelled) return { ...report, stopped: "arrêtée" };
 		progress(i, files.length, file.path);
 		const frontmatter = plugin.app.metadataCache.getFileCache(file)?.frontmatter;
 		try {
@@ -198,7 +198,7 @@ export async function simulateCompleteFiches(plugin: LegifrancePlugin, progress:
 	const report: BatchReport = { completed: 0, already: 0, noId: 0, notFound: 0, ambiguous: 0, errors: 0 };
 	const files = plugin.references.fichePaths().map((path) => plugin.app.vault.getFileByPath(path)).filter((f): f is TFile => !!f);
 	for (const [i, file] of files.entries()) {
-		if (plugin.taskCancelled) return { ...report, stopped: "arrêtée" };
+		if (plugin.tasks.cancelled) return { ...report, stopped: "arrêtée" };
 		if (i % 50 === 0) progress(i, files.length, file.path);
 		const frontmatter = plugin.app.metadataCache.getFileCache(file)?.frontmatter;
 		if (!ficheId(frontmatter, settings)) report.noId++;

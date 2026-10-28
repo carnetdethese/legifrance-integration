@@ -1,6 +1,7 @@
 import { App, EventRef, PluginSettingTab, Setting, debounce } from "obsidian";
 import { FolderSuggest } from "lib/folderSugget";
-import LegifrancePlugin, { REFERENCES_EVENT, TASK_EVENT } from "main";
+import LegifrancePlugin from "main";
+import { REFERENCES_EVENT, TASK_EVENT } from "lib/events";
 import { confirmAction } from "views/ConfirmModal";
 import { LiveStatus, renderDataStatus } from "./status";
 import { FICHE_FIELDS, FicheField, FicheMapping } from "references/fiches";
@@ -308,7 +309,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			.setDesc("Analyse toutes les notes et enregistre leurs références juridiques. Seules les notes modifiées depuis la dernière analyse sont relues.")
 			.addButton((button) =>
 				button.setButtonText("Indexer").onClick(async () => {
-					await plugin.runTask(INDEX_TASK);
+					await plugin.tasks.run(INDEX_TASK);
 					this.display();
 				})
 			);
@@ -318,7 +319,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			.setDesc("Retrouve chaque décision citée sur Légifrance puis enregistre ses métadonnées (date, formation, solution, ECLI) et son texte intégral ; retrouve ensuite l'adresse, le texte et le statut de vigueur des articles et textes cités. Demande une ou deux requêtes par référence ; peut être relancé, la tâche reprend où elle s'est arrêtée.")
 			.addButton((button) =>
 				button.setButtonText("Compléter").onClick(async () => {
-					await plugin.runTask(ENRICH_TASK);
+					await plugin.tasks.run(ENRICH_TASK);
 					this.display();
 				})
 			);
@@ -328,7 +329,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			.setDesc("Seulement les articles et textes (les plus cités d'abord), sans toucher aux décisions : adresse Légifrance, texte et statut de vigueur (abrogé ou non).")
 			.addButton((button) =>
 				button.setButtonText("Retrouver").onClick(async () => {
-					await plugin.runTask(ARTICLES_TASK);
+					await plugin.tasks.run(ARTICLES_TASK);
 					this.display();
 				})
 			);
@@ -338,7 +339,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			.setDesc("Relève dans le texte des décisions complétées les décisions qu'elles citent et comment (revient sur, précise, confirme). Local, sans requête ; lancé aussi à la fin de « Compléter ».")
 			.addButton((button) =>
 				button.setButtonText("Analyser").onClick(async () => {
-					await plugin.runTask(GENEALOGY_TASK);
+					await plugin.tasks.run(GENEALOGY_TASK);
 					this.display();
 				})
 			);
@@ -348,7 +349,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			.setDesc("Revérifie sur Légifrance les articles et textes dont le lien date de plus de six mois, et signale dans « À faire » ceux dont le statut (abrogé, modifié) ou le texte a changé.")
 			.addButton((button) =>
 				button.setButtonText("Actualiser").onClick(async () => {
-					await plugin.runTask(REFRESH_TASK);
+					await plugin.tasks.run(REFRESH_TASK);
 					this.display();
 				})
 			);
@@ -358,7 +359,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			.setDesc("« Compléter » ne relance pas la recherche d'une décision déjà marquée introuvable. Ce bouton la relance pour toutes (chaque décision coûte une à deux requêtes).")
 			.addButton((button) =>
 				button.setButtonText("Réessayer").onClick(async () => {
-					await plugin.runTask(RETRY_UNRESOLVED_TASK);
+					await plugin.tasks.run(RETRY_UNRESOLVED_TASK);
 					this.display();
 				})
 			);
@@ -369,7 +370,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			.addButton((button) =>
 				button.setButtonText("Vider").setWarning().onClick(() => {
 					plugin.references.clear();
-					plugin.syncFiches();
+					plugin.fiches.sync();
 					this.display();
 				})
 			);
@@ -382,7 +383,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 		/** Enregistre puis réanalyse les fiches (regroupe les frappes successives). */
 		const save = async () => {
 			await plugin.saveSettings();
-			plugin.ficheSettingsChanged();
+			plugin.fiches.settingsChanged();
 		};
 
 		new Setting(containerEl).setName("Fiches de décisions").setHeading();
@@ -514,7 +515,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Simuler le complément")
 			.setDesc("Compte les fiches qui seraient complétées, déjà complètes ou sans identifiant, sans aucune requête ni modification de vos notes.")
-			.addButton((button) => button.setButtonText("Simuler").onClick(() => plugin.runTask(SIMULATE_FICHES_TASK)));
+			.addButton((button) => button.setButtonText("Simuler").onClick(() => plugin.tasks.run(SIMULATE_FICHES_TASK)));
 
 		new Setting(containerEl)
 			.setName("Compléter toutes les fiches")
@@ -522,7 +523,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			.addButton((button) =>
 				button.setButtonText("Compléter").setWarning().onClick(async () => {
 					if (settings.ficheOverwrite && !(await confirmAction(this.app, "Remplacer les valeurs existantes", `Le réglage « Remplacer les valeurs existantes » est actif : les propriétés déjà renseignées de toutes les fiches seront remplacées par celles de Légifrance. Continuer ?`))) return;
-					await plugin.runTask(COMPLETE_FICHES_TASK);
+					await plugin.tasks.run(COMPLETE_FICHES_TASK);
 					this.display();
 				})
 			);

@@ -1,7 +1,7 @@
 import { Notice, getAllTags } from "obsidian";
 import { FilePlus, Link2, Unlink } from "lucide-react";
 import { CSSProperties, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { REFERENCES_EVENT } from "main";
+import { REFERENCES_EVENT } from "lib/events";
 import { DecisionRecord, filterRecords, groupByYear, manualMerges, suggestMerges, themeCounts, RESOLVED_ID } from "references/timeline";
 import { createFiche } from "references/insights";
 import { chooseMain } from "views/MergeModal";

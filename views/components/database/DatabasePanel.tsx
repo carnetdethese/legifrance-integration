@@ -1,6 +1,6 @@
 import { TFile } from "obsidian";
 import { ReactNode, useEffect, useMemo, useReducer, useState } from "react";
-import { REFERENCES_EVENT } from "main";
+import { REFERENCES_EVENT } from "lib/events";
 import { decisionsOf } from "references/insights";
 import { useDatabaseVersion, usePlugin } from "views/hooks";
 import { TodoTab } from "views/components/jurisprudence/TodoTab";

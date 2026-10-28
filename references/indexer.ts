@@ -44,7 +44,7 @@ export async function indexVault(plugin: LegifrancePlugin, progress: Progress): 
 	let analyzed = 0;
 
 	for (const [i, file] of files.entries()) {
-		if (plugin.taskCancelled) return { notes: files.length, analyzed, removed: 0, references: index.stats().references, stopped: "arrêtée" };
+		if (plugin.tasks.cancelled) return { notes: files.length, analyzed, removed: 0, references: index.stats().references, stopped: "arrêtée" };
 		if (!index.cached(file.path, file.stat.mtime)) {
 			await plugin.getReferences(file);
 			analyzed++;
@@ -61,7 +61,7 @@ export async function indexVault(plugin: LegifrancePlugin, progress: Progress): 
 	missing.forEach((n) => index.remove(n.path));
 
 	index.prune();
-	plugin.syncFiches();
+	plugin.fiches.sync();
 	return { notes: files.length, analyzed, removed: missing.length, references: index.stats().references };
 }
 
@@ -90,13 +90,13 @@ export async function enrichDecisions(plugin: LegifrancePlugin, progress: Progre
 	const todo = only ?? index.pendingDecisions(retryUnresolved);
 
 	for (const [i, ref] of todo.entries()) {
-		if (plugin.taskCancelled) return { ...report, stopped: "arrêtée" };
+		if (plugin.tasks.cancelled) return { ...report, stopped: "arrêtée" };
 		progress(i, todo.length, ref.label);
 		try {
 			// 1. Adresse de la décision (recherche si elle n'est pas encore connue). Une décision déjà
 			// marquée introuvable n'est pas recherchée à nouveau, sauf demande expresse.
 			if (!index.linkFor(ref) && canResolve(ref) && (retryUnresolved || !index.hasMiss(ref.key))) {
-				await plugin.resolveReferences([ref], retryUnresolved, "background");
+				await plugin.links.resolve([ref], retryUnresolved, "background");
 			}
 			const link = index.linkFor(ref);
 			if (!link) {
@@ -195,10 +195,10 @@ export async function resolveArticles(plugin: LegifrancePlugin, progress: Progre
 	const todo = plugin.references.unresolvedArticles().filter(canResolve);
 
 	for (const [i, ref] of todo.entries()) {
-		if (plugin.taskCancelled) return { ...report, stopped: "arrêtée" };
-		if (plugin.referenceAuthFailed) return { ...report, stopped: "identifiants refusés" };
+		if (plugin.tasks.cancelled) return { ...report, stopped: "arrêtée" };
+		if (plugin.links.authFailed) return { ...report, stopped: "identifiants refusés" };
 		progress(i, todo.length, ref.label);
-		await plugin.resolveReferences([ref], false, "background");
+		await plugin.links.resolve([ref], false, "background");
 		if (plugin.references.linkFor(ref)) report.resolved++;
 		else report.missing++;
 	}
@@ -222,7 +222,7 @@ export async function analyzeGenealogy(plugin: LegifrancePlugin, progress: Progr
 	const todo = index.decisionsWithoutRelations();
 	const report: GenealogyReport = { analyzed: 0, relations: 0 };
 	for (const [i, row] of todo.entries()) {
-		if (plugin.taskCancelled) return { ...report, stopped: "arrêtée" };
+		if (plugin.tasks.cancelled) return { ...report, stopped: "arrêtée" };
 		if (i % 10 === 0) {
 			progress(i, todo.length, row.legifrance_id);
 			await pause(0);
@@ -259,10 +259,10 @@ export async function refreshArticles(plugin: LegifrancePlugin, progress: Progre
 	const todo = index.articlesToRefresh(Date.now() - REFRESH_AFTER_MS);
 
 	for (const [i, ref] of todo.entries()) {
-		if (plugin.taskCancelled) return { ...report, changed: index.changedArticles().length - before, stopped: "arrêtée" };
-		if (plugin.referenceAuthFailed) return { ...report, changed: index.changedArticles().length - before, stopped: "identifiants refusés" };
+		if (plugin.tasks.cancelled) return { ...report, changed: index.changedArticles().length - before, stopped: "arrêtée" };
+		if (plugin.links.authFailed) return { ...report, changed: index.changedArticles().length - before, stopped: "identifiants refusés" };
 		progress(i, todo.length, ref.label);
-		await plugin.resolveReferences([ref], true, "background");
+		await plugin.links.resolve([ref], true, "background");
 		index.touchLink(ref.key);
 		report.checked++;
 	}
@@ -317,7 +317,7 @@ export const ENRICH_TASK: Task<EnrichReport & { articles?: ArticlesReport }> = {
 	run: async (plugin, progress) => {
 		const report: EnrichReport & { articles?: ArticlesReport } = await enrichDecisions(plugin, progress);
 		if (!report.stopped) report.articles = await resolveArticles(plugin, progress);
-		if (!plugin.taskCancelled) await analyzeGenealogy(plugin, progress);
+		if (!plugin.tasks.cancelled) await analyzeGenealogy(plugin, progress);
 		return report;
 	},
 	summarize: (r) => {

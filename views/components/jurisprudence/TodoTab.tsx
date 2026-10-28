@@ -1,5 +1,5 @@
 import { Notice } from "obsidian";
-import { REFERENCES_EVENT } from "main";
+import { REFERENCES_EVENT } from "lib/events";
 import { refineUnresolved } from "references/refine";
 import { useMemo, useState } from "react";
 import { citationIssues } from "references/checks";

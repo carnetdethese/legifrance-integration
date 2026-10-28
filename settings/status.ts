@@ -35,7 +35,7 @@ export class LiveStatus {
 		this.bar = root.createEl("progress");
 		this.taskDetail = root.createDiv({ cls: "setting-item-description" });
 		this.stop = root.createEl("button", { text: "Arrêter" });
-		this.stop.onclick = () => plugin.cancelTask();
+		this.stop.onclick = () => plugin.tasks.cancel();
 
 		const apiRow = parent.createDiv({ cls: "legifrance-status-row" });
 		apiRow.createDiv({ cls: "legifrance-status-title", text: "Requêtes vers l'API" });
@@ -45,7 +45,7 @@ export class LiveStatus {
 
 	update() {
 		const { plugin } = this;
-		const state = plugin.taskState;
+		const state = plugin.tasks.state;
 		if (state) {
 			const percent = state.total ? Math.round((state.done / state.total) * 100) : 0;
 			const elapsed = Date.now() - state.startedAt;
@@ -53,7 +53,7 @@ export class LiveStatus {
 			this.task.setText(`${state.name} : ${state.done} / ${state.total} (${percent} %)${remaining}`);
 			this.bar.max = Math.max(state.total, 1);
 			this.bar.value = state.done;
-			this.taskDetail.setText(plugin.taskCancelled ? "Arrêt demandé : la tâche s'interrompt après la requête en cours." : state.label);
+			this.taskDetail.setText(plugin.tasks.cancelled ? "Arrêt demandé : la tâche s'interrompt après la requête en cours." : state.label);
 		} else {
 			this.task.setText("Aucune tâche en cours.");
 			this.bar.value = 0;
@@ -61,14 +61,14 @@ export class LiveStatus {
 		}
 		this.bar.toggle(!!state);
 		this.stop.toggle(!!state);
-		this.stop.disabled = plugin.taskCancelled;
+		this.stop.disabled = plugin.tasks.cancelled;
 
 		const limiter = plugin.api.limiter;
 		const limit = limiter.maxPerWindow;
 		const lines = [`${limiter.used}${limit > 0 ? ` / ${limit}` : ""} requête${limiter.used > 1 ? "s" : ""} dans la dernière minute · ${limiter.total} depuis le démarrage d'Obsidian`];
 		if (limiter.suspendedUntil) lines.push(`Quota dépassé : envois suspendus jusqu'à ${clock(limiter.suspendedUntil)}.`);
 		else if (limiter.waiting > 0) lines.push(`${limiter.waiting} requête${limiter.waiting > 1 ? "s" : ""} en attente d'un créneau${limiter.nextSlot ? ` (prochain envoi à ${clock(limiter.nextSlot)})` : ""}.`);
-		if (plugin.pendingReferences.size > 0) lines.push(`${plugin.pendingReferences.size} recherche${plugin.pendingReferences.size > 1 ? "s" : ""} de lien en cours.`);
+		if (plugin.links.pending.size > 0) lines.push(`${plugin.links.pending.size} recherche${plugin.links.pending.size > 1 ? "s" : ""} de lien en cours.`);
 		this.api.setText(lines.join("\n"));
 		this.api.addClass("legifrance-status-lines");
 	}

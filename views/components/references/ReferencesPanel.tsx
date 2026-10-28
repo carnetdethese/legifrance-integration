@@ -37,7 +37,7 @@ export const ReferencesPanel = () => {
 
 	/** Références que l'API peut encore retrouver (sans lien mémorisé, ni recherche en cours). */
 	const missing = refs.filter(
-		(ref) => canResolve(ref) && !plugin.references.linkFor(ref) && !plugin.pendingReferences.has(ref.key)
+		(ref) => canResolve(ref) && !plugin.references.linkFor(ref) && !plugin.links.pending.has(ref.key)
 	);
 
 	async function resolve(targets: LegalRef[]) {
@@ -46,7 +46,7 @@ export const ReferencesPanel = () => {
 			return;
 		}
 		setBusy(true);
-		await plugin.resolveReferences(targets, true);
+		await plugin.links.resolve(targets, true);
 		setBusy(false);
 	}
 
@@ -99,8 +99,8 @@ async function copyDiagnostic(plugin: LegifrancePlugin, path: string, refs: Lega
 	for (const ref of refs) {
 		const link = plugin.references.linkFor(ref);
 		lines.push(`## ${ref.label}`, `type : ${ref.kind} | données : ${JSON.stringify(ref.data)}`);
-		lines.push(`lien : ${link?.url ?? "aucun"} | repli : ${ref.fallbackUrl ?? plugin.getReferenceUrl(ref)}`);
-		lines.push(...(plugin.referenceTraces.get(ref.key) ?? ["(aucune recherche pendant cette session)"]), "");
+		lines.push(`lien : ${link?.url ?? "aucun"} | repli : ${ref.fallbackUrl ?? plugin.links.urlFor(ref)}`);
+		lines.push(...(plugin.links.traces.get(ref.key) ?? ["(aucune recherche pendant cette session)"]), "");
 	}
 	await navigator.clipboard.writeText(lines.join("\n"));
 	new Notice("Diagnostic copié dans le presse-papiers.");
@@ -154,7 +154,7 @@ interface ReferenceItemProps {
 const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) => {
 	const plugin = usePlugin();
 	const link = plugin.references.linkFor(reference);
-	const pending = plugin.pendingReferences.has(reference.key);
+	const pending = plugin.links.pending.has(reference.key);
 	const missed = plugin.references.isRecentMiss(reference);
 
 	let status = reference.url || reference.fallbackUrl ? "Lien vers la page du texte." : "Lien de recherche Légifrance.";
@@ -173,7 +173,7 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 	// Texte déjà en base (décision complétée, article retrouvé) : lisible dans le lecteur, sans requête.
 	const documentId = link ? decisionKey(link.url) ?? /(?:LEGIARTI|LEGITEXT|JORFTEXT|JORFARTI)\d{12}/.exec(link.url)?.[0] : undefined;
 	const readable = !!documentId && !!storedLegalDocument(plugin, documentId);
-	const trace = plugin.settings.debugRefs ? plugin.referenceTraces.get(reference.key) : undefined;
+	const trace = plugin.settings.debugRefs ? plugin.links.traces.get(reference.key) : undefined;
 
 	return (
 		<div className="setting-item">
@@ -239,7 +239,7 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 				<a
 					className="clickable-icon"
 					aria-label={link ? "Ouvrir sur Légifrance" : "Rechercher sur Légifrance"}
-					href={plugin.getReferenceUrl(reference)}
+					href={plugin.links.urlFor(reference)}
 				>
 					<ExternalLink size={16} />
 				</a>

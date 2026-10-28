@@ -41,7 +41,7 @@ export const CycleOverview = () => {
 					<section key={step.id} className="legifrance-cycle-step">
 						<div className="legifrance-cycle-head">
 							<h5>{step.title}</h5>
-							<button disabled={plugin.taskRunning} onClick={() => void plugin.runTask(task)}>{done ? `${button} à nouveau` : button}</button>
+							<button disabled={plugin.tasks.running} onClick={() => void plugin.tasks.run(task)}>{done ? `${button} à nouveau` : button}</button>
 						</div>
 						<p className="setting-item-description">{step.what}</p>
 						<progress max={Math.max(step.total, 1)} value={Math.min(step.done, Math.max(step.total, 1))} />

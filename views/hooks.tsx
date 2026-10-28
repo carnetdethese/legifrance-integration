@@ -2,7 +2,7 @@ import { TFile, debounce } from "obsidian";
 import { useContext, useEffect, useReducer, useState, useSyncExternalStore } from "react";
 import { LegalRef } from "references/parser";
 import { PluginContext } from "./context";
-import { HISTORY_EVENT, REFERENCES_EVENT, TASK_EVENT } from "main";
+import { HISTORY_EVENT, REFERENCES_EVENT, TASK_EVENT } from "lib/events";
 import { documentDataStorage } from "./viewsData";
 
 export const usePlugin = () => {
@@ -80,7 +80,7 @@ export const useNoteReferences = () => {
 		plugin.getReferences(file).then((found) => {
 			if (cancelled) return;
 			setRefs(found);
-			if (plugin.settings.autoResolveRefs) plugin.resolveReferences(found);
+			if (plugin.settings.autoResolveRefs) plugin.links.resolve(found);
 		});
 		return () => {
 			cancelled = true;
