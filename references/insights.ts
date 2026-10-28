@@ -6,11 +6,10 @@ import { Notice, TFile, normalizePath } from "obsidian";
 import { codeJuridiction } from "abstracts/decisions";
 import type LegifrancePlugin from "main";
 import { BIB_FORMATS, BibEntry, BibFilter, BibFormat, decisionEntries, filterDecisions, formatBibliography, isFiltered } from "./bibliography";
-import { articleNoteContent } from "./articleNote";
-import { articlesByDecision, citedTexts, decisionsApplying, loadDecisions, statusLabel } from "./corpus";
+import { articlesByDecision, citedTexts, loadDecisions, statusLabel } from "./corpus";
 import { DecisionValues, FicheDifference, ficheDifferences, ficheId, ficheValues } from "./fiches";
 import { PlanOptions, coursePlan, planThemes } from "./plan";
-import { DecisionRecord, byDate, decisionsTable, ficheFileName, themeCounts } from "./timeline";
+import { DecisionRecord, decisionsTable, ficheFileName, themeCounts } from "./timeline";
 
 /** Dernier recensement des décisions, avec l'état de la base et des liens entre notes pour lequel il a été fait. */
 const cache = new WeakMap<LegifrancePlugin, { databaseVersion: number; notesVersion: number; records: DecisionRecord[] }>();
@@ -122,7 +121,7 @@ export function noteDecisionsTable(plugin: LegifrancePlugin, file: TFile) {
 }
 
 /** Caractères interdits dans un nom de fichier. */
-const safeName = (name: string) => name.replace(/[\\/:*?"<>|#^[\]]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+export const safeName = (name: string) => name.replace(/[\\/:*?"<>|#^[\]]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
 
 /**
  * Crée la fiche d'une décision citée : ses propriétés (réglage « correspondance ») sont remplies avec
@@ -161,7 +160,7 @@ export async function createFiche(plugin: LegifrancePlugin, record: DecisionReco
 }
 
 /** Lien interne vers une note, écrit comme Obsidian l'écrirait depuis `from`. */
-const internalLink = (plugin: LegifrancePlugin, from: string) => (path: string, alias: string) => {
+export const internalLink = (plugin: LegifrancePlugin, from: string) => (path: string, alias: string) => {
 	const target = plugin.app.vault.getFileByPath(path);
 	return target ? plugin.app.fileManager.generateMarkdownLink(target, from, undefined, alias) : alias;
 };
@@ -257,34 +256,4 @@ export async function writeFicheIds(plugin: LegifrancePlugin, chosen: DecisionRe
 		written.push(path);
 	}
 	return written;
-}
-
-/**
- * Ouvre la note d'un article, en la créant d'abord si elle n'existe pas (dossier de base, sous-dossier « Articles ») :
- * propriétés, texte retrouvé sur Légifrance, décisions de la base qui l'appliquent, notes qui le citent. Une note
- * existante n'est jamais réécrite.
- */
-export async function openArticleNote(plugin: LegifrancePlugin, key: string) {
-	const { app, references: index, settings } = plugin;
-	const ref = index.db.get<{ label: string }>("SELECT label FROM refs WHERE key = ?", [key]);
-	const known = index.db.get<{ label: string }>("SELECT label FROM decision_articles WHERE article_key = ? LIMIT 1", [key]);
-	const label = ref?.label ?? known?.label;
-	if (!label) {
-		new Notice("Article inconnu de la base.");
-		return undefined;
-	}
-	const folder = normalizePath(`${settings.dossierBase}/Articles`);
-	const path = normalizePath(`${folder}/${safeName(label)}.md`);
-	let file = app.vault.getFileByPath(path);
-	if (!file) {
-		const link = index.db.get<{ url: string; text: string | null; status: string | null }>("SELECT url, text, status FROM links WHERE ref_key = ?", [key]);
-		const decisions = decisionsApplying(index, decisionsOf(plugin), key).sort(byDate).map((r) => ({ title: r.name ?? r.title ?? r.label, date: r.date, court: r.court, fichePath: r.fichePath, url: r.url }));
-		const notes = index.db.all<{ note_path: string }>("SELECT DISTINCT note_path FROM citations WHERE ref_key = ? ORDER BY note_path", [key]).map((row) => row.note_path);
-		const content = articleNoteContent({ label, text: link?.text ?? undefined, status: link?.status ? statusLabel(link.status) : undefined, url: link?.url, decisions, notes }, internalLink(plugin, path));
-		if (!app.vault.getFolderByPath(folder)) await app.vault.createFolder(folder).catch(() => undefined);
-		file = await app.vault.create(path, `${content}\n`);
-		new Notice(`Note créée : ${path}`);
-	}
-	await app.workspace.getLeaf(false).openFile(file);
-	return file;
 }

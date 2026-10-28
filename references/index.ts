@@ -108,6 +108,8 @@ export class ReferenceIndex {
 	private misses = new Map<string, number>();
 	/** Fiches de décisions : identifiant Légifrance → chemin de la note. */
 	private fichesById = new Map<string, string>();
+	/** Notes d'articles créées par le plugin : chemin de la note → clef de l'article. */
+	private articleNotePaths = new Map<string, string>();
 
 	/** Un effectif : première colonne `n` de la requête, 0 si elle ne renvoie rien. */
 	private count(sql: string) {
@@ -132,6 +134,9 @@ export class ReferenceIndex {
 		for (const row of db.all<{ note_path: string; legifrance_id: string | null }>("SELECT note_path, legifrance_id FROM fiches")) {
 			if (row.legifrance_id) this.fichesById.set(row.legifrance_id, row.note_path);
 		}
+		for (const row of db.all<{ ref_key: string; note_path: string }>("SELECT ref_key, note_path FROM article_notes")) {
+			this.articleNotePaths.set(row.note_path, row.ref_key);
+		}
 		for (const row of db.all<{ ref_key: string; url: string; title: string; text: string | null; status: string | null }>("SELECT ref_key, url, title, text, status FROM links")) {
 			this.links.set(row.ref_key, { url: row.url, titre: row.title, texte: row.text ?? undefined, statut: row.status ?? undefined });
 		}
@@ -149,6 +154,11 @@ export class ReferenceIndex {
 		if (cached) return cached;
 
 		const citations = parseCitations(await read());
+		// Une note d'article cite d'autres articles dans son texte : ces citations ne sont pas celles de l'utilisateur.
+		if (this.isArticleNote(path)) {
+			this.db.run("DELETE FROM citations WHERE note_path = ?", [path]);
+			return citations.map(({ ref }) => ref);
+		}
 		this.db.transaction(() => {
 			this.db.run("DELETE FROM citations WHERE note_path = ?", [path]);
 			citations.forEach(({ ref, count }, ord) => {
@@ -189,7 +199,13 @@ export class ReferenceIndex {
 			this.db.run("UPDATE notes SET path = ? WHERE path = ?", [newPath, oldPath]);
 			this.db.run("UPDATE citations SET note_path = ? WHERE note_path = ?", [newPath, oldPath]);
 			this.db.run("UPDATE fiches SET note_path = ? WHERE note_path = ?", [newPath, oldPath]);
+			this.db.run("UPDATE article_notes SET note_path = ? WHERE note_path = ?", [newPath, oldPath]);
 		});
+		const articleKey = this.articleNotePaths.get(oldPath);
+		if (articleKey) {
+			this.articleNotePaths.delete(oldPath);
+			this.articleNotePaths.set(newPath, articleKey);
+		}
 		for (const [id, path] of this.fichesById) if (path === oldPath) this.fichesById.set(id, newPath);
 	}
 
@@ -197,7 +213,9 @@ export class ReferenceIndex {
 		this.db.transaction(() => {
 			this.db.run("DELETE FROM citations WHERE note_path = ?", [path]);
 			this.db.run("DELETE FROM notes WHERE path = ?", [path]);
+			this.db.run("DELETE FROM article_notes WHERE note_path = ?", [path]);
 		});
+		this.articleNotePaths.delete(path);
 		this.removeFiche(path);
 	}
 
@@ -460,6 +478,39 @@ export class ReferenceIndex {
 		return at !== undefined && Date.now() - at < MISS_RETRY_MS;
 	}
 
+	// --- Notes d'articles --------------------------------------------------------------------------
+
+	/** Cette note est-elle une note d'article créée par le plugin ? */
+	isArticleNote(path: string) {
+		return this.articleNotePaths.has(path);
+	}
+
+	/** Chemin de la note de l'article, si elle a été créée. */
+	articleNoteFor(key: string) {
+		for (const [path, articleKey] of this.articleNotePaths) if (articleKey === key) return path;
+		return undefined;
+	}
+
+	/** Notes d'articles : [clef de l'article, chemin de la note]. */
+	articleNotes(): [string, string][] {
+		return [...this.articleNotePaths].map(([path, key]) => [key, path]);
+	}
+
+	/** Enregistre la note d'un article (à faire avant sa création : son contenu ne doit pas compter comme des citations). */
+	setArticleNote(key: string, path: string) {
+		const previous = this.articleNoteFor(key);
+		if (previous) this.articleNotePaths.delete(previous);
+		this.articleNotePaths.set(path, key);
+		this.db.run("INSERT OR REPLACE INTO article_notes (ref_key, note_path) VALUES (?, ?)", [key, path]);
+	}
+
+	/** Oublie la note d'un article (elle n'est plus tenue à jour). */
+	forgetArticleNote(key: string) {
+		const path = this.articleNoteFor(key);
+		if (path) this.articleNotePaths.delete(path);
+		this.db.run("DELETE FROM article_notes WHERE ref_key = ?", [key]);
+	}
+
 	// --- Précisions de l'utilisateur -------------------------------------------------------------
 
 	/** Ce que l'utilisateur a précisé pour cette référence (formulaire « Préciser »), s'il l'a fait. */
@@ -648,9 +699,10 @@ export class ReferenceIndex {
 	/** Vide la base (notes, références, liens, fiches). */
 	clear() {
 		this.db.transaction(() => {
-			for (const table of ["notes", "refs", "citations", "links", "misses", "decisions", "decision_articles", "fiches", "documents", "decision_relations", "decision_precisions"]) this.db.run(`DELETE FROM ${table}`);
+			for (const table of ["notes", "refs", "citations", "links", "misses", "decisions", "decision_articles", "fiches", "documents", "decision_relations", "decision_precisions", "article_notes"]) this.db.run(`DELETE FROM ${table}`);
 		});
 		this.fichesById.clear();
+		this.articleNotePaths.clear();
 		this.links.clear();
 		this.misses.clear();
 	}

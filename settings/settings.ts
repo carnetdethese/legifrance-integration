@@ -65,6 +65,8 @@ export interface LegifranceSettings {
 	ficheAutoComplete: boolean;
 	/** À l'ouverture d'Obsidian : ne rien faire, rappeler les articles à revérifier, ou les actualiser en fond. */
 	refreshOnStartup: "off" | "remind" | "run";
+	/** Tient à jour les notes d'articles créées par le plugin (texte, statut, décisions, notes qui citent l'article). */
+	articleNotesAutoRefresh: boolean;
 }
 
 export const DEFAULT_SETTINGS: LegifranceSettings = {
@@ -99,6 +101,7 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	ficheOverwrite: false,
 	ficheAutoComplete: false,
 	refreshOnStartup: "remind",
+	articleNotesAutoRefresh: true,
 }
 
 
@@ -262,6 +265,12 @@ export class LegifranceSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
+
+		this.addToggleSetting(
+			"Tenir à jour les notes d'articles",
+			"Quand le texte, le statut de vigueur, les décisions ou les notes qui citent un article changent, met à jour la note d'article créée par le plugin. Seuls les passages entre les repères <!-- legifrance:… --> et les propriétés texte, numero, statut et lien sont réécrits : vos remarques ne sont jamais touchées.",
+			"articleNotesAutoRefresh"
+		);
 
 		new Setting(containerEl).setName("Recherche").setHeading();
 

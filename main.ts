@@ -26,6 +26,7 @@ import { DatabaseFile } from "references/databaseFile";
 import { FicheEditor, isMarkdown } from "references/ficheEditor";
 import { DEFAULT_GRAPH_SETTINGS, GraphSettings, mergeGraphSettings } from "references/graph";
 import { INDEX_TASK } from "references/indexer";
+import { refreshArticleNotes } from "references/articleNotes";
 import { refreshOnStartup } from "references/startup";
 import { LinkResolver } from "references/linkResolver";
 import { MigrationReport } from "references/migrate";
@@ -36,6 +37,7 @@ import { DEFAULT_SETTINGS, LegifranceSettings, LegifranceSettingTab } from "sett
 import { DATABASE_VIEW, DatabaseView } from "views/DatabaseView";
 import { JURISPRUDENCE_VIEW, JurisprudenceView } from "views/JurisprudenceView";
 import { NOTE_TAKING_VIEW, NoteTakingView } from "views/NoteTakingView";
+import { ARTICLES_VIEW, ArticlesView } from "views/ArticlesView";
 import { REFERENCES_VIEW, ReferencesView } from "views/ReferencesView";
 import { RESEARCH_TEXT_VIEW, ResearchTextView } from "views/ResearchTextView";
 import { SEARCH_RESULT_VIEW, SearchResultView } from "views/SearchResultView";
@@ -83,6 +85,8 @@ export default class LegifrancePlugin extends Plugin {
 	/** Notes modifiées en attente de réanalyse. */
 	private pendingNotes = new Set<TFile>();
 	private reindexSoon = debounce(() => this.reindexPendingNotes(), 2000, true);
+	/** Met à jour les notes d'articles un instant après le dernier changement de la base. */
+	private refreshArticleNotesSoon!: () => void;
 	private saveGraphSoon = debounce(() => void this.saveSettings(), 800, true);
 
 	async onload() {
@@ -95,6 +99,7 @@ export default class LegifrancePlugin extends Plugin {
 		this.registerView(SEARCH_RESULT_VIEW, (leaf) => new SearchResultView(leaf, this));
 		this.registerView(TEXT_READER_VIEW, (leaf) => new TextReaderView(leaf, this));
 		this.registerView(REFERENCES_VIEW, (leaf) => new ReferencesView(leaf, this));
+		this.registerView(ARTICLES_VIEW, (leaf) => new ArticlesView(leaf, this));
 		this.registerView(DATABASE_VIEW, (leaf) => new DatabaseView(leaf, this));
 		this.registerView(JURISPRUDENCE_VIEW, (leaf) => new JurisprudenceView(leaf, this));
 		this.registerView(NOTE_TAKING_VIEW, (leaf) => new NoteTakingView(leaf, this));
@@ -102,6 +107,10 @@ export default class LegifrancePlugin extends Plugin {
 		this.addSettingTab(new LegifranceSettingTab(this.app, this));
 
 		this.watchVault();
+		// Les notes d'articles suivent la base (texte, statut, décisions) ; rafale d'événements : on attend qu'elle se calme.
+		const refreshArticleNotesSoon = debounce(() => this.settings.articleNotesAutoRefresh && void refreshArticleNotes(this), 5000, true);
+		this.registerEvent(this.events.on(REFERENCES_EVENT, refreshArticleNotesSoon));
+		this.refreshArticleNotesSoon = refreshArticleNotesSoon;
 		this.fiches.register();
 		// Dernière écriture de la base à la fermeture d'Obsidian.
 		this.registerEvent(this.app.workspace.on("quit", () => this.databaseFile.save()));
@@ -154,6 +163,8 @@ export default class LegifrancePlugin extends Plugin {
 		if (analyzeStoredDecisions(this.references) > 0) this.events.trigger(REFERENCES_EVENT);
 		// Liens d'articles anciens : rappel ou actualisation en fond, selon le réglage.
 		refreshOnStartup(this);
+		// Notes d'articles : une passe au démarrage, la base a pu changer pendant que le plugin était fermé.
+		this.refreshArticleNotesSoon();
 	}
 
 	/** Charge les réglages et l'historique ; renvoie les anciennes données de références, à reprendre. */
@@ -252,6 +263,11 @@ export default class LegifrancePlugin extends Plugin {
 			active: true,
 			reveal: true,
 		});
+	}
+
+	/** Affiche le panneau latéral des articles cités par la note active. */
+	async activateArticlesView() {
+		await this.app.workspace.ensureSideLeaf(ARTICLES_VIEW, "right", { active: true, reveal: true });
 	}
 
 	/** Onglet et article que la vue Jurisprudence doit afficher à son prochain rendu (lien depuis une autre vue). */

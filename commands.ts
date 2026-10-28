@@ -28,6 +28,7 @@ export function registerCommands(plugin: LegifrancePlugin) {
 	// Vues
 	plugin.addCommand({ id: "nouvelle-recherche", name: "Nouvelle recherche", callback: () => plugin.activateResearchTextView() });
 	plugin.addCommand({ id: "references-juridiques", name: "Afficher les références juridiques de la note", callback: () => plugin.activateReferencesView() });
+	plugin.addCommand({ id: "articles-de-la-note", name: "Afficher les articles de la note (statut, versions, décisions, note d'article)", callback: () => plugin.activateArticlesView() });
 	plugin.addCommand({ id: "base-de-donnees", name: "Afficher la base de données et le cycle de la donnée", callback: () => plugin.activateDatabaseView() });
 	plugin.addCommand({ id: "a-faire", name: "Afficher ce qui reste à faire (fiches, écarts, articles abrogés)", callback: () => plugin.activateDatabaseView("todo") });
 	plugin.addCommand({ id: "jurisprudence", name: "Afficher l'analyse de la jurisprudence", callback: () => plugin.activateJurisprudenceView() });

@@ -1,6 +1,9 @@
 /**
  * Contenu d'une note d'article : propriétés, texte, décisions de la base qui l'appliquent, notes qui le citent.
- * Module pur : les données sont fournies par `createArticleNote` (`insights.ts`).
+ * Module pur : les données sont fournies par `articleNotes.ts`.
+ *
+ * Le plugin ne possède que ce qui est entre deux repères `<!-- legifrance:… -->` et dans quatre propriétés
+ * (`texte`, `numero`, `statut`, `lien`) : le reste de la note est à l'utilisateur et n'est jamais réécrit.
  */
 import { displayDate } from "./timeline";
 
@@ -27,33 +30,79 @@ export interface ArticleNoteData {
 	notes: string[];
 }
 
+/** Parties de la note tenues à jour par le plugin. */
+export type ArticleBlock = "texte" | "decisions" | "notes";
+
 /** Texte et numéro d'un libellé d'article (« Code civil, art. 1240 » : « Code civil » et « 1240 »). */
 export function splitLabel(label: string) {
 	const at = label.indexOf(", art. ");
 	return at < 0 ? { text: label, number: "" } : { text: label.slice(0, at), number: label.slice(at + 7) };
 }
 
-/**
- * Note de l'article en Markdown.
- * @param link lien interne vers une note (`[[…]]`) pour le chemin donné
- */
-export function articleNoteContent({ label, text, status, url, decisions, notes }: ArticleNoteData, link: (path: string, alias: string) => string) {
-	const parts = splitLabel(label);
-	const quote = (value: string) => JSON.stringify(value);
-	const front = ["type: article", `texte: ${quote(parts.text)}`, parts.number && `numero: ${quote(parts.number)}`, status && `statut: ${quote(status)}`, url && `lien: ${quote(url)}`].filter(Boolean);
-	const lines = ["---", ...front, "---", "", `# ${label}`, ""];
-	if (text) lines.push(...text.trim().split("\n").map((line) => `> ${line}`), "");
-	else lines.push("*Le texte de l'article n'a pas été retrouvé : complétez-le depuis le panneau des références.*", "");
+/** Propriétés tenues à jour (celles sans valeur sont absentes). */
+export function articleProperties({ label, status, url }: ArticleNoteData): Record<string, string> {
+	const { text, number } = splitLabel(label);
+	return Object.fromEntries(Object.entries({ texte: text, numero: number, statut: status, lien: url }).filter(([, value]) => value)) as Record<string, string>;
+}
 
-	lines.push("## Décisions qui l'appliquent", "");
-	if (decisions.length === 0) lines.push("*Aucune décision de la base ne l'applique (pour l'instant).*");
-	for (const d of decisions) {
+const open = (block: ArticleBlock) => `<!-- legifrance:${block} -->`;
+const close = (block: ArticleBlock) => `<!-- /legifrance:${block} -->`;
+const wrap = (block: ArticleBlock, body: string) => `${open(block)}\n${body}\n${close(block)}`;
+
+/** Corps de chaque partie tenue à jour. `link` : lien interne vers une note (`[[…]]`) pour le chemin donné. */
+export function articleBlocks({ text, decisions, notes }: ArticleNoteData, link: (path: string, alias: string) => string): Record<ArticleBlock, string> {
+	const decisionLines = decisions.map((d) => {
 		const target = d.fichePath ? link(d.fichePath, d.title) : d.url ? `[${d.title}](${d.url})` : d.title;
 		const details = [displayDate(d.date), d.court].filter(Boolean).join(", ");
-		lines.push(`- ${target}${details ? ` (${details})` : ""}`);
+		return `- ${target}${details ? ` (${details})` : ""}`;
+	});
+	return {
+		texte: text ? text.trim().split("\n").map((line) => `> ${line}`).join("\n") : "*Le texte de l'article n'a pas été retrouvé : il apparaîtra ici dès qu'il sera récupéré.*",
+		decisions: decisionLines.length ? decisionLines.join("\n") : "*Aucune décision de la base ne l'applique (pour l'instant).*",
+		notes: notes.length ? notes.map((path) => `- ${link(path, path.split("/").pop()!.replace(/\.md$/, ""))}`).join("\n") : "*Aucune.*",
+	};
+}
+
+/** Note de l'article : propriétés, puis les trois parties tenues à jour, avec une place pour les remarques. */
+export function articleNoteContent(data: ArticleNoteData, link: (path: string, alias: string) => string) {
+	const blocks = articleBlocks(data, link);
+	const front = Object.entries(articleProperties(data)).map(([name, value]) => `${name}: ${JSON.stringify(value)}`);
+	return [
+		"---",
+		"type: article",
+		...front,
+		"---",
+		"",
+		`# ${data.label}`,
+		"",
+		wrap("texte", blocks.texte),
+		"",
+		"## Mes remarques",
+		"",
+		"",
+		"## Décisions qui l'appliquent",
+		"",
+		wrap("decisions", blocks.decisions),
+		"",
+		"## Notes qui le citent",
+		"",
+		wrap("notes", blocks.notes),
+		"",
+	].join("\n");
+}
+
+/**
+ * Contenu d'une note d'article avec ses parties tenues à jour. Ce qui est hors des repères n'est pas touché ;
+ * une partie dont les repères ont disparu (supprimés par l'utilisateur) n'est pas recréée.
+ */
+export function refreshArticleContent(content: string, data: ArticleNoteData, link: (path: string, alias: string) => string) {
+	const blocks = articleBlocks(data, link);
+	let result = content;
+	for (const block of Object.keys(blocks) as ArticleBlock[]) {
+		const start = result.indexOf(open(block));
+		const end = result.indexOf(close(block), start + 1);
+		if (start < 0 || end < 0) continue;
+		result = result.slice(0, start) + wrap(block, blocks[block]) + result.slice(end + close(block).length);
 	}
-	lines.push("", "## Notes qui le citent", "");
-	if (notes.length === 0) lines.push("*Aucune.*");
-	for (const path of notes) lines.push(`- ${link(path, path.split("/").pop()!.replace(/\.md$/, ""))}`);
-	return lines.join("\n");
+	return result;
 }

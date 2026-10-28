@@ -151,6 +151,12 @@ CREATE TABLE IF NOT EXISTS decision_precisions (
 	ref_key TEXT PRIMARY KEY,
 	data TEXT NOT NULL
 );
+
+-- Notes d'articles créées par le plugin (clef de l'article → note), pour les tenir à jour (voir articleNotes.ts).
+CREATE TABLE IF NOT EXISTS article_notes (
+	ref_key TEXT PRIMARY KEY,
+	note_path TEXT NOT NULL
+);
 `;
 
 /**

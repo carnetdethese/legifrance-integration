@@ -9,7 +9,7 @@ import { legifranceUrl } from "api/urls";
 import { loadArticleVersions, storeArticleVersion } from "references/articleVersions";
 import { ArticleVersion, VersionAtDate, versionAt } from "references/versions";
 import { ArticleSort, ArticleVigor, articleByKey, articlePage, articleTexts, decisionsApplying, excerptFor, statusLabel } from "references/corpus";
-import { openArticleNote } from "references/insights";
+import { openArticleNote } from "references/articleNotes";
 import { DecisionRecord, byDate } from "references/timeline";
 import { usePlugin } from "views/hooks";
 import { Card, DecisionRow, ExcerptQuote } from "./Shared";
@@ -17,7 +17,7 @@ import { Card, DecisionRow, ExcerptQuote } from "./Shared";
 const frenchDate = (iso: string | null | undefined) => (iso ? iso.split("-").reverse().join("/") : "");
 
 /** Période de vigueur d'une version : « du 01/10/2016 à aujourd'hui ». */
-const period = (v: ArticleVersion) => `${v.start ? `du ${frenchDate(v.start)}` : "depuis l'origine"} ${v.end ? `au ${frenchDate(v.end)} (exclu)` : "à aujourd'hui"}`;
+export const period = (v: ArticleVersion) => `${v.start ? `du ${frenchDate(v.start)}` : "depuis l'origine"} ${v.end ? `au ${frenchDate(v.end)} (exclu)` : "à aujourd'hui"}`;
 
 /** Version d'un article applicable à la date d'une décision, avec de quoi la lire. */
 const VersionLine = ({ label, versions, date }: { label: string; versions: ArticleVersion[]; date?: string }) => {

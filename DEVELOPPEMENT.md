@@ -137,8 +137,11 @@ Ce que l'on tire du recensement pour les notes : table des décisions (`timeline
 lue à la demande dans `text_markdown`). Les commandes sont dans `commands.ts` ; l'actualisation des articles
 au démarrage (rappel ou lancement en fond) dans `startup.ts`.
 
-Autres lectures de la base : **note d'article** (`articleNote.ts`, `openArticleNote`), **précisions** saisies pour une
-décision introuvable (table `decision_precisions`, `precisionsFor` / `savePrecisions`).
+Autres lectures de la base : **vue « Articles de la note »** (`ArticlesView`, `components/articles/ArticlesPanel.tsx` :
+statut, texte, extraits des décisions, versions, note de chaque article cité), **notes d'articles** (`articleNote.ts`
+pour le contenu, `articleNotes.ts` pour la création et la mise à jour automatique ; registre dans la table
+`article_notes`, dont le contenu n'est pas indexé comme des citations), **précisions** saisies pour une décision
+introuvable (table `decision_precisions`, `precisionsFor` / `savePrecisions`).
 
 La commande **« Compléter les fiches de décisions »** (`ENRICH_TASK`) enchaîne les étapes ③, ② puis ④ ; chaque
 étape peut aussi être lancée seule depuis la vue ou la palette de commandes.

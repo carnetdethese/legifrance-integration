@@ -1,6 +1,6 @@
 /** Test du plan de cours et de la bibliographie. Lancer : `npm test`. */
 import { BibEntry, decisionEntries, filterDecisions, formatBibliography, isFiltered } from "./bibliography";
-import { articleNoteContent, splitLabel } from "./articleNote";
+import { articleNoteContent, articleProperties, refreshArticleContent, splitLabel } from "./articleNote";
 import { coursePlan } from "./plan";
 import type { DecisionRecord } from "./timeline";
 
@@ -71,14 +71,24 @@ eq("filtre actif ?", [isFiltered({}), isFiltered({ to: "2000" })], [false, true]
 // Note d'article
 eq("libellé coupé", splitLabel("Code civil, art. 1240"), { text: "Code civil", number: "1240" });
 eq("libellé sans article", splitLabel("Préambule de 1946"), { text: "Préambule de 1946", number: "" });
-const note = articleNoteContent(
-	{ label: "Code civil, art. 1240", text: "Tout fait quelconque\nde l'homme…", status: "En vigueur", url: "https://exemple/a", decisions: [{ title: "Couitéas", date: "1923-11-30", court: "Conseil d'État", fichePath: "Fiches/couiteas1923.md" }, { title: "Cass.", url: "https://exemple/c" }], notes: ["Cours/responsabilite.md"] },
-	link
-);
+const data = { label: "Code civil, art. 1240", text: "Tout fait quelconque\nde l'homme…", status: "En vigueur", url: "https://exemple/a", decisions: [{ title: "Couitéas", date: "1923-11-30", court: "Conseil d'État", fichePath: "Fiches/couiteas1923.md" }, { title: "Cass.", url: "https://exemple/c" }], notes: ["Cours/responsabilite.md"] };
+const note = articleNoteContent(data, link);
 eq("note d'article : propriétés", note.startsWith('---\ntype: article\ntexte: "Code civil"\nnumero: "1240"\nstatut: "En vigueur"\nlien: "https://exemple/a"\n---\n\n# Code civil, art. 1240'), true);
-eq("note d'article : texte cité", note.includes("> Tout fait quelconque\n> de l'homme…"), true);
+eq("note d'article : texte cité entre repères", note.includes("<!-- legifrance:texte -->\n> Tout fait quelconque\n> de l'homme…\n<!-- /legifrance:texte -->"), true);
 eq("note d'article : décisions et notes", note.includes("- [[Fiches/couiteas1923|Couitéas]] (30/11/1923, Conseil d'État)") && note.includes("- [Cass.](https://exemple/c)") && note.includes("- [[Cours/responsabilite|responsabilite]]"), true);
 eq("note d'article sans texte", articleNoteContent({ label: "X", decisions: [], notes: [] }, link).includes("n'a pas été retrouvé"), true);
+eq("propriétés d'un article sans statut", articleProperties({ label: "Code civil, art. 1", decisions: [], notes: [] }), { texte: "Code civil", numero: "1" });
+
+// Mise à jour : seul ce qui est entre repères change ; les remarques de l'utilisateur restent.
+const edited = note.replace("## Mes remarques\n\n", "## Mes remarques\n\nÀ relire avant le partiel.\n\n");
+const newer = { ...data, status: "Abrogé", text: "Nouveau texte", decisions: [], notes: [] };
+const refreshed = refreshArticleContent(edited, newer, link);
+eq("mise à jour : remarques conservées", refreshed.includes("À relire avant le partiel."), true);
+eq("mise à jour : texte remplacé", refreshed.includes("> Nouveau texte") && !refreshed.includes("Tout fait quelconque"), true);
+eq("mise à jour : décisions remplacées", refreshed.includes("Aucune décision de la base") && !refreshed.includes("Couitéas"), true);
+eq("mise à jour : idempotente", refreshArticleContent(refreshed, newer, link), refreshed);
+eq("mise à jour : repères supprimés, partie non recréée", refreshArticleContent(edited.replace(/<!-- \/?legifrance:decisions -->/g, ""), newer, link).includes("Aucune décision"), false);
+eq("mise à jour : note sans repères intacte", refreshArticleContent("Ma note.", newer, link), "Ma note.");
 
 if (fail) { console.log(`${fail} échec(s)`); process.exit(1); }
 console.log("tout passe");

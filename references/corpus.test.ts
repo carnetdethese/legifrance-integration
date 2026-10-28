@@ -119,6 +119,18 @@ const check = (name: string, ok: boolean, detail = "") => { if (!ok) { fail++; c
 	index.prune();
 	check("précisions : supprimées avec la référence", index.precisionsFor("k2") === undefined);
 
+	// Notes d'articles : leur contenu ne compte pas comme des citations de l'utilisateur.
+	index.setArticleNote("article|a", "Articles/a.md");
+	check("note d'article enregistrée", index.isArticleNote("Articles/a.md") && index.articleNoteFor("article|a") === "Articles/a.md" && !index.isArticleNote("b.md"));
+	const found = await index.forFile("Articles/a.md", 1, async () => "Voir l'article 1240 du code civil.");
+	check("note d'article : références rendues mais non enregistrées", found.length === 1 && db.get("SELECT 1 FROM citations WHERE note_path = 'Articles/a.md'") === undefined);
+	await index.forFile("b.md", 1, async () => "Voir l'article 1240 du code civil.");
+	check("note ordinaire : citations enregistrées", db.get("SELECT 1 FROM citations WHERE note_path = 'b.md'") !== undefined);
+	index.rename("Articles/a.md", "Articles/renommee.md");
+	check("note d'article renommée", index.articleNoteFor("article|a") === "Articles/renommee.md" && index.isArticleNote("Articles/renommee.md") && !index.isArticleNote("Articles/a.md"));
+	index.remove("Articles/renommee.md");
+	check("note d'article supprimée", index.articleNotes().length === 0);
+
 	console.log(fail ? `${fail} échec(s)` : "tout passe");
 	process.exit(fail ? 1 : 0);
 })();
