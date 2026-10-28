@@ -1,3 +1,7 @@
+/**
+ * Analyse de la jurisprudence, onglet « Chronologie » : les décisions par année, filtrables par thème, étiquette, note
+ * et juridiction ; fusion de décisions en double (manuelle ou suggérée), création d'une fiche depuis une décision.
+ */
 import { Notice, getAllTags } from "obsidian";
 import { FilePlus, Link2, Unlink } from "lucide-react";
 import { CSSProperties, useLayoutEffect, useMemo, useRef, useState } from "react";

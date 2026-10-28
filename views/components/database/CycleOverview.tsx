@@ -1,3 +1,8 @@
+/**
+ * Vue Base de données, onglet « Cycle de la donnée » : les cinq étapes (notes analysées → articles retrouvés →
+ * décisions complétées → généalogie → fiches reliées), leur avancement tiré de `cycleProgress`, un bouton par tâche
+ * (`plugin.tasks.run`) et la légende des pastilles d'état d'une source.
+ */
 import { useMemo } from "react";
 import { COMPLETE_FICHES_TASK } from "references/ficheSync";
 import { ARTICLES_TASK, ENRICH_TASK, GENEALOGY_TASK, INDEX_TASK, Task } from "references/indexer";

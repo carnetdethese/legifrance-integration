@@ -1,3 +1,7 @@
+/**
+ * Onglet de lecture d'un document : un document de l'historique (`docId`, consulté sur l'API) ou un texte déjà dans
+ * la base (`storedId` : décision, article, texte). L'état de l'onglet est restauré par Obsidian au redémarrage.
+ */
 import { ViewStateResult } from "obsidian";
 import { ReactNode } from "react";
 import { removeTags } from "lib/tools";

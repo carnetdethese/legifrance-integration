@@ -3,10 +3,17 @@ import { isCaselawOrigin } from "./fonds";
 import { dateFormat } from "lib/dateHandler";
 import { legifranceUrl } from "api/urls";
 
+/**
+ * Les requêtes `POST /search` du formulaire de recherche et leurs réponses. Le corps de la requête est construit par
+ * `documentSearchFieldsClass` (`searchHandler.ts`) d'après le fond choisi (`fonds.ts`) ; la réponse est mise en forme
+ * en `legalDocument` par `resultatsRechercheClass`.
+ */
+
+/** Corps d'une recherche : le fond et la recherche proprement dite. */
 export interface rechercheAvStructure {
-	// Base
-	recherche: champsRechercheAvancees | requeteDateUnique;
+	/** Code du fond (`CETAT`, `JORF`, `LODA_DATE`…). */
 	fond: string;
+	recherche: champsRechercheAvancees | requeteDateUnique;
 }
 
 /** Requête d'un fond « à une date » : le filtre porte une date de version unique. */
@@ -14,17 +21,23 @@ export type requeteDateUnique = Omit<champsRechercheAvancees, "filtres"> & {
 	filtres: { facette: string; singleDate: number }[];
 };
 
+/** Recherche : champs interrogés, filtres de date, tri et pagination. */
 export interface champsRechercheAvancees {
+	/** Opérateur entre les champs (`ET` / `OU`). */
 	operateur?: string;
 	pageSize: number;
+	/** Critère de tri (`PERTINENCE`, `DATE_DESC`… : propre au fond). */
 	sort: string;
 	typePagination: string;
 	pageNumber: number;
+	/** Un champ de l'API (titre, texte, numéro…) et les critères qui s'y appliquent. */
 	champs: {
 		operateur?: string;
 		criteres: Criteres[];
+		/** Champ interrogé (`ALL`, `TITLE`, `NUM_ARTICLE`…). */
 		typeChamp: string;
 	}[];
+	/** Filtres par période : une facette de date (`DATE_DECISION`, `DATE_SIGNATURE`…) et ses bornes. */
 	filtres: {
 		facette: string;
 		dates: {
@@ -34,12 +47,15 @@ export interface champsRechercheAvancees {
 	}[];
 }
 
+/** Un critère de recherche dans un champ : un mot ou une expression, et la façon de la chercher. */
 export interface Criteres {
-	// interface pour le champ : criteres. Peut y en avoir plusieurs.
+	/** Opérateur avec le critère voisin (`ET` / `OU`). */
 	operateur: string;
 	criteres?: Criteres;
 	valeur: string;
+	/** Écart maximal entre les mots (recherche par proximité). */
 	proximite: number;
+	/** `EXACTE`, `UN_DES_MOTS`, `TOUS_LES_MOTS_DANS_UN_CHAMP`… (voir `api/constants.ts`). */
 	typeRecherche: string;
 }
 
@@ -50,10 +66,13 @@ interface Title {
 	title: string;
 }
 
+/** Réponse de `POST /search`. */
 export interface resultatsRecherche {
+	/** Un résultat regroupe des documents (`titles`) qui partagent le même extrait. */
 	results: {
 		titles?: Title[];
 		nature?: string;
+		/** Extrait (HTML, termes surlignés). */
 		text: string;
 		origin: string;
 		date?: string;
@@ -63,6 +82,7 @@ export interface resultatsRecherche {
 	fond?: string;
 }
 
+/** Réponse d'une consultation : le document est sous `text` (textes, décisions) ou `circulaire`. */
 export interface reponseDocument {
 	text?: legalDocument;
 	circulaire?: legalDocument;

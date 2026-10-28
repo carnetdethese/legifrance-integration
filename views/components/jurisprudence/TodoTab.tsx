@@ -1,3 +1,9 @@
+/**
+ * Vue Base de données, onglet « À faire » : ce qui demande une action de l'utilisateur. Une `Card` par rubrique, dont
+ * les lignes portent leur action : décisions citées sans fiche (créer la fiche), décisions introuvables (préciser),
+ * articles modifiés, citations à vérifier (date ou numéro écrits qui diffèrent de la décision), écarts entre une fiche
+ * et Légifrance (corriger), articles cités qui ne sont plus en vigueur, fiches jamais citées, fiches sans identifiant.
+ */
 import { Notice } from "obsidian";
 import { REFERENCES_EVENT } from "lib/events";
 import { refineUnresolved } from "references/refine";

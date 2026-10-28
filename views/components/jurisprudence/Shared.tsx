@@ -1,3 +1,8 @@
+/**
+ * Briques communes aux onglets de l'analyse de la jurisprudence et au panneau des références : `Card` (une rubrique),
+ * `Row` (une ligne), `DecisionRow` (une décision avec ses actions), `DecisionInfo`, `RelatedList` et `Genealogy`
+ * (décisions proches, relations entre décisions), `SourceBadge` (pastille d'état d'une source), `useOpenNote`.
+ */
 import { BookOpen, ExternalLink, FileText, Info, Sparkles } from "lucide-react";
 import { ReactNode, useMemo, useState } from "react";
 import { relatedTo } from "references/corpus";

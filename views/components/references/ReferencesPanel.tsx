@@ -1,3 +1,8 @@
+/**
+ * Panneau latéral des références juridiques de la note active : décisions, articles et textes cités, avec leur lien
+ * (retrouvé via l'API, `plugin.links`), la pastille d'état des décisions, le texte lu dans la base, et, pour une fiche,
+ * ses écarts avec Légifrance (`FicheInsights`). Le mode débogage affiche le journal de chaque recherche de lien.
+ */
 import { Mentions } from "./Mentions";
 import { Section } from "./Section";
 import { BookOpen, ExternalLink, FileText, Search } from "lucide-react";

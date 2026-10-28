@@ -1,3 +1,8 @@
+/**
+ * Hooks React du plugin : accès au plugin (`usePlugin`), et abonnements aux événements de `lib/events.ts` —
+ * historique des documents, références de la note active, version de la base. Une vue ne déclenche jamais
+ * l'événement qu'elle écoute (elle bouclerait).
+ */
 import { TFile, debounce } from "obsidian";
 import { useContext, useEffect, useReducer, useState, useSyncExternalStore } from "react";
 import { LegalRef } from "references/parser";

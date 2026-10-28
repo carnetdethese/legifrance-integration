@@ -1,3 +1,8 @@
+/**
+ * Analyse de la jurisprudence, onglet « Articles » : les articles cités ou appliqués, lus en SQL page par page
+ * (filtres par texte et par vigueur, deux tris), les décisions qui appliquent chacun, et ses versions : la version
+ * applicable à la date de chaque décision se demande à l'API par un bouton (`loadArticleVersions`).
+ */
 import { Notice } from "obsidian";
 import { useEffect, useMemo, useState } from "react";
 import { legifranceUrl } from "api/urls";

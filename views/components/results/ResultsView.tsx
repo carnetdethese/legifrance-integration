@@ -1,3 +1,8 @@
+/**
+ * Résultats d'une recherche : liste paginée (`ResultCard`, `ResultsNav`). Ouvrir un résultat le lit dans la base s'il y
+ * est déjà (aucune requête) ; sinon `getDocumentInfo` consulte l'API, le texte est enregistré dans la base, puis le
+ * document est ajouté à l'historique et ouvert dans le lecteur.
+ */
 import { Notice } from "obsidian";
 import { useEffect, useState } from "react";
 import { getDocumentInfo, legalDocument } from "abstracts/document";

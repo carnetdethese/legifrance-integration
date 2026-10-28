@@ -1,3 +1,8 @@
+/**
+ * Analyse de la jurisprudence, onglet « Graphe » : les citations entre notes, décisions et articles, dessinées comme le
+ * graphe d'Obsidian. Ce fichier assemble l'extrait (`buildGraph`), le canvas (`GraphCanvas`), le panneau de réglages
+ * (`GraphControls`) et les cartes de droite ; le dessin est dans `graphRenderer.ts`, les données dans `references/graph.ts`.
+ */
 import { Maximize2, Settings, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { loadGraphInput } from "references/corpus";

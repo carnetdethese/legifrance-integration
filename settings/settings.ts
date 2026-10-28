@@ -1,3 +1,7 @@
+/**
+ * Réglages du plugin : identifiants PISTE, limite de débit, modèle de note, fiches de décisions, et l'onglet de
+ * réglages d'Obsidian (`LegifranceSettingTab`) qui les présente, avec l'état de la base et des tâches (`status.ts`).
+ */
 import { App, EventRef, PluginSettingTab, Setting, debounce } from "obsidian";
 import { FolderSuggest } from "lib/folderSugget";
 import LegifrancePlugin from "main";
