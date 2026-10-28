@@ -242,25 +242,47 @@ interface AddOptions {
 	key?: string;
 }
 
-/** Références d'un texte avec leur plage, avant suppression des chevauchements. */
-function scan(text: string): Candidate[] {
-	const found: Candidate[] = [];
-	const add = (
-		match: RegExpMatchArray,
-		kind: RefKind,
-		label: string,
-		query: string,
-		data: Record<string, string>,
-		{ url, fallbackUrl, length, key }: AddOptions = {}
-	) =>
-		found.push({
-			start: match.index ?? 0,
-			end: (match.index ?? 0) + (length ?? match[0].length),
-			ref: { key: key ?? makeKey(kind, data), kind, label, query, data, ...(url && { url }), ...(fallbackUrl && { fallbackUrl }) },
-		});
+/** Candidate construite à partir d'une correspondance de motif. */
+function candidate(
+	match: RegExpMatchArray,
+	kind: RefKind,
+	label: string,
+	query: string,
+	data: Record<string, string>,
+	{ url, fallbackUrl, length, key }: AddOptions = {}
+): Candidate {
+	const start = match.index ?? 0;
+	return {
+		start,
+		end: start + (length ?? match[0].length),
+		ref: { key: key ?? makeKey(kind, data), kind, label, query, data, ...(url && { url }), ...(fallbackUrl && { fallbackUrl }) },
+	};
+}
 
-	// Articles de codes et de textes constitutionnels. Charte de l'environnement : sa page seulement ;
-	// Constitution et Déclaration de 1789 : la page tant que l'API n'a pas donné l'article exact.
+/**
+ * Références d'un texte avec leur plage, avant suppression des chevauchements. L'ordre des familles
+ * est l'ordre de priorité de `citationSpans` : en cas de chevauchement, la première l'emporte.
+ */
+function scan(text: string): Candidate[] {
+	return [
+		...scanCodeArticles(text),
+		...scanEuArticles(text),
+		...scanPreamble(text),
+		...scanLaws(text),
+		...scanDecisions(text),
+		...scanDecisionsByName(text),
+		...scanEcli(text),
+		...scanEuLaw(text),
+		...scanIdentifiers(text),
+	];
+}
+
+/**
+ * Articles de codes et de textes constitutionnels. Charte de l'environnement : sa page seulement ;
+ * Constitution et Déclaration de 1789 : la page tant que l'API n'a pas donné l'article exact.
+ */
+function scanCodeArticles(text: string): Candidate[] {
+	const found: Candidate[] = [];
 	for (const pattern of [ARTICLE_THEN_CODE, CODE_THEN_ARTICLE]) {
 		for (const match of text.matchAll(pattern)) {
 			for (const item of match.groups!.numbers.matchAll(NUMBER_ITEM)) {
@@ -270,15 +292,21 @@ function scan(text: string): Candidate[] {
 				if (!code) continue;
 				const page = LEGIFRANCE_PAGES[code];
 				const apiResolvable = code.startsWith("Code ") || code === "Constitution" || code.startsWith("Déclaration");
-				add(match, "article", `${code}, art. ${number}`, `${code} article ${number}`, { code, number }, {
-					url: page && !apiResolvable ? page : undefined,
-					fallbackUrl: page,
-				});
+				found.push(
+					candidate(match, "article", `${code}, art. ${number}`, `${code} article ${number}`, { code, number }, {
+						url: page && !apiResolvable ? page : undefined,
+						fallbackUrl: page,
+					})
+				);
 			}
 		}
 	}
+	return found;
+}
 
-	// Articles de textes de l'Union : adresse du texte sur EUR-Lex, ancrée sur l'article.
+/** Articles de textes de l'Union : adresse du texte sur EUR-Lex, ancrée sur l'article. */
+function scanEuArticles(text: string): Candidate[] {
+	const found: Candidate[] = [];
 	for (const pattern of [EU_ARTICLE_THEN_TEXT, EU_TEXT_THEN_ARTICLE]) {
 		for (const match of text.matchAll(pattern)) {
 			const g = match.groups!;
@@ -287,35 +315,52 @@ function scan(text: string): Candidate[] {
 			const name = euLabelOf(celex) ?? (g.alias ? clean(g.alias) : `${g.type.toLowerCase()} (UE) ${g.a}/${g.b}`);
 			for (const item of g.numbers.matchAll(NUMBER_ITEM)) {
 				const number = articleNumber(item[0]);
-				add(match, "eu", `${name}, art. ${number}`, `${name} article ${number}`, { celex, number }, { url: euArticleUrl(celex, number) });
+				found.push(candidate(match, "eu", `${name}, art. ${number}`, `${name} article ${number}`, { celex, number }, { url: euArticleUrl(celex, number) }));
 			}
 		}
 	}
+	return found;
+}
 
+/** Préambule de la Constitution de 1946, cité par alinéa. */
+function scanPreamble(text: string): Candidate[] {
+	const found: Candidate[] = [];
 	for (const match of text.matchAll(PREAMBLE)) {
 		const g = match.groups!;
 		const word = g.a_w ?? g.b_w;
 		const alinea = g.a_n ?? g.a_m ?? g.b_n ?? g.b_m ?? (word ? String(ORDINALS[word.toLowerCase()]) : "");
 		const number = alinea ? `al. ${alinea}` : "";
-		add(match, "article", alinea ? `${PREAMBLE_1946}, al. ${alinea}` : PREAMBLE_1946, PREAMBLE_1946, { code: PREAMBLE_1946, number }, { url: LEGIFRANCE_PAGES[PREAMBLE_1946] });
+		found.push(
+			candidate(match, "article", alinea ? `${PREAMBLE_1946}, al. ${alinea}` : PREAMBLE_1946, PREAMBLE_1946, { code: PREAMBLE_1946, number }, { url: LEGIFRANCE_PAGES[PREAMBLE_1946] })
+		);
 	}
+	return found;
+}
 
+/** Lois, ordonnances, décrets et arrêtés, par leur numéro ou par leur seule date. */
+function scanLaws(text: string): Candidate[] {
+	const found: Candidate[] = [];
 	// Lois citées en entier avec leur date : elles servent à rattacher les citations par la date seule.
 	const lawNumbers = new Map<string, string>();
 	for (const match of text.matchAll(LAW)) {
 		const nature = clean(match.groups!.nature).toLowerCase();
 		const number = match.groups!.number;
 		if (match.groups!.date) lawNumbers.set(`${nature}|${dateKey(match.groups!.date)}`, number);
-		add(match, "texte", clean(match[0]), `${nature} n° ${number}`, { nature, number });
+		found.push(candidate(match, "texte", clean(match[0]), `${nature} n° ${number}`, { nature, number }));
 	}
 	for (const match of text.matchAll(SHORT_LAW)) {
 		const nature = clean(match.groups!.nature).toLowerCase();
 		const date = clean(match.groups!.date);
 		const number = lawNumbers.get(`${nature}|${dateKey(date)}`);
 		const data: Record<string, string> = number ? { nature, number } : { nature, date };
-		add(match, "texte", clean(match[0]), number ? `${nature} n° ${number}` : `${nature} du ${date}`, data);
+		found.push(candidate(match, "texte", clean(match[0]), number ? `${nature} n° ${number}` : `${nature} du ${date}`, data));
 	}
+	return found;
+}
 
+/** Décisions citées par leur numéro (Cour de cassation, Conseil d'État, Conseil constitutionnel). */
+function scanDecisions(text: string): Candidate[] {
+	const found: Candidate[] = [];
 	const decisions: [Court, RegExp][] = [
 		["cassation", CASSATION],
 		["ce", CONSEIL_ETAT],
@@ -335,13 +380,20 @@ function scan(text: string): Candidate[] {
 				data.name = hintName;
 				data.decided = decidedIso(clean(hint.groups!.date)) ?? clean(hint.groups!.date);
 			}
-			add(match, "decision", clean(match[0]), number, data, {
-				key: makeKey("decision", { court, number }),
-				fallbackUrl: court === "cassation" ? JUDILIBRE_SEARCH + encodeURIComponent(number) : undefined,
-			});
+			found.push(
+				candidate(match, "decision", clean(match[0]), number, data, {
+					key: makeKey("decision", { court, number }),
+					fallbackUrl: court === "cassation" ? JUDILIBRE_SEARCH + encodeURIComponent(number) : undefined,
+				})
+			);
 		}
 	}
+	return found;
+}
 
+/** Décisions du Conseil d'État ou du Tribunal des conflits citées par leurs parties et leur date. */
+function scanDecisionsByName(text: string): Candidate[] {
+	const found: Candidate[] = [];
 	for (const match of text.matchAll(CITED_BY_NAME)) {
 		const court = /^(?:T\.?\s?C\.?|Tribunal)/.test(match[0]) ? "tc" : "ce";
 		const raw = match.groups!.names ?? match.groups!.name;
@@ -352,17 +404,22 @@ function scan(text: string): Candidate[] {
 		const decided = decidedIso(written) ?? written;
 		// Le libellé s'arrête au nom retenu (pas au reste de la phrase).
 		const label = tidyLabel(match[0].slice(0, match[0].length - raw.length) + name);
-		add(match, "decision", label, `${name} ${written}`, { court, name, decided }, { key: namedDecisionKey(court, name, decided) });
+		found.push(candidate(match, "decision", label, `${name} ${written}`, { court, name, decided }, { key: namedDecisionKey(court, name, decided) }));
 	}
+	return found;
+}
 
-	for (const match of text.matchAll(ECLI)) {
-		add(match, "decision", match[0], match[0], { court: "ecli", number: match[0] });
-	}
+/** Identifiants ECLI. */
+function scanEcli(text: string): Candidate[] {
+	return [...text.matchAll(ECLI)].map((match) => candidate(match, "decision", match[0], match[0], { court: "ecli", number: match[0] }));
+}
 
-	// Droit de l'Union : adresses exactes d'EUR-Lex (acte) ou recherche CURIA (affaire de la CJUE).
+/** Droit de l'Union : adresses exactes d'EUR-Lex (acte) ou recherche CURIA (affaire de la CJUE). */
+function scanEuLaw(text: string): Candidate[] {
+	const found: Candidate[] = [];
 	const euActs = new Map<string, string>(); // « lettre|date » → CELEX, pour les citations par la date seule
 	const euRef = (match: RegExpMatchArray, celex: string, label: string, length?: number) =>
-		add(match, "eu", label, celex, { celex }, { url: EURLEX_CELEX + encodeURIComponent(celex), length });
+		found.push(candidate(match, "eu", label, celex, { celex }, { url: EURLEX_CELEX + encodeURIComponent(celex), length }));
 	for (const match of text.matchAll(CELEX)) euRef(match, match.groups!.celex, `CELEX ${match.groups!.celex}`);
 	for (const match of text.matchAll(EU_ACT)) {
 		const g = match.groups!;
@@ -372,18 +429,20 @@ function scan(text: string): Candidate[] {
 	}
 	for (const match of text.matchAll(EU_CASE)) {
 		const eu = match.groups!.case;
-		add(match, "eu", `aff. ${eu}`, eu, { case: eu }, { url: CURIA_SEARCH + encodeURIComponent(eu) });
+		found.push(candidate(match, "eu", `aff. ${eu}`, eu, { case: eu }, { url: CURIA_SEARCH + encodeURIComponent(eu) }));
 	}
 	for (const match of text.matchAll(SHORT_EU_ACT)) {
 		const celex = euActs.get(`${EU_ACT_LETTER[match.groups!.type.toLowerCase()]}|${dateKey(match.groups!.date)}`);
 		if (celex) euRef(match, celex, clean(match[0]));
 	}
-
-	for (const match of text.matchAll(ID_REGEX)) {
-		const ref = { key: `identifiant|${match[0]}`, kind: "identifiant" as const, label: match[0], query: match[0], data: {}, url: `${BASE_URL}/${ID_PATHS[match[1]]}/${match[0]}` };
-		found.push({ start: match.index ?? 0, end: (match.index ?? 0) + match[0].length, ref });
-	}
 	return found;
+}
+
+/** Identifiants Légifrance (LEGIARTI…, JURITEXT…) : adresse directe. */
+function scanIdentifiers(text: string): Candidate[] {
+	return [...text.matchAll(ID_REGEX)].map((match) =>
+		candidate(match, "identifiant", match[0], match[0], {}, { key: `identifiant|${match[0]}`, url: `${BASE_URL}/${ID_PATHS[match[1]]}/${match[0]}` })
+	);
 }
 
 /** Référence détectée et nombre de fois où la note la cite. */

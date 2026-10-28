@@ -10,6 +10,13 @@ const MISS_RETRY_MS = 24 * 60 * 60 * 1000;
 /** Délai après une erreur technique (réseau, service) : on réessaie plus vite (1 h). */
 export const ERROR_RETRY_MS = 60 * 60 * 1000;
 
+/**
+ * Références qui désignent une décision : citées par leurs éléments (juridiction, numéro) ou par un
+ * identifiant Légifrance de décision (Cour de cassation, Conseil d'État, Conseil constitutionnel).
+ * Condition SQL sur la table `refs`.
+ */
+const DECISION_REFS_SQL = "kind = 'decision' OR (kind = 'identifiant' AND (label LIKE 'JURITEXT%' OR label LIKE 'CETATEXT%' OR label LIKE 'CONSTEXT%'))";
+
 /** Contenu d'une fiche de décision (table `decisions`). */
 export interface DecisionFields {
 	status: "pending" | "complete" | "external" | "unresolved" | "error";
@@ -90,6 +97,10 @@ const toRef = (row: RefRow): LegalRef => ({
  * Index des références juridiques des notes, dans la base SQLite : qui cite quoi, adresses
  * retrouvées via l'API, recherches infructueuses. Indépendant d'Obsidian : le plugin fournit le
  * contenu des notes et la base.
+ *
+ * Une section par groupe de tables : notes et citations (`forFile`…), généalogie, documents
+ * consultés, versions d'articles, rapprochements, fiches (notes), liens et échecs de
+ * résolution, décisions (contenu complété), puis effectifs et remise à zéro.
  */
 export class ReferenceIndex {
 	/** Liens et échecs, gardés en mémoire : l'interface les lit à chaque affichage. */
@@ -97,6 +108,25 @@ export class ReferenceIndex {
 	private misses = new Map<string, number>();
 	/** Fiches de décisions : identifiant Légifrance → chemin de la note. */
 	private fichesById = new Map<string, string>();
+
+	/** Un effectif : première colonne `n` de la requête, 0 si elle ne renvoie rien. */
+	private count(sql: string) {
+		return this.db.get<{ n: number }>(sql)?.n ?? 0;
+	}
+
+	/** Notes qui citent chaque référence, regroupées par clef de référence. */
+	private notesByRef(sql: string) {
+		const notes = new Map<string, string[]>();
+		for (const { ref_key, note_path } of this.db.all<{ ref_key: string; note_path: string }>(sql)) {
+			notes.set(ref_key, [...(notes.get(ref_key) ?? []), note_path]);
+		}
+		return notes;
+	}
+
+	/** Oublie en mémoire la fiche enregistrée pour cette note. */
+	private forgetFiche(path: string) {
+		for (const [id, notePath] of this.fichesById) if (notePath === path) this.fichesById.delete(id);
+	}
 
 	constructor(readonly db: LegalDatabase) {
 		for (const row of db.all<{ note_path: string; legifrance_id: string | null }>("SELECT note_path, legifrance_id FROM fiches")) {
@@ -273,7 +303,7 @@ export class ReferenceIndex {
 		});
 	}
 
-	// --- Fiches de décisions ---------------------------------------------------------------------
+	// --- Fiches : notes Obsidian reconnues comme fiches de décisions ------------------------------
 
 	/**
 	 * Enregistre une note comme fiche de décision (avec son identifiant Légifrance, s'il est connu).
@@ -283,7 +313,7 @@ export class ReferenceIndex {
 		const current = this.db.get<{ legifrance_id: string | null }>("SELECT legifrance_id FROM fiches WHERE note_path = ?", [path]);
 		if (current && (current.legifrance_id ?? undefined) === legifranceId) return false;
 		this.db.run("INSERT OR REPLACE INTO fiches (note_path, legifrance_id, indexed_at) VALUES (?, ?, ?)", [path, legifranceId ?? null, Date.now()]);
-		for (const [id, notePath] of this.fichesById) if (notePath === path) this.fichesById.delete(id);
+		this.forgetFiche(path);
 		if (legifranceId) this.fichesById.set(legifranceId, path);
 		return true;
 	}
@@ -292,7 +322,7 @@ export class ReferenceIndex {
 	removeFiche(path: string) {
 		if (!this.db.get("SELECT 1 FROM fiches WHERE note_path = ?", [path])) return false;
 		this.db.run("DELETE FROM fiches WHERE note_path = ?", [path]);
-		for (const [id, notePath] of this.fichesById) if (notePath === path) this.fichesById.delete(id);
+		this.forgetFiche(path);
 		return true;
 	}
 
@@ -321,10 +351,9 @@ export class ReferenceIndex {
 	}
 
 	ficheStats() {
-		const count = (sql: string) => this.db.get<{ n: number }>(sql)?.n ?? 0;
 		return {
-			fiches: count("SELECT COUNT(*) AS n FROM fiches"),
-			identified: count("SELECT COUNT(*) AS n FROM fiches WHERE legifrance_id IS NOT NULL"),
+			fiches: this.count("SELECT COUNT(*) AS n FROM fiches"),
+			identified: this.count("SELECT COUNT(*) AS n FROM fiches WHERE legifrance_id IS NOT NULL"),
 		};
 	}
 
@@ -389,10 +418,7 @@ export class ReferenceIndex {
 
 	/** Articles et textes dont le statut ou le texte a changé depuis la dernière vérification, non encore signalés comme vus. */
 	changedArticles(): { key: string; label: string; url: string; status: string | null; previousStatus: string | null; changedAt: number; notes: string[] }[] {
-		const notes = new Map<string, string[]>();
-		for (const { ref_key, note_path } of this.db.all<{ ref_key: string; note_path: string }>("SELECT ref_key, note_path FROM citations")) {
-			notes.set(ref_key, [...(notes.get(ref_key) ?? []), note_path]);
-		}
+		const notes = this.notesByRef("SELECT ref_key, note_path FROM citations");
 		return this.db
 			.all<{ key: string; label: string; url: string; status: string | null; previous_status: string | null; changed_at: number }>(
 				`SELECT r.key, r.label, l.url, l.status, l.previous_status, l.changed_at FROM links l JOIN refs r ON r.key = l.ref_key
@@ -436,12 +462,7 @@ export class ReferenceIndex {
 
 	/** Décisions citées que la recherche n'a pas retrouvées, les plus citées d'abord. */
 	unresolvedDecisions(): (LegalRef & { citations: number; notes: string[] })[] {
-		const notes = new Map<string, string[]>();
-		for (const { ref_key, note_path } of this.db.all<{ ref_key: string; note_path: string }>(
-			"SELECT c.ref_key, c.note_path FROM citations c JOIN decisions d ON d.ref_key = c.ref_key WHERE d.status = 'unresolved'"
-		)) {
-			notes.set(ref_key, [...(notes.get(ref_key) ?? []), note_path]);
-		}
+		const notes = this.notesByRef("SELECT c.ref_key, c.note_path FROM citations c JOIN decisions d ON d.ref_key = c.ref_key WHERE d.status = 'unresolved'");
 		return this.db
 			.all<RefRow & { total: number }>(
 				`SELECT r.*, SUM(c.count) AS total FROM refs r JOIN decisions d ON d.ref_key = r.key JOIN citations c ON c.ref_key = r.key
@@ -482,14 +503,11 @@ export class ReferenceIndex {
 		});
 	}
 
-	// --- Fiches de décisions -------------------------------------------------------------------
+	// --- Décisions : contenu récupéré sur l'API (table `decisions`) -------------------------------
 
 	/** Crée une fiche « à compléter » pour chaque décision citée qui n'en a pas encore. */
 	ensureDecisionRows() {
-		this.db.run(
-			`INSERT OR IGNORE INTO decisions (ref_key) SELECT key FROM refs
-			 WHERE kind = 'decision' OR (kind = 'identifiant' AND (label LIKE 'JURITEXT%' OR label LIKE 'CETATEXT%' OR label LIKE 'CONSTEXT%'))`
-		);
+		this.db.run(`INSERT OR IGNORE INTO decisions (ref_key) SELECT key FROM refs WHERE ${DECISION_REFS_SQL}`);
 	}
 
 	/**
@@ -579,11 +597,8 @@ export class ReferenceIndex {
 
 	/** Avancement du complément des fiches de décisions : décisions citées, par état de leur fiche. */
 	decisionProgress() {
-		const count = (sql: string) => this.db.get<{ n: number }>(sql)?.n ?? 0;
-		const cited = count(
-			`SELECT COUNT(*) AS n FROM refs WHERE kind = 'decision' OR (kind = 'identifiant' AND (label LIKE 'JURITEXT%' OR label LIKE 'CETATEXT%' OR label LIKE 'CONSTEXT%'))`
-		);
-		const status = (value: string) => count(`SELECT COUNT(*) AS n FROM decisions WHERE status = '${value}'`);
+		const cited = this.count(`SELECT COUNT(*) AS n FROM refs WHERE ${DECISION_REFS_SQL}`);
+		const status = (value: string) => this.count(`SELECT COUNT(*) AS n FROM decisions WHERE status = '${value}'`);
 		const complete = status("complete");
 		const external = status("external");
 		const unresolved = status("unresolved");
@@ -606,13 +621,12 @@ export class ReferenceIndex {
 
 	/** Effectifs de la base, pour les réglages. */
 	stats() {
-		const count = (sql: string) => this.db.get<{ n: number }>(sql)?.n ?? 0;
 		return {
-			notes: count("SELECT COUNT(*) AS n FROM notes"),
-			references: count("SELECT COUNT(*) AS n FROM refs"),
-			decisions: count("SELECT COUNT(*) AS n FROM refs WHERE kind = 'decision'"),
-			links: count("SELECT COUNT(*) AS n FROM links"),
-			complete: count("SELECT COUNT(*) AS n FROM decisions WHERE status = 'complete'"),
+			notes: this.count("SELECT COUNT(*) AS n FROM notes"),
+			references: this.count("SELECT COUNT(*) AS n FROM refs"),
+			decisions: this.count("SELECT COUNT(*) AS n FROM refs WHERE kind = 'decision'"),
+			links: this.count("SELECT COUNT(*) AS n FROM links"),
+			complete: this.count("SELECT COUNT(*) AS n FROM decisions WHERE status = 'complete'"),
 		};
 	}
 
