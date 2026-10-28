@@ -1566,3 +1566,20 @@
 	height: 28px;
 	padding: 0;
 }
+
+/* Analyse de la jurisprudence : même fond sombre que les autres vues (les panneaux latéraux et la vue Base de
+   données). Les éléments collants de la chronologie reprennent ce fond, les cartes passent au fond clair. */
+.legifrance-view.view-content:has(> .legifrance-juris) {
+	--legifrance-surface: var(--background-secondary);
+	background: var(--legifrance-surface);
+}
+
+.legifrance-juris .legifrance-timeline-bar,
+.legifrance-juris .legifrance-year-items > .legifrance-year-label {
+	background: var(--legifrance-surface);
+}
+
+.legifrance-juris .legifrance-stat,
+.legifrance-juris .legifrance-card {
+	background: var(--background-primary);
+}
