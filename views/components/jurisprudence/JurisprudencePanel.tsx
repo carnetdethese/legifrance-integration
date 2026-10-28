@@ -3,15 +3,14 @@ import { decisionsOf } from "references/insights";
 import { ExportModal } from "views/ExportModal";
 import { useDatabaseVersion, usePlugin } from "views/hooks";
 import { ArticlesTab } from "./ArticlesTab";
-import { GapsTab } from "./GapsTab";
 import { GraphTab } from "./GraphTab";
 import { SearchTab } from "./SearchTab";
 import { TimelineTab } from "./TimelineTab";
 
-type Tab = "timeline" | "articles" | "graph" | "search" | "gaps";
+type Tab = "timeline" | "articles" | "graph" | "search";
 
 /**
- * Analyse de la jurisprudence du coffre : articles, chronologie, graphe des citations, lacunes du corpus, recherche dans les textes. Ce qui reste à faire est dans la vue
+ * Analyse de la jurisprudence du coffre : articles, chronologie, graphe des citations, recherche dans les textes. Ce qui reste à faire est dans la vue
  * Base de données (bouton « À faire »), pour laisser la place aux analyses.
  * L'onglet des articles s'ouvre le premier : il lit la base par pages. Les décisions ne sont recensées
  * (toute la base est alors parcourue) que lorsqu'un onglet en a besoin.
@@ -33,7 +32,7 @@ export const JurisprudencePanel = () => {
 
 	// `decisionsOf` garde son dernier recensement : le rappeler ne coûte rien tant que rien n'a changé.
 	const getRecords = () => decisionsOf(plugin);
-	const records = useMemo(() => (tab === "timeline" || tab === "graph" || tab === "gaps" ? decisionsOf(plugin) : undefined), [plugin, version, tab]);
+	const records = useMemo(() => (tab === "timeline" || tab === "graph" ? decisionsOf(plugin) : undefined), [plugin, version, tab]);
 	const stats: [number, string][] = records
 		? [
 				[records.length, "décisions"],
@@ -45,7 +44,6 @@ export const JurisprudencePanel = () => {
 		["articles", "Articles"],
 		["timeline", "Chronologie"],
 		["graph", "Graphe"],
-		["gaps", "Lacunes"],
 		["search", "Recherche"],
 	];
 
@@ -73,7 +71,6 @@ export const JurisprudencePanel = () => {
 			<div className="legifrance-juris-body">
 				{tab === "timeline" && records && <TimelineTab records={records} />}
 				{tab === "graph" && records && <GraphTab records={records} />}
-				{tab === "gaps" && records && <GapsTab records={records} />}
 				{tab === "search" && <SearchTab />}
 				{tab === "articles" && <ArticlesTab getRecords={getRecords} version={version} focus={articleKey} />}
 			</div>

@@ -1237,8 +1237,3 @@
 	font-size: var(--font-ui-smaller);
 	cursor: pointer;
 }
-
-.legifrance-gap {
-	border-bottom: 1px solid var(--background-modifier-border);
-	padding-bottom: var(--size-2-2);
-}

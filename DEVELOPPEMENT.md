@@ -137,10 +137,8 @@ Ce que l'on tire du recensement pour les notes : table des décisions (`timeline
 lue à la demande dans `text_markdown`). Les commandes sont dans `commands.ts` ; l'actualisation des articles
 au démarrage (rappel ou lancement en fond) dans `startup.ts`.
 
-Autres lectures de la base : **lacunes du corpus** (`corpusGaps` dans `corpus.ts` : décisions qui appliquent un
-article de vos notes sans y être citées ; onglet « Lacunes » et rubrique « Décisions à envisager » du panneau),
-**note d'article** (`articleNote.ts`, `openArticleNote`), **précisions** saisies pour une décision introuvable
-(table `decision_precisions`, `precisionsFor` / `savePrecisions`).
+Autres lectures de la base : **note d'article** (`articleNote.ts`, `openArticleNote`), **précisions** saisies pour une
+décision introuvable (table `decision_precisions`, `precisionsFor` / `savePrecisions`).
 
 La commande **« Compléter les fiches de décisions »** (`ENRICH_TASK`) enchaîne les étapes ③, ② puis ④ ; chaque
 étape peut aussi être lancée seule depuis la vue ou la palette de commandes.

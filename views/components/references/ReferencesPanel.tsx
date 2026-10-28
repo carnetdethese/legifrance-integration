@@ -14,7 +14,7 @@ import { ArticleModal } from "views/ArticleModal";
 import { canResolve } from "references/resolver";
 import { LegalRef, RefKind } from "references/parser";
 import { isFiche } from "references/fiches";
-import { articleExcerpts, corpusGaps, countApplying, statusLabel } from "references/corpus";
+import { articleExcerpts, countApplying, statusLabel } from "references/corpus";
 import { decisionsOf, openArticleNote } from "references/insights";
 import { ExcerptQuote, Genealogy, RelatedList, SourceBadge } from "views/components/jurisprudence/Shared";
 import { useDatabaseVersion, useNoteReferences, usePlugin } from "views/hooks";
@@ -81,8 +81,6 @@ export const ReferencesPanel = () => {
 					{busy ? "Recherche…" : `Retrouver ${missing.length} lien${missing.length > 1 ? "s" : ""} via l'API`}
 				</button>
 			)}
-
-			{refs.some((ref) => ref.kind === "article") && <NoteGaps file={file} />}
 
 			{GROUPS.map(({ kind, title }) => {
 				const group = refs.filter((ref) => ref.kind === kind);
@@ -277,25 +275,5 @@ const ApplyingExcerpts = ({ articleKey }: { articleKey: string }) => {
 				</div>
 			))}
 		</details>
-	);
-};
-
-/** Décisions de la base qui appliquent les articles de la note sans y être citées. */
-const NoteGaps = ({ file }: { file: TFile }) => {
-	const plugin = usePlugin();
-	const version = useDatabaseVersion();
-	const gaps = useMemo(() => corpusGaps(plugin.references, decisionsOf(plugin), file.path), [plugin, version, file.path]);
-	if (gaps.length === 0) return null;
-	return (
-		<Section id="gaps" title="Décisions à envisager" count={gaps.reduce((n, gap) => n + gap.decisions.length, 0)} defaultOpen={false}>
-			<div className="setting-item-description">Décisions de votre base qui appliquent les articles de cette note sans y être citées.</div>
-			{gaps.slice(0, 5).map((gap) => (
-				<div key={gap.key}>
-					<a onClick={() => void plugin.activateJurisprudenceView({ tab: "articles", articleKey: gap.key })}>{gap.label}</a>
-					<div className="setting-item-description">{gap.decisions.slice(0, 4).map((r) => r.name ?? r.title ?? r.label).join(" · ")}{gap.decisions.length > 4 ? ` · +${gap.decisions.length - 4}` : ""}</div>
-				</div>
-			))}
-			{gaps.length > 5 && <div className="setting-item-description">+ {gaps.length - 5} autres articles (onglet Lacunes de l'analyse).</div>}
-		</Section>
 	);
 };
