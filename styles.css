@@ -34,8 +34,8 @@
 }
 
 /* Marges internes réduites pour les panneaux latéraux (recherche, références) ; titres resserrés. */
-.legifrance-view.view-content:has(> .legifrance-search, > .legifrance-references) {
-	padding: var(--size-4-2) var(--size-4-3);
+.legifrance-view.view-content:has(> .legifrance-search, > .legifrance-references, > .legifrance-articles-panel) {
+	padding: var(--size-4-4);
 }
 
 .legifrance-view h4,
@@ -235,7 +235,7 @@
 /* --- Base de données ------------------------------------------------------ */
 
 .legifrance-view.view-content:has(> .legifrance-database) {
-	padding: var(--size-4-3);
+	padding: var(--size-4-4);
 }
 
 .legifrance-database {
@@ -1448,4 +1448,108 @@
 
 .legifrance-ref-main .legifrance-applying summary {
 	margin-top: 0;
+}
+
+/* --- Espacement : marges des panneaux, boutons et cartes aérés ------------------------------------ */
+
+.legifrance-articles-panel {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-3);
+}
+
+.legifrance-articles-panel > h4 {
+	margin: 0;
+}
+
+.legifrance-articles-panel > button {
+	align-self: flex-start;
+	padding: var(--size-4-2) var(--size-4-4);
+}
+
+.legifrance-article-card {
+	gap: var(--size-4-3);
+	margin-top: 0;
+	padding: var(--size-4-4);
+}
+
+.legifrance-article-card-head {
+	gap: var(--size-4-4);
+}
+
+.legifrance-article-card-title {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+}
+
+.legifrance-article-card-body {
+	gap: var(--size-4-4);
+	padding-top: var(--size-4-2);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.legifrance-ref {
+	gap: var(--size-4-3);
+	padding: var(--size-4-3) 0;
+}
+
+.legifrance-ref-main {
+	gap: var(--size-4-2);
+}
+
+.legifrance-ref-chips {
+	gap: var(--size-4-1);
+}
+
+.legifrance-ref-chips .legifrance-chip {
+	padding: var(--size-2-1) var(--size-4-2);
+}
+
+.legifrance-ref-actions {
+	gap: var(--size-4-1);
+	max-width: 104px;
+}
+
+.legifrance-ref-actions .clickable-icon {
+	padding: var(--size-4-1);
+}
+
+/* À faire : menu des rubriques */
+.legifrance-todo {
+	gap: var(--size-4-6);
+}
+
+.legifrance-todo-menu {
+	gap: var(--size-4-5);
+}
+
+.legifrance-todo-menu > div {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-1);
+}
+
+.legifrance-todo-group {
+	margin-bottom: var(--size-4-1);
+	padding: 0 var(--size-4-3);
+}
+
+.legifrance-todo-item {
+	padding: var(--size-4-2) var(--size-4-3);
+	min-height: 2.4em;
+}
+
+.legifrance-todo-item .legifrance-badge {
+	min-width: 2.2em;
+	padding: var(--size-2-1) var(--size-4-2);
+	text-align: center;
+}
+
+.legifrance-todo-body .legifrance-card {
+	padding: var(--size-4-4);
+}
+
+.legifrance-todo-body .legifrance-card-head {
+	margin-bottom: var(--size-4-2);
 }
