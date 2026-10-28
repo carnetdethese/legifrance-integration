@@ -11,6 +11,7 @@ import { COMPLETE_FICHES_TASK, completeFiche } from "references/ficheSync";
 import { LegalDatabase } from "references/database";
 import { MigrationReport, needsParserMigration, upgradeParserData } from "references/migrate";
 import { ARTICLES_TASK, ENRICH_TASK, GENEALOGY_TASK, INDEX_TASK, REFRESH_TASK, RETRY_UNRESOLVED_TASK, Task } from "references/indexer";
+import { DEFAULT_GRAPH_SETTINGS, GraphSettings, mergeGraphSettings } from "references/graph";
 import { ResolvedLink } from "references/resolver";
 import { LegalRef, searchUrl } from "references/parser";
 import { canResolve, resolveReference } from "references/resolver";
@@ -41,6 +42,8 @@ export const REFERENCES_EVENT = "references-change";
 interface PluginData {
 	data: documentDataStorage[];
 	settings: LegifranceSettings;
+	/** Réglages du graphe des citations (filtres, groupes, affichage, forces). */
+	graph?: Partial<GraphSettings>;
 	/** Anciens liens de références, avant la base SQLite : repris une fois puis abandonnés. */
 	references?: { links?: Record<string, ResolvedLink>; misses?: Record<string, number> };
 }
@@ -71,6 +74,8 @@ export default class LegifrancePlugin extends Plugin {
 	readonly events = new Events();
 	/** Documents consultés. Toujours remplacé, jamais muté, pour le rendu React. */
 	historiqueDocuments: documentDataStorage[] = [];
+	/** Réglages du graphe des citations, conservés d'une ouverture à l'autre. Toujours remplacés, jamais mutés. */
+	graphSettings: GraphSettings = DEFAULT_GRAPH_SETTINGS;
 	/** Références juridiques détectées dans les notes du coffre, dans la base SQLite (voir `references/`). */
 	references: ReferenceIndex;
 	/** Incrémenté quand les notes ou leurs liens changent : périme le recensement des décisions (`decisionsOf`). */
@@ -87,6 +92,7 @@ export default class LegifrancePlugin extends Plugin {
 	/** Notes modifiées en attente de réanalyse. */
 	private pendingNotes = new Set<TFile>();
 	private reindexSoon = debounce(() => this.reindexPendingNotes(), 2000, true);
+	private saveGraphSoon = debounce(() => void this.saveSettings(), 800, true);
 
 	async onload() {
 		LegifrancePlugin.instance = this;
@@ -250,6 +256,7 @@ export default class LegifrancePlugin extends Plugin {
 		const saved: Partial<PluginData> | null = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved?.settings);
 		this.historiqueDocuments = saved?.data ?? [];
+		this.graphSettings = mergeGraphSettings(saved?.graph);
 		return saved?.references;
 	}
 
@@ -451,6 +458,12 @@ export default class LegifrancePlugin extends Plugin {
 		this.events.trigger(TASK_EVENT);
 	}
 
+	/** Retient les réglages du graphe (écrits un instant après le dernier changement : un curseur en produit des dizaines). */
+	setGraphSettings(settings: GraphSettings) {
+		this.graphSettings = settings;
+		this.saveGraphSoon();
+	}
+
 	async saveSettings() {
 		// Nouveaux identifiants : on peut réessayer après un refus.
 		const credentials = `${this.settings.clientId}:${this.settings.clientSecret}`;
@@ -460,6 +473,7 @@ export default class LegifrancePlugin extends Plugin {
 		await this.saveData({
 			data: this.historiqueDocuments,
 			settings: this.settings,
+			graph: this.graphSettings,
 		} satisfies PluginData);
 		this.agent.dilaApi.updateConfig(this.settings);
 	}

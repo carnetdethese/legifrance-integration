@@ -145,17 +145,38 @@ onglet *Articles*). Une décision applique l'article tel qu'il était le jour o�
   devenu 1240) a son historique sous l'identifiant de l'article actuel, pas sous l'ancien numéro.
 
 **Graphe des citations** (`references/graph.ts`, `loadGraphInput` dans `corpus.ts`, onglet *Graphe*).
-Notes ↔ décisions ↔ articles, trois sortes de liens : une note *cite* une décision (`DecisionRecord.notes`), une
-décision *applique* un article (`decision_articles`), une note *mentionne* un article (`citations`, option).
-- `buildGraph` ne garde qu'un **extrait** : les décisions les plus liées (par défaut 40), les articles qu'elles
-  appliquent (40), les notes qui les citent (120) ; filtres par thème (sans accents) ou par note (la note, ses
-  décisions, leurs articles et les autres notes qui les citent). Les liens ne pointent jamais vers un nœud absent.
+Notes ↔ décisions ↔ articles, trois sortes de liens, orientés comme les flèches : une note *cite* une décision
+(`DecisionRecord.notes`), une décision *applique* un article (`decision_articles`), une note *mentionne* un article
+(`citations`, option).
+- `buildGraph` ne garde qu'un **extrait** : les décisions les plus liées (150 par défaut, jusqu'à 600), les articles
+  qu'elles appliquent, les notes qui les citent ; filtres par texte (intitulé, date, thèmes, notes qui citent, articles
+  appliqués : tous les mots, sans accents), par thème, par note (la note, ses décisions, leurs articles et les autres
+  notes qui les citent), « fiches uniquement » (équivalent de « fichiers existants uniquement » d'Obsidian : une
+  décision sans fiche n'est que citée) et « orphelins » (nœuds sans lien dans l'extrait). Les liens ne pointent jamais
+  vers un nœud absent.
 - `pivotDecisions` (citées par au moins deux notes, les plus liées d'abord) et `isolatedNotes` (tout ce qu'elles
   citent n'est cité par aucune autre note) se calculent sur **toute la base**, pas sur l'extrait.
-- `layoutGraph` : Fruchterman-Reingold maison, déterministe (départ en spirale), quadratique — adapté à quelques
-  centaines de nœuds, d'où la limite proposée à 300 décisions. Pas de bibliothèque de graphe.
-- La vue (`GraphTab.tsx`) est un SVG avec zoom (molette), déplacement, survol (voisins mis en avant) et sélection.
-  Les couleurs rappellent les pastilles : contour vert = décision fichée, jaune = citée seulement ; note creuse = isolée.
+- **Réglages** (`GraphSettings`, conservés dans `data.json` sous la clef `graph`, lus par `mergeGraphSettings` qui
+  ramène tout dans les bornes) : mêmes rubriques et mêmes curseurs que le graphe d'Obsidian — *Filtres*, *Groupes*
+  (requêtes `type:`, `theme:`, `path:` ou mot de l'intitulé, couleur, le premier groupe qui convient l'emporte :
+  `matchesQuery`, `nodeGroup`), *Afficher* (flèches, seuil de fondu du texte, taille des nœuds, épaisseur des liens,
+  *Animer*), *Forces* (centrale, répulsion, liaison, distance des liens). Réinitialisation par le bouton ↺.
+- `ForceSimulation` : simulation de forces à la d3-force (comme Obsidian) — ressorts sur les liens, répulsion en
+  1/distance entre toutes les paires, attraction vers le centre, énergie `alpha` qui décroît jusqu'à l'arrêt. Maison,
+  déterministe (départ en spirale ou près des voisins), quadratique : un pas coûte ~4 ms pour 1 200 nœuds. Les nœuds
+  déjà dessinés gardent leur place quand l'extrait change. `layoutGraph` la mène à son terme d'un coup (tests).
+  Constantes `REPEL_SCALE` et `CENTER_SCALE` : elles relient les curseurs d'Obsidian aux forces, à régler à l'œil.
+- *Animer* (`appearanceOrder`) rejoue la constitution du graphe : les décisions paraissent par date croissante, les
+  notes et articles avec la première décision qui leur est liée ; `ForceSimulation.setActive` / `reveal` tiennent les
+  nœuds à l'écart jusqu'à leur tour.
+- Rendu (`graphRenderer.ts`) : **canvas 2D**, hors React (la boucle de dessin ne tourne que tant que la simulation ou la
+  vue bougent). Couleurs lues dans les variables du graphe d'Obsidian (`--graph-line`, `--graph-node`, `--graph-text`,
+  `--graph-node-focused`), donc celles du thème, relues à `css-change`. Survol / sélection : le nœud et ses voisins
+  restent allumés, le reste s'estompe ; intitulés qui apparaissent avec le zoom (seuil de fondu) et selon le degré ;
+  glisser un nœud, glisser le fond, molette, pincement à deux doigts ; cadrage automatique tant qu'on ne touche pas à
+  la vue. Une décision pâle n'est que citée, pleine elle a une fiche ; une note creuse est isolée.
+- Vue : `GraphTab.tsx` (extrait, cartes de droite, légende), `GraphCanvas.tsx` (lien React ↔ dessin),
+  `GraphControls.tsx` (panneau de réglages). Sur petit écran, la fiche du nœud touché s'affiche en bas du graphe.
 
 ### Où se décide quoi
 
@@ -293,7 +314,7 @@ se compilent avec `--loader:.wasm=binary` pour embarquer le moteur SQLite.
 | `api/rateLimiter.test.ts` | **Limiteur de débit.** Fenêtre glissante (jamais plus de N requêtes par fenêtre), ordre d'attente, suspension après un refus de quota, changement de limite à chaud, mesure de l'usage, priorité de l'interactif sur le fond. Utilise de vraies durées courtes (centaines de ms). |
 | `references/insights.test.ts` | **Analyses.** Thèmes (CE, Cassation, CC) et thème de plus haut niveau ; solution du Conseil constitutionnel ; résumé ; vocabulaire et décisions proches (TF-IDF) ; écarts entre fiche et Légifrance ; filtres de la chronologie ; dates (année d'après le numéro du CC, dates de libellés, date la plus précise) ; **fusion des alias** d'une même décision (Labonne, Despujol, Septfonds, Piccoli…, avec les cas où il ne faut *pas* fusionner) ; rapprochements manuels et suggestions ; comparaison de numéros et de dates des citations ; généalogie. |
 | `references/corpus.test.ts` | **Lecture de la base.** Pagination et filtre des articles en SQL (1 200 articles, plus de plafond), jokers `%` et `_` pris à la lettre, filtres par texte de loi et par vigueur, deux tris (plus appliqués ; texte puis numéro, 99 avant 1103), libellés des statuts de vigueur (« Abrogé », « Transféré »…), articles périmés avec leurs notes, compteur de version de la base. |
-| `references/graph.test.ts` | **Graphe des citations.** Sur un petit corpus (Blanco, Couitéas, une note isolée) : décisions pivots, notes isolées, nœuds et liens du graphe complet, degrés, indicateurs (pivot, fiche, isolée), filtres par thème et par note, limites (décisions, articles), liens vers des nœuds absents exclus ; disposition finie, dans le cadre, déterministe, avec les nœuds liés plus proches que la moyenne, 300 nœuds en moins de 3 s ; lecture en base (décision citée de plusieurs façons = un nœud, articles des notes). |
+| `references/graph.test.ts` | **Graphe des citations.** Sur un petit corpus (Blanco, Couitéas, une note isolée) : décisions pivots, notes isolées, nœuds et liens du graphe complet (orientés), degrés, indicateurs (pivot, fiche, isolée), filtres par thème, par note, par texte (intitulé, date, thème, note, article ; tous les mots), fiches seules, orphelins, limites (décisions, articles), liens vers des nœuds absents exclus ; groupes (requêtes `type:`, `theme:`, `path:`, mots, premier groupe qui convient) ; réglages lus en tolérant (bornes, types, groupes mal formés) ; ordre d'apparition de l'animation ; simulation de forces (arrêt, déterminisme, effet de chaque curseur, nœud retenu, positions reprises, nœuds écartés puis révélés, forces extrêmes) et 800 nœuds en moins de 2 s ; lecture en base (décision citée de plusieurs façons = un nœud, date, articles des notes). |
 | `references/textSearch.test.ts` | **Recherche dans les textes.** Réduction du texte (accents, casse, apostrophes, longueur conservée) ; mots et expressions entre guillemets ; extraits (mot surligné avec sa graphie d'origine, contexte tronqué, extraits proches réunis, Markdown aplati) ; sur base synthétique : décisions complètes seulement et sans doublon, plus récentes d'abord, articles, documents consultés, portées, tous les mots requis, pagination. |
 | `references/versions.test.ts` | **Versions d'un article.** Lecture de la réponse de l'API (réponse réelle abrégée de l'art. 1240 : ancienne version 1804-2016, version actuelle) ; version applicable la veille, le jour même (début inclus, fin exclue) et après une réforme ; date incomplète (année ou mois) exacte ou ambiguë ; article inexistant à la date, lacune, date illisible. |
 | `references/lifecycle.test.ts` | **Cycle de la donnée.** Les cinq étapes dans l'ordre, une tâche par étape ; compteurs sur une base synthétique (notes analysées, articles retrouvés / introuvables / hors de portée / à retrouver, décisions traitées, généalogie, fiches reliées) ; état d'une source (fichée, citée, fiche non citée). |

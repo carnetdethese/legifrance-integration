@@ -379,6 +379,7 @@ export function loadGraphInput(index: ReferenceIndex, records: DecisionRecord[])
 			id: r.id,
 			label: r.name ?? r.title ?? r.label,
 			themes: [...new Set(r.themes.map(topTheme))],
+			date: r.date,
 			fiche: !!r.fichePath,
 			notes: r.notes,
 		})),
