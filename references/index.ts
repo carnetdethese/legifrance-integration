@@ -366,7 +366,7 @@ export class ReferenceIndex {
 		const orphans = this.db.all<{ key: string }>("SELECT key FROM refs WHERE key NOT IN (SELECT ref_key FROM citations)");
 		this.db.transaction(() => {
 			for (const { key } of orphans) {
-				for (const table of ["refs", "links", "misses", "decisions"]) {
+				for (const table of ["refs", "links", "misses", "decisions", "decision_precisions"]) {
 					this.db.run(`DELETE FROM ${table} WHERE ${table === "refs" ? "key" : "ref_key"} = ?`, [key]);
 				}
 				this.links.delete(key);
@@ -458,6 +458,21 @@ export class ReferenceIndex {
 	isRecentMiss(ref: LegalRef) {
 		const at = this.misses.get(ref.key);
 		return at !== undefined && Date.now() - at < MISS_RETRY_MS;
+	}
+
+	// --- Précisions de l'utilisateur -------------------------------------------------------------
+
+	/** Ce que l'utilisateur a précisé pour cette référence (formulaire « Préciser »), s'il l'a fait. */
+	precisionsFor(key: string): Record<string, string> | undefined {
+		const row = this.db.get<{ data: string }>("SELECT data FROM decision_precisions WHERE ref_key = ?", [key]);
+		return row ? (JSON.parse(row.data) as Record<string, string>) : undefined;
+	}
+
+	/** Conserve les précisions saisies (les champs vides sont écartés ; rien de renseigné : on oublie). */
+	savePrecisions(key: string, precisions: Record<string, string | undefined>) {
+		const kept = Object.fromEntries(Object.entries(precisions).filter(([, value]) => value?.trim()).map(([name, value]) => [name, value!.trim()]));
+		if (Object.keys(kept).length === 0) this.db.run("DELETE FROM decision_precisions WHERE ref_key = ?", [key]);
+		else this.db.run("INSERT OR REPLACE INTO decision_precisions (ref_key, data) VALUES (?, ?)", [key, JSON.stringify(kept)]);
 	}
 
 	/** Décisions citées que la recherche n'a pas retrouvées, les plus citées d'abord. */
@@ -633,7 +648,7 @@ export class ReferenceIndex {
 	/** Vide la base (notes, références, liens, fiches). */
 	clear() {
 		this.db.transaction(() => {
-			for (const table of ["notes", "refs", "citations", "links", "misses", "decisions", "decision_articles", "fiches", "documents", "decision_relations"]) this.db.run(`DELETE FROM ${table}`);
+			for (const table of ["notes", "refs", "citations", "links", "misses", "decisions", "decision_articles", "fiches", "documents", "decision_relations", "decision_precisions"]) this.db.run(`DELETE FROM ${table}`);
 		});
 		this.fichesById.clear();
 		this.links.clear();

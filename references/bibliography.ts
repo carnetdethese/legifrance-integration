@@ -2,6 +2,7 @@
  * Bibliographie des décisions et des textes cités : liste Markdown, tableau CSV, BibTeX et RIS (Zotero,
  * EndNote…). Module pur : les entrées sont construites par l'appelant (`bibliographyOf` dans `insights.ts`).
  */
+import { themeKey, topTheme } from "./themes";
 import { DecisionRecord, byDate, displayDate } from "./timeline";
 
 export type BibFormat = "markdown" | "csv" | "bibtex" | "ris";
@@ -173,3 +174,23 @@ export function formatBibliography(entries: BibEntry[], format: BibFormat, link:
 			return ris(entries);
 	}
 }
+
+/** Restriction d'un export aux décisions d'un thème ou d'une période (années, bornes comprises). */
+export interface BibFilter {
+	theme?: string;
+	from?: string;
+	to?: string;
+}
+
+export const isFiltered = (filter: BibFilter) => !!(filter.theme || filter.from || filter.to);
+
+/** Les décisions de `records` qui répondent au filtre ; une décision sans date est écartée dès qu'une borne est donnée. */
+export function filterDecisions(records: DecisionRecord[], { theme, from, to }: BibFilter) {
+	return records.filter((r) => {
+		if (theme && !r.themes.some((t) => themeKey(topTheme(t)) === themeKey(theme))) return false;
+		const year = r.date?.slice(0, 4);
+		if ((from || to) && !year) return false;
+		return (!from || year! >= from.trim()) && (!to || year! <= to.trim());
+	});
+}
+

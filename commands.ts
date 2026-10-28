@@ -7,7 +7,8 @@ import { Notice } from "obsidian";
 import type LegifrancePlugin from "main";
 import { COMPLETE_FICHES_TASK } from "references/ficheSync";
 import { ARTICLES_TASK, ENRICH_TASK, GENEALOGY_TASK, INDEX_TASK, REFRESH_TASK, RETRY_UNRESOLVED_TASK, Task } from "references/indexer";
-import { noteBibliography, noteDecisionsTable, notePlan } from "references/insights";
+import { noteBibliography, noteDecisionsTable, notePlan, notePlanThemes } from "references/insights";
+import { PlanModal } from "views/PlanModal";
 import { ExportModal } from "views/ExportModal";
 
 /** Commandes qui lancent une tâche longue : identifiant, libellé, tâche. */
@@ -50,12 +51,20 @@ export function registerCommands(plugin: LegifrancePlugin) {
 		id: "plan-des-decisions",
 		name: "Insérer le plan des décisions citées dans la note (thème, décisions, articles)",
 		editorCallback: (editor, view) => {
-			const plan = view.file && notePlan(plugin, view.file);
-			if (!plan) {
+			const file = view.file;
+			const themes = file ? notePlanThemes(plugin, file) : [];
+			if (!file || themes.length === 0) {
 				new Notice("Aucune décision citée dans cette note (ou la note n'est pas encore analysée).");
 				return;
 			}
-			editor.replaceRange(`\n${plan}\n`, editor.getCursor("to"));
+			new PlanModal(plugin.app, themes, (options) => {
+				const plan = notePlan(plugin, file, options);
+				if (!plan || plan.split("\n").length < 3) {
+					new Notice("Rien à insérer : aucune décision de cette note n'a de fiche.");
+					return;
+				}
+				editor.replaceRange(`\n${plan}\n`, editor.getCursor("to"));
+			}).open();
 		},
 	});
 	plugin.addCommand({

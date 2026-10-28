@@ -12,7 +12,7 @@ import { cleanTheme, topTheme } from "./themes";
 import { Excerpt, citingSentence } from "./excerpts";
 import type { PlanArticle } from "./plan";
 import { DecisionFeatures, RelatedDecision, relatedDecisions, termCounts } from "./similarity";
-import { DecisionRecord, betterDate, ccYear, cleanLabel, dateFromLabel, nameFromNote } from "./timeline";
+import { DecisionRecord, betterDate, byDate, ccYear, cleanLabel, dateFromLabel, nameFromNote } from "./timeline";
 import { Signatures, courtGroup, mergeAliases, numberSignature } from "./merge";
 
 interface Row {
@@ -453,3 +453,64 @@ export function citedTexts(index: ReferenceIndex, notePath?: string) {
 		notePath ? [notePath] : []
 	);
 }
+
+/** Un article cité dans les notes, et les décisions de la base qui l'appliquent sans être citées là où il l'est. */
+export interface CorpusGap {
+	key: string;
+	label: string;
+	status: string | null;
+	/** Notes qui citent l'article. */
+	citedIn: string[];
+	/** Nombre de citations de l'article dans ces notes. */
+	citations: number;
+	/** Décisions qui l'appliquent et qu'aucune de ces notes ne cite. */
+	decisions: DecisionRecord[];
+}
+
+/**
+ * Lacunes du corpus : pour chaque article cité par vos notes (ou par la seule `notePath`), les décisions
+ * de la base (texte intégral analysé) qui l'appliquent et que ces notes ne citent pas. Aucune requête à
+ * l'API : seules les décisions que le coffre connaît déjà sont proposées. Les articles les plus cités
+ * d'abord ; ceux sans lacune sont omis.
+ */
+export function corpusGaps(index: ReferenceIndex, records: DecisionRecord[], notePath?: string): CorpusGap[] {
+	const recordOf = new Map<string, DecisionRecord>();
+	for (const record of records) for (const member of record.members ?? [record.id]) recordOf.set(member, record);
+
+	const articles = new Map<string, CorpusGap>();
+	for (const row of index.db.all<{ key: string; label: string; note_path: string; count: number; status: string | null }>(
+		`SELECT r.key, r.label, c.note_path, c.count, l.status FROM citations c JOIN refs r ON r.key = c.ref_key LEFT JOIN links l ON l.ref_key = r.key
+		 WHERE r.kind = 'article' ${notePath ? "AND c.note_path = ?" : ""}`,
+		notePath ? [notePath] : []
+	)) {
+		const gap = articles.get(row.key) ?? { key: row.key, label: row.label, status: row.status, citedIn: [], citations: 0, decisions: [] };
+		gap.citedIn.push(row.note_path);
+		gap.citations += row.count;
+		articles.set(row.key, gap);
+	}
+
+	const applying = new Map<string, Set<DecisionRecord>>();
+	for (const row of index.db.all<{ decision_id: string; article_key: string }>("SELECT decision_id, article_key FROM decision_articles")) {
+		const record = articles.has(row.article_key) ? recordOf.get(row.decision_id) : undefined;
+		if (!record) continue;
+		const set = applying.get(row.article_key) ?? new Set<DecisionRecord>();
+		set.add(record);
+		applying.set(row.article_key, set);
+	}
+
+	const gaps: CorpusGap[] = [];
+	for (const gap of articles.values()) {
+		// Une fiche qui cite l'article est la décision elle-même, pas une lacune.
+		gap.decisions = [...(applying.get(gap.key) ?? [])]
+			.filter((r) => !r.notes.some((n) => gap.citedIn.includes(n)) && !(r.fichePath && gap.citedIn.includes(r.fichePath)))
+			.sort(byDate);
+		if (gap.decisions.length) gaps.push(gap);
+	}
+	return gaps.sort((a, b) => b.citations - a.citations || b.decisions.length - a.decisions.length || a.label.localeCompare(b.label));
+}
+
+/** Notes qui citent au moins un article, pour choisir la note à examiner. */
+export const notesCitingArticles = (index: ReferenceIndex) =>
+	index.db
+		.all<{ note_path: string }>("SELECT DISTINCT c.note_path FROM citations c JOIN refs r ON r.key = c.ref_key WHERE r.kind = 'article' ORDER BY c.note_path")
+		.map((row) => row.note_path);

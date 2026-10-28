@@ -144,6 +144,13 @@ CREATE TABLE IF NOT EXISTS decision_dismissed (
 	b_id TEXT NOT NULL,
 	PRIMARY KEY (a_id, b_id)
 );
+
+-- Ce que l'utilisateur a précisé d'une décision introuvable (juridiction, nom, date, numéro, lien, en JSON) :
+-- conservé pour préremplir le formulaire au prochain essai, même si la recherche échoue.
+CREATE TABLE IF NOT EXISTS decision_precisions (
+	ref_key TEXT PRIMARY KEY,
+	data TEXT NOT NULL
+);
 `;
 
 /**

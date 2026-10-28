@@ -1,5 +1,5 @@
 /** Test du plan de cours et de la bibliographie. Lancer : `npm test`. */
-import { BibEntry, decisionEntries, formatBibliography } from "./bibliography";
+import { BibEntry, decisionEntries, filterDecisions, formatBibliography, isFiltered } from "./bibliography";
 import { coursePlan } from "./plan";
 import type { DecisionRecord } from "./timeline";
 
@@ -24,6 +24,15 @@ eq("lien web sans fiche", plan.includes("[Blanco](https://example.org/blanco)"),
 eq("articles, les plus cités d'abord", plan.includes("  - Articles : Code civil, art. 1240 ; Code de justice administrative, art. L. 521-1"), true);
 eq("repli sur la juridiction", plan.includes("### Sans thème — Cour de cassation (1)"), true);
 eq("sans thème en dernier", plan.indexOf("Sans thème") > plan.indexOf("Couitéas"), true);
+
+import { planThemes } from "./plan";
+eq("thèmes du plan", planThemes(records), ["Responsabilité de la puissance publique", "Sans thème — Cour de cassation"]);
+const oneTheme = coursePlan(records, articles, link, { theme: "Responsabilité de la puissance publique" });
+eq("un seul thème", oneTheme.includes("Blanco") && !oneTheme.includes("Sans thème"), true);
+const links = coursePlan(records, articles, link, { linksOnly: true });
+eq("liens seulement : fiches, sans articles ni détails", links.endsWith("- [[Fiches/couiteas1923|Couitéas]]") && !links.includes("Articles") && !links.includes("Blanco"), true);
+eq("liens seulement : groupe sans fiche omis", links.includes("Sans thème"), false);
+eq("niveau du titre", coursePlan(records, articles, link, { level: 3 }).startsWith("### Plan"), true);
 
 // Bibliographie
 const entries: BibEntry[] = [
@@ -50,6 +59,13 @@ eq("ris : type décision", ris.includes("TY  - CASE"), true);
 eq("ris : type texte", ris.includes("TY  - STAT"), true);
 eq("ris : date", ris.includes("DA  - 1873/02/08/"), true);
 eq("ris : fin d'enregistrement", ris.split("ER  - ").length - 1, 4);
+
+// Filtre d'export
+eq("filtre par thème", filterDecisions(records, { theme: "Responsabilité de la puissance publique" }).map((r) => r.id), ["blanco", "couiteas"]);
+eq("filtre par période", filterDecisions(records, { from: "1900", to: "2000" }).map((r) => r.id), ["couiteas"]);
+eq("filtre : une borne écarte les décisions sans date", filterDecisions([...records, rec("sans-date", {})], { from: "1800" }).map((r) => r.id), ["blanco", "couiteas", "cass"]);
+eq("filtre vide : tout", filterDecisions(records, {}).length, 3);
+eq("filtre actif ?", [isFiltered({}), isFiltered({ to: "2000" })], [false, true]);
 
 if (fail) { console.log(`${fail} échec(s)`); process.exit(1); }
 console.log("tout passe");

@@ -8,7 +8,7 @@ import { CSSProperties, useLayoutEffect, useMemo, useRef, useState } from "react
 import { REFERENCES_EVENT } from "lib/events";
 import { DecisionRecord, filterRecords, groupByYear, themeCounts } from "references/timeline";
 import { manualMerges, suggestMerges, RESOLVED_ID } from "references/merge";
-import { createFiche } from "references/insights";
+import { createFiche, writeFicheIds } from "references/insights";
 import { chooseMain } from "views/MergeModal";
 import { usePlugin } from "views/hooks";
 import { DecisionInfo, DecisionRow, noteName } from "./Shared";
@@ -85,7 +85,8 @@ export const TimelineTab = ({ records }: { records: DecisionRecord[] }) => {
 		const merges = chosen.filter((r) => r !== main).flatMap((r) => manualMerges(r.members ?? [r.id], main.id));
 		plugin.references.mergeDecisions(merges);
 		plugin.events.trigger(REFERENCES_EVENT);
-		new Notice(`${chosen.length} entrées rapprochées en une décision.`);
+		const written = await writeFicheIds(plugin, chosen, main);
+		new Notice(`${chosen.length} entrées rapprochées en une décision.${written.length ? ` Identifiant Légifrance écrit dans ${written.length} fiche${written.length > 1 ? "s" : ""}.` : ""}`);
 		return true;
 	};
 	const merge = async () => {

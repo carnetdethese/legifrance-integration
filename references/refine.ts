@@ -30,13 +30,17 @@ const urlOf = (key: string) => (key.startsWith("http") ? key : `${LEGIFRANCE_URL
  * @returns `true` si la décision a été retrouvée.
  */
 export async function refineUnresolved(plugin: LegifrancePlugin, ref: LegalRef): Promise<boolean> {
+	// Les précisions d'un essai précédent l'emportent sur ce que la note dit : l'utilisateur ne les ressaisit pas.
+	const saved = plugin.references.precisionsFor(ref.key);
 	const input = await refineDecision(plugin.app, ref.label, {
-		court: ref.data.court as CourtCode | undefined,
-		name: ref.data.name ?? "",
-		date: ref.data.decided ?? "",
-		number: ref.data.number ?? "",
+		court: (saved?.court ?? ref.data.court) as CourtCode | undefined,
+		name: saved?.name ?? ref.data.name ?? "",
+		date: saved?.date ?? ref.data.decided ?? "",
+		number: saved?.number ?? ref.data.number ?? "",
+		link: saved?.link ?? "",
 	});
 	if (!input) return false;
+	plugin.references.savePrecisions(ref.key, { court: input.court, name: input.name, date: input.date, number: input.number, link: input.link });
 
 	let chosen: DecisionCandidate | null = null;
 	const key = input.link.trim() ? decisionKey(input.link) : undefined;

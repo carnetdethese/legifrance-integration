@@ -5,11 +5,11 @@
 import { Notice, TFile, normalizePath } from "obsidian";
 import { codeJuridiction } from "abstracts/decisions";
 import type LegifrancePlugin from "main";
-import { BIB_FORMATS, BibEntry, BibFormat, decisionEntries, formatBibliography } from "./bibliography";
+import { BIB_FORMATS, BibEntry, BibFilter, BibFormat, decisionEntries, filterDecisions, formatBibliography, isFiltered } from "./bibliography";
 import { articlesByDecision, citedTexts, loadDecisions, statusLabel } from "./corpus";
-import { DecisionValues, FicheDifference, ficheDifferences, ficheValues } from "./fiches";
-import { coursePlan } from "./plan";
-import { DecisionRecord, decisionsTable, ficheFileName } from "./timeline";
+import { DecisionValues, FicheDifference, ficheDifferences, ficheId, ficheValues } from "./fiches";
+import { PlanOptions, coursePlan, planThemes } from "./plan";
+import { DecisionRecord, decisionsTable, ficheFileName, themeCounts } from "./timeline";
 
 /** Dernier recensement des décisions, avec l'état de la base et des liens entre notes pour lequel il a été fait. */
 const cache = new WeakMap<LegifrancePlugin, { databaseVersion: number; notesVersion: number; records: DecisionRecord[] }>();
@@ -165,16 +165,30 @@ const internalLink = (plugin: LegifrancePlugin, from: string) => (path: string, 
 	return target ? plugin.app.fileManager.generateMarkdownLink(target, from, undefined, alias) : alias;
 };
 
+/** Décisions citées par une note. */
+const decisionsCitedBy = (plugin: LegifrancePlugin, file: TFile) => decisionsOf(plugin).filter((r) => r.notes.includes(file.path));
+
+/** Thèmes du plan des décisions citées par une note (vide si elle n'en cite aucune). */
+export const notePlanThemes = (plugin: LegifrancePlugin, file: TFile) => planThemes(decisionsCitedBy(plugin, file));
+
 /** Plan « thème → décisions → articles » des décisions citées par une note, ou `undefined` si elle n'en cite aucune. */
-export function notePlan(plugin: LegifrancePlugin, file: TFile) {
-	const records = decisionsOf(plugin).filter((r) => r.notes.includes(file.path));
+export function notePlan(plugin: LegifrancePlugin, file: TFile, options: PlanOptions = {}) {
+	const records = decisionsCitedBy(plugin, file);
 	if (records.length === 0) return undefined;
-	return coursePlan(records, articlesByDecision(plugin.references, records), internalLink(plugin, file.path));
+	return coursePlan(records, articlesByDecision(plugin.references, records), internalLink(plugin, file.path), options);
 }
 
-/** Décisions et textes cités par une note (`file`) ou par tout le coffre. */
-export function bibliographyOf(plugin: LegifrancePlugin, file?: TFile): BibEntry[] {
-	const records = decisionsOf(plugin).filter((r) => !file || r.notes.includes(file.path));
+/** Décisions citées par une note (ou tout le coffre), thèmes de plus haut niveau compris, pour proposer un filtre. */
+export const exportableThemes = (plugin: LegifrancePlugin, file?: TFile) =>
+	themeCounts(decisionsOf(plugin).filter((r) => !file || r.notes.includes(file.path))).map(([theme]) => theme);
+
+/**
+ * Décisions et textes cités par une note (`file`) ou par tout le coffre. Avec un filtre, seules les décisions
+ * sont gardées : un article n'a ni thème ni date de décision.
+ */
+export function bibliographyOf(plugin: LegifrancePlugin, file?: TFile, filter: BibFilter = {}): BibEntry[] {
+	const cited = decisionsOf(plugin).filter((r) => !file || r.notes.includes(file.path));
+	if (isFiltered(filter)) return decisionEntries(filterDecisions(cited, filter));
 	const texts = citedTexts(plugin.references, file?.path).map(
 		(t): BibEntry => ({
 			kind: "texte",
@@ -184,7 +198,7 @@ export function bibliographyOf(plugin: LegifrancePlugin, file?: TFile): BibEntry
 			notes: t.notes,
 		})
 	);
-	return [...decisionEntries(records), ...texts];
+	return [...decisionEntries(cited), ...texts];
 }
 
 /** Bibliographie en Markdown d'une note, prête à insérer. */
@@ -193,23 +207,53 @@ export function noteBibliography(plugin: LegifrancePlugin, file: TFile) {
 	return entries.length ? formatBibliography(entries, "markdown", internalLink(plugin, file.path)) : undefined;
 }
 
+/** Où va l'export : un fichier à la racine du coffre, ou le presse-papiers. */
+export type ExportTarget = "file" | "clipboard";
+
 /**
- * Écrit la bibliographie dans un nouveau fichier à la racine du coffre (« Bibliographie - note.bib ») ; un fichier
- * existant n'est jamais écrasé.
- * @returns le chemin du fichier, ou `undefined` si rien n'est cité
+ * Exporte la bibliographie. Dans un fichier, il est créé à la racine du coffre (« Bibliographie - note.bib ») ;
+ * un fichier existant n'est jamais écrasé.
+ * @returns le chemin du fichier créé, ou `undefined` (presse-papiers, ou rien à exporter)
  */
-export async function exportBibliography(plugin: LegifrancePlugin, format: BibFormat, file?: TFile) {
-	const entries = bibliographyOf(plugin, file);
+export async function exportBibliography(plugin: LegifrancePlugin, format: BibFormat, file?: TFile, filter: BibFilter = {}, target: ExportTarget = "file") {
+	const entries = bibliographyOf(plugin, file, filter);
 	if (entries.length === 0) {
-		new Notice("Rien à exporter : aucune décision ni aucun texte cité.");
+		new Notice("Rien à exporter : aucune décision ni aucun texte cité (ou aucune ne répond au filtre).");
+		return undefined;
+	}
+	if (target === "clipboard") {
+		await navigator.clipboard.writeText(formatBibliography(entries, format, internalLink(plugin, file?.path ?? "")));
+		new Notice(`${entries.length} entrées copiées dans le presse-papiers.`);
 		return undefined;
 	}
 	const { extension } = BIB_FORMATS[format];
-	const base = safeName(`Bibliographie - ${file ? file.basename : "coffre"}`);
+	const base = safeName(`Bibliographie - ${file ? file.basename : "coffre"}${isFiltered(filter) ? " (filtrée)" : ""}`);
 	let path = normalizePath(`${base}.${extension}`);
 	if (plugin.app.vault.getFileByPath(path)) path = normalizePath(`${base} ${new Date().toISOString().slice(0, 10)} ${Date.now() % 100000}.${extension}`);
 	const content = formatBibliography(entries, format, internalLink(plugin, path));
 	await plugin.app.vault.create(path, `${content}\n`);
 	new Notice(`${entries.length} entrées exportées : ${path}`);
 	return path;
+}
+
+/**
+ * Après un rapprochement manuel : écrit l'identifiant Légifrance de la décision conservée (`main`) dans les
+ * fiches rapprochées qui n'en ont pas, pour que le lien tienne sans le rapprochement manuel. Seule une décision
+ * retrouvée sur Légifrance (et non une page ArianeWeb) a un identifiant à écrire ; une fiche qui en a déjà un
+ * n'est jamais modifiée.
+ * @returns les chemins des fiches mises à jour
+ */
+export async function writeFicheIds(plugin: LegifrancePlugin, chosen: DecisionRecord[], main: DecisionRecord) {
+	const property = plugin.settings.ficheIdProperty.trim();
+	if (!property || !/^(CETATEXT|JURITEXT|CONSTEXT)\d+$/.test(main.id)) return [];
+	const written: string[] = [];
+	for (const path of new Set(chosen.map((r) => r.fichePath).filter((p): p is string => !!p))) {
+		const file = plugin.app.vault.getFileByPath(path);
+		if (!file || ficheId(plugin.app.metadataCache.getFileCache(file)?.frontmatter, plugin.settings)) continue;
+		await plugin.app.fileManager.processFrontMatter(file, (front) => {
+			if (!front[property]) front[property] = main.id;
+		});
+		written.push(path);
+	}
+	return written;
 }

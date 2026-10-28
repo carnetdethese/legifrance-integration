@@ -1,7 +1,7 @@
 /** Tests de la lecture des articles dans la base (pagination, filtre, statuts). Lancer : `npm test`. */
 import { LegalDatabase } from "./database";
 import { ReferenceIndex } from "./index";
-import { articleByKey, articleExcerpts, articlePage, articleTexts, articlesByDecision, citedTexts, excerptFor, staleArticles, statusLabel } from "./corpus";
+import { articleByKey, articleExcerpts, articlePage, articleTexts, articlesByDecision, citedTexts, corpusGaps, notesCitingArticles, excerptFor, staleArticles, statusLabel } from "./corpus";
 import { parseCitations } from "./parser";
 import type { DecisionRecord } from "./timeline";
 
@@ -107,6 +107,32 @@ const check = (name: string, ok: boolean, detail = "") => { if (!ok) { fail++; c
 	const cited = citedTexts(index);
 	check("textes cités : articles seulement, nombre de notes", cited.length === 1 && cited[0].notes === 2 && cited[0].link_url === "https://exemple/k1" && cited[0].status === "VIGUEUR", JSON.stringify(cited));
 	check("textes cités par une note", citedTexts(index, "a.md")[0]?.notes === 1 && citedTexts(index, "c.md").length === 0);
+
+	// Lacunes : l'article est cité par n1 et n2 ; trois décisions l'appliquent.
+	db.run("DELETE FROM citations"); db.run("DELETE FROM decision_articles");
+	db.run("INSERT INTO citations (note_path, ref_key, ord, count) VALUES ('n1.md', 'k1', 0, 3), ('n2.md', 'k1', 0, 1)");
+	for (const id of ["DA", "DB", "DC"]) db.run("INSERT INTO decision_articles (decision_id, article_key, label, count) VALUES (?, 'k1', 'Code civil, art. 1240', 1)", [id]);
+	const mk = (id: string, notes: string[], extra: Partial<DecisionRecord> = {}) => ({ id, label: id, themes: [], complete: true, notes, members: [id], ...extra }) as DecisionRecord;
+	const recs = [mk("DA", ["n1.md"]), mk("DB", ["n3.md"], { date: "2020" }), mk("DC", [], { fichePath: "n2.md" }), mk("DD", [])];
+	const gaps = corpusGaps(index, recs);
+	check("lacunes : la décision citée par une note de l'article est écartée", gaps.length === 1 && gaps[0].decisions.map((r) => r.id).join() === "DB", JSON.stringify(gaps.map((g) => g.decisions.map((r) => r.id))));
+	check("lacunes : la fiche d'une note qui cite l'article est la décision elle-même", !gaps[0].decisions.some((r) => r.id === "DC"));
+	check("lacunes : citations et notes", gaps[0].citations === 4 && gaps[0].citedIn.length === 2);
+	const forN2 = corpusGaps(index, recs, "n2.md");
+	check("lacunes d'une note : DA et DB, pas sa propre fiche", forN2[0].decisions.map((r) => r.id).sort().join() === "DA,DB", JSON.stringify(forN2));
+	check("lacunes : note qui cite tout", corpusGaps(index, [mk("DA", ["n1.md"])], "n1.md").length === 0);
+	check("notes qui citent des articles", notesCitingArticles(index).join() === "n1.md,n2.md");
+
+	// Précisions de l'utilisateur : conservées, champs vides écartés, oubliées si tout est vide.
+	check("précisions : rien au départ", index.precisionsFor("k2") === undefined);
+	index.savePrecisions("k2", { court: "ce", name: " Despujol ", date: "", number: "97263", link: "" });
+	check("précisions : conservées et nettoyées", JSON.stringify(index.precisionsFor("k2")) === JSON.stringify({ court: "ce", name: "Despujol", number: "97263" }), JSON.stringify(index.precisionsFor("k2")));
+	index.savePrecisions("k2", { name: "", number: undefined });
+	check("précisions : tout vide, on oublie", index.precisionsFor("k2") === undefined);
+	index.savePrecisions("k2", { name: "Despujol" });
+	index.db.run("DELETE FROM citations WHERE ref_key = 'k2'");
+	index.prune();
+	check("précisions : supprimées avec la référence", index.precisionsFor("k2") === undefined);
 
 	console.log(fail ? `${fail} échec(s)` : "tout passe");
 	process.exit(fail ? 1 : 0);
