@@ -9,6 +9,7 @@ import { legifranceUrl } from "api/urls";
 import { loadArticleVersions, storeArticleVersion } from "references/articleVersions";
 import { ArticleVersion, VersionAtDate, versionAt } from "references/versions";
 import { ArticleSort, ArticleVigor, articleByKey, articlePage, articleTexts, decisionsApplying, excerptFor, statusLabel } from "references/corpus";
+import { openArticleNote } from "references/insights";
 import { DecisionRecord, byDate } from "references/timeline";
 import { usePlugin } from "views/hooks";
 import { Card, DecisionRow, ExcerptQuote } from "./Shared";
@@ -137,6 +138,7 @@ export const ArticlesTab = ({ getRecords, version, focus }: { getRecords: () => 
 			</Card>
 			<Card title={current ? current.label : "Décisions"} count={current ? decisions.length : undefined}>
 				{!current && <p className="legifrance-empty">Choisissez un article pour voir les décisions de votre base qui l'appliquent.</p>}
+				{current && <button onClick={() => void openArticleNote(plugin, current.key)}>Ouvrir ou créer la note de l'article</button>}
 				{current && current.key.startsWith("article|") && decisions.length > 0 && !versions && (
 					<button disabled={loadingVersions} onClick={() => void showVersions(current.key, current.label)}>
 						{loadingVersions ? "Recherche des versions…" : "Version applicable à la date de chaque décision"}

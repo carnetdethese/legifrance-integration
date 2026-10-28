@@ -5,7 +5,7 @@
  */
 import { Mentions } from "./Mentions";
 import { Section } from "./Section";
-import { BookOpen, ExternalLink, FileText, Search } from "lucide-react";
+import { BookOpen, ExternalLink, FilePlus, FileText, Search } from "lucide-react";
 import { decisionKey } from "references/ids";
 import { storedLegalDocument } from "references/stored";
 import { Notice, TFile, setTooltip } from "obsidian";
@@ -15,7 +15,7 @@ import { canResolve } from "references/resolver";
 import { LegalRef, RefKind } from "references/parser";
 import { isFiche } from "references/fiches";
 import { articleExcerpts, corpusGaps, countApplying, statusLabel } from "references/corpus";
-import { decisionsOf } from "references/insights";
+import { decisionsOf, openArticleNote } from "references/insights";
 import { ExcerptQuote, Genealogy, RelatedList, SourceBadge } from "views/components/jurisprudence/Shared";
 import { useDatabaseVersion, useNoteReferences, usePlugin } from "views/hooks";
 import LegifrancePlugin from "main";
@@ -227,6 +227,11 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 						onClick={() => void plugin.app.workspace.getLeaf(false).openFile(fiche)}
 					>
 						<FileText size={16} />
+					</button>
+				)}
+				{reference.kind === "article" && (
+					<button className="clickable-icon" aria-label="Ouvrir ou créer la note de l'article" onClick={() => void openArticleNote(plugin, reference.key)}>
+						<FilePlus size={16} />
 					</button>
 				)}
 				{readable && (

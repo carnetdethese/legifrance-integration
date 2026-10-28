@@ -1,5 +1,6 @@
 /** Test du plan de cours et de la bibliographie. Lancer : `npm test`. */
 import { BibEntry, decisionEntries, filterDecisions, formatBibliography, isFiltered } from "./bibliography";
+import { articleNoteContent, splitLabel } from "./articleNote";
 import { coursePlan } from "./plan";
 import type { DecisionRecord } from "./timeline";
 
@@ -66,6 +67,18 @@ eq("filtre par période", filterDecisions(records, { from: "1900", to: "2000" })
 eq("filtre : une borne écarte les décisions sans date", filterDecisions([...records, rec("sans-date", {})], { from: "1800" }).map((r) => r.id), ["blanco", "couiteas", "cass"]);
 eq("filtre vide : tout", filterDecisions(records, {}).length, 3);
 eq("filtre actif ?", [isFiltered({}), isFiltered({ to: "2000" })], [false, true]);
+
+// Note d'article
+eq("libellé coupé", splitLabel("Code civil, art. 1240"), { text: "Code civil", number: "1240" });
+eq("libellé sans article", splitLabel("Préambule de 1946"), { text: "Préambule de 1946", number: "" });
+const note = articleNoteContent(
+	{ label: "Code civil, art. 1240", text: "Tout fait quelconque\nde l'homme…", status: "En vigueur", url: "https://exemple/a", decisions: [{ title: "Couitéas", date: "1923-11-30", court: "Conseil d'État", fichePath: "Fiches/couiteas1923.md" }, { title: "Cass.", url: "https://exemple/c" }], notes: ["Cours/responsabilite.md"] },
+	link
+);
+eq("note d'article : propriétés", note.startsWith('---\ntype: article\ntexte: "Code civil"\nnumero: "1240"\nstatut: "En vigueur"\nlien: "https://exemple/a"\n---\n\n# Code civil, art. 1240'), true);
+eq("note d'article : texte cité", note.includes("> Tout fait quelconque\n> de l'homme…"), true);
+eq("note d'article : décisions et notes", note.includes("- [[Fiches/couiteas1923|Couitéas]] (30/11/1923, Conseil d'État)") && note.includes("- [Cass.](https://exemple/c)") && note.includes("- [[Cours/responsabilite|responsabilite]]"), true);
+eq("note d'article sans texte", articleNoteContent({ label: "X", decisions: [], notes: [] }, link).includes("n'a pas été retrouvé"), true);
 
 if (fail) { console.log(`${fail} échec(s)`); process.exit(1); }
 console.log("tout passe");
