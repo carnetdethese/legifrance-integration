@@ -1,6 +1,16 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
+import { copyFileSync, mkdirSync, watchFile } from "fs";
+
+const outDir = "dist";
+const staticFiles = ["manifest.json", "styles.css"];
+
+// Obsidian charge main.js, manifest.json et styles.css depuis le même dossier : on copie les deux derniers dans dist/.
+const copyStatic = () => {
+	mkdirSync(outDir, { recursive: true });
+	for (const file of staticFiles) copyFileSync(file, `${outDir}/${file}`);
+};
 
 const banner =
 `/*
@@ -39,12 +49,20 @@ const context = await esbuild.context({
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
-	outfile: "main.js",
+	outfile: `${outDir}/main.js`,
+	plugins: [{
+		name: "copy-static-files",
+		setup(build) {
+			build.onEnd(copyStatic);
+		},
+	}],
 });
 
 if (prod) {
 	await context.rebuild();
 	process.exit(0);
 } else {
+	// Re-copie manifest.json / styles.css à chaque modification (esbuild ne surveille que les fichiers importés).
+	for (const file of staticFiles) watchFile(file, { interval: 300 }, copyStatic);
 	await context.watch();
 }

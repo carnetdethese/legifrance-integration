@@ -1,0 +1,338 @@
+# Guide du développeur
+
+Pour comprendre le plugin avant d'y toucher : où est quoi, comment la donnée circule, comment lancer et
+écrire les tests. Le code est commenté en français ; ce guide donne la carte.
+
+## 1. Mise en route
+
+```bash
+npm install
+npm run dev      # compile en continu dans dist/ (main.js, manifest.json, styles.css)
+npm run build    # vérifie les types (tsc) puis compile en production
+npm run lint     # eslint
+npm test         # tous les tests (voir §6)
+```
+
+Pour essayer le plugin : lier (ou copier) `dist/` dans `<coffre>/.obsidian/plugins/legifrance-integration/`.
+Le réglage **« Mode débogage des références »** (`debugRefs`) ajoute, dans le panneau des références, le journal de
+chaque recherche d'API.
+
+## 2. Vue d'ensemble
+
+Le plugin fait deux choses, qui se rejoignent dans la base SQLite :
+
+1. **Recherche et lecture** (la partie historique) : rechercher dans les fonds de l'API Légifrance, lire un
+   document, créer une note à partir d'un modèle.
+2. **Références du coffre** (la partie récente) : repérer les décisions, textes et articles cités dans les notes,
+   les retrouver sur Légifrance, garder leur texte, puis analyser (chronologie, articles appliqués, écarts
+   avec les fiches, généalogie…).
+
+| Dossier | Rôle |
+|---|---|
+| `main.ts` | Point d'entrée : charge les réglages et la base, enregistre vues, commandes, événements ; lance les tâches de fond. |
+| `api/` | Client PISTE (OAuth, requêtes), limiteur de débit (`rateLimiter.ts`), URLs, façade `utilities.ts`. |
+| `abstracts/` | Partie « recherche » : registre des fonds (`fonds.ts`), construction des requêtes (`searchHandler.ts`, `searches.ts`), lecture des documents (`consult.ts`, `document.ts`, `decisions.ts`). |
+| `creation/` | Création d'une note à partir d'un document (`newNote.ts`, modèles Handlebars). |
+| `references/` | **Le cœur récent** : parseur, base, résolution par l'API, tâches, analyses. Voir §3 à §5. |
+| `references/sources/` | Sources pour retrouver la décision d'une fiche sans identifiant : Légifrance, ArianeWeb, RGD. |
+| `settings/` | Onglet de réglages (`settings.ts`) et blocs d'état (`status.ts`). |
+| `views/` | Vues Obsidian (classes `ItemView`) et composants React (`views/components/`). |
+| `lib/` | Petits utilitaires (dates, suggestion de dossiers). |
+
+### Modules « purs » et modules Obsidian
+
+Règle importante pour que les tests tournent sous Node : **un module de `references/` n'importe pas
+`obsidian`** sauf s'il en a vraiment besoin. Sont purs : `parser`, `dates`, `themes`, `similarity`,
+`timeline`, `genealogy`, `checks`, `fiches`, `rgdTitle`, `migrate`, `database`, `rateLimiter`. Le plugin leur
+passe ce qu'il lit (frontmatter, texte des notes) et applique ce qu'ils décident. Quand vous ajoutez de la
+logique, mettez-la dans un module pur et gardez les fichiers qui touchent à Obsidian (`insights.ts`,
+`ficheSync.ts`, `indexer.ts`, `main.ts`, vues) minces.
+
+## 3. Le cycle de la donnée
+
+Une source (décision, texte, article) passe par cinq étapes. Chacune s'appuie sur la précédente, a sa tâche,
+sa commande, ses tables et son compteur dans la vue **Base de données → Cycle de la donnée**
+(`views/components/database/CycleOverview.tsx`, alimenté par `cycleProgress` dans
+[references/lifecycle.ts](references/lifecycle.ts), qui sert aussi aux réglages).
+
+```
+                                  VOTRE COFFRE
+  ┌──────────────┐
+  │    Notes     │  citent des décisions, des textes, des articles ; certaines notes sont des fiches
+  └──────┬───────┘
+         │ ① ANALYSER LES NOTES          tâche INDEX_TASK            parser.ts · indexer.ts (indexVault)
+         ▼                               tables notes, refs, citations
+  ┌──────────────┐
+  │  Références  │  « CE, 1923, Couitéas » · « art. 1240 C. civ. » · « art. 32 RGPD »
+  │   citées     │  = ÉTAT « CITÉE » (jaune)
+  └──────┬───────┘
+         │ ② RETROUVER LES TEXTES        tâche ARTICLES_TASK         resolver.ts (articles, textes)
+         ▼                               tables links, misses
+  ┌──────────────┐
+  │ Articles et  │  adresse Légifrance, texte, statut de vigueur (VIGUEUR, ABROGE, MODIFIE…)
+  │ textes liés  │  veille : REFRESH_TASK relit les liens de plus de six mois (previous_status, changed_at)
+  └──────┬───────┘
+         │ ③ COMPLÉTER LES DÉCISIONS     tâche ENRICH_TASK           indexer.ts (enrichDecisions)
+         ▼                               tables decisions, decision_articles
+  ┌──────────────┐
+  │  Décisions   │  recherche (Légifrance, ArianeWeb, RGD) → lecture → métadonnées, texte intégral,
+  │  complètes   │  thèmes, résumé, vocabulaire, articles visés par le texte
+  └──────┬───────┘  (status : pending → complete | external | unresolved | error)
+         │ ④ ANALYSER LA GÉNÉALOGIE      tâche GENEALOGY_TASK        genealogy.ts
+         ▼                               table decision_relations
+  ┌──────────────┐
+  │  Relations   │  « revient sur », « précise », « confirme »… entre décisions
+  └──────┬───────┘
+         │ ⑤ RELIER LES FICHES           tâche COMPLETE_FICHES_TASK  fiches.ts · ficheSync.ts
+         ▼                               table fiches (+ main.ts : syncFiche à chaque modification)
+  ┌──────────────┐
+  │   Fiches     │  note dont une propriété désigne une décision, reliée par l'identifiant Légifrance
+  │   reliées    │  = ÉTAT « FICHÉE » (vert)
+  └──────┬───────┘
+         │ recensement : loadDecisions / decisionsOf        corpus.ts · insights.ts
+         ▼
+   Analyses : Articles, Chronologie (vue Jurisprudence) · À faire, Cycle, Tables (vue Base de données)
+```
+
+La commande **« Compléter les fiches de décisions »** (`ENRICH_TASK`) enchaîne les étapes ③, ② puis ④ ; chaque
+étape peut aussi être lancée seule depuis la vue ou la palette de commandes.
+
+### Les trois états d'une source
+
+Deux informations indépendantes décrivent une décision, et l'interface les distingue partout par la même
+pastille (`SourceBadge`, calculée par `sourceState` dans `lifecycle.ts`) :
+
+| Pastille | Signification | Où la voir |
+|---|---|---|
+| **Fichée** (verte) | Une fiche décrit la décision et au moins une note la cite. | Listes de décisions, panneau des références. |
+| **Citée** (jaune) | Une note la cite, mais elle n'a pas de fiche : « À faire » propose d'en créer une. | idem |
+| **Fiche non citée** (grise) | Une fiche existe, mais aucune note ne cite la décision. | idem |
+
+Ce qui a été **lu en ligne** (texte intégral en base, `decisions.status = 'complete'`) n'est pas un quatrième état :
+c'est une précision, signalée par l'icône de lecture, qui permet de consulter la décision sans requête.
+
+Les articles et les textes n'ont pas de fiche : ils sont toujours « cités ». Leur précision est le **statut de
+vigueur** (`statusLabel`) : un article « Abrogé » ou « Transféré » apparaît dans « À faire ».
+
+### Deux services transversaux
+
+Ils ne sont pas des étapes du cycle : ils lisent ce que les étapes ont mis en base.
+
+**Recherche dans les textes** (`references/textSearch.ts`, onglet *Recherche* de la vue Jurisprudence).
+Elle cherche dans le texte intégral des décisions complétées (`decisions.text_markdown`), des articles
+retrouvés (`links.text`) et des documents consultés (`documents`). Aucune requête n'est envoyée à l'API.
+- La comparaison est faite par une fonction SQL `fold` (déclarée dans `LegalDatabase.open`) : minuscules, sans
+  accents, apostrophes et espaces insécables ordinaires. `foldText` conserve la longueur du texte, ce qui permet de
+  placer les extraits surlignés (`snippetsFor`) dans le texte d'origine.
+- Tous les mots demandés doivent figurer ; `"une expression"` se cherche telle quelle.
+- Le filtrage se fait dans SQLite (`instr(fold(texte), mot)`) ; seuls les textes d'une page sont relus pour les extraits.
+  Le coût est proportionnel à la taille totale des textes en base : une recherche sur une très grosse base prend
+  quelques secondes, d'où le message « Recherche… ».
+
+**Version d'un article à la date d'une décision** (`references/versions.ts`, `references/articleVersions.ts`,
+onglet *Articles*). Une décision applique l'article tel qu'il était le jour où elle a été rendue.
+- `/consult/getArticle` renvoie `article.articleVersions` : pour chaque version, `id`, `etat`, `dateDebut`,
+  `dateFin` (millisecondes ; 2999 = sans fin). `parseVersions` les convertit en dates AAAA-MM-JJ.
+- `versionAt(versions, date)` choisit la version dont la période contient la date (début inclus, fin exclue).
+  Une date incomplète (« 1923 », « 2016-10 ») est comparée à toute la période qu'elle couvre : plusieurs
+  versions → résultat `ambiguous` (toutes sont montrées) ; aucune → `none` avec la raison (article postérieur à
+  la décision, lacune).
+- Les versions sont demandées **à la demande** (bouton, une fois par article) puis gardées dans `article_versions`.
+  Les articles visés par une décision n'étant pas forcément cités dans une note, l'article est d'abord retrouvé
+  (`resolveReference`) à partir de sa clef et de son libellé (`articleRef`).
+- « Lire » enregistre le texte de la version dans `documents` (`storeArticleVersion`) pour l'ouvrir dans le lecteur.
+- Limite : les droits de l'Union (`eu|…`) n'ont pas de versions Légifrance ; un article renuméroté (art. 1382
+  devenu 1240) a son historique sous l'identifiant de l'article actuel, pas sous l'ancien numéro.
+
+**Graphe des citations** (`references/graph.ts`, `loadGraphInput` dans `corpus.ts`, onglet *Graphe*).
+Notes ↔ décisions ↔ articles, trois sortes de liens : une note *cite* une décision (`DecisionRecord.notes`), une
+décision *applique* un article (`decision_articles`), une note *mentionne* un article (`citations`, option).
+- `buildGraph` ne garde qu'un **extrait** : les décisions les plus liées (par défaut 40), les articles qu'elles
+  appliquent (40), les notes qui les citent (120) ; filtres par thème (sans accents) ou par note (la note, ses
+  décisions, leurs articles et les autres notes qui les citent). Les liens ne pointent jamais vers un nœud absent.
+- `pivotDecisions` (citées par au moins deux notes, les plus liées d'abord) et `isolatedNotes` (tout ce qu'elles
+  citent n'est cité par aucune autre note) se calculent sur **toute la base**, pas sur l'extrait.
+- `layoutGraph` : Fruchterman-Reingold maison, déterministe (départ en spirale), quadratique — adapté à quelques
+  centaines de nœuds, d'où la limite proposée à 300 décisions. Pas de bibliothèque de graphe.
+- La vue (`GraphTab.tsx`) est un SVG avec zoom (molette), déplacement, survol (voisins mis en avant) et sélection.
+  Les couleurs rappellent les pastilles : contour vert = décision fichée, jaune = citée seulement ; note creuse = isolée.
+
+### Où se décide quoi
+
+| Question | Réponse | Code |
+|---|---|---|
+| Que cite cette note ? | Table `citations`, `ReferenceIndex.cached` | `references/index.ts` |
+| Cette référence a-t-elle un lien ? | `ReferenceIndex.linkFor` | `references/index.ts` |
+| Cette décision est-elle lue ? | `decisions.status` | `references/index.ts` |
+| Cette décision a-t-elle une fiche ? | `fiches.legifrance_id` = identifiant de la décision | `ReferenceIndex.ficheFor` |
+| Où en est le cycle ? | `cycleProgress` | `references/lifecycle.ts` |
+| Quelle pastille afficher ? | `sourceState` | `references/lifecycle.ts` |
+| Quels textes contiennent ces mots ? | `searchTexts` | `references/textSearch.ts` |
+| Quels liens entre notes, décisions et articles ? | `buildGraph` | `references/graph.ts` |
+| Quelle version de l'article à cette date ? | `versionAt` | `references/versions.ts` |
+
+Quand vous ajoutez une étape (une nouvelle source, par exemple Judilibre), ajoutez-la à `cycleProgress` : elle
+apparaîtra dans la vue et dans les réglages, avec son bouton.
+
+### Statuts d'une décision (`decisions.status`)
+
+`pending` (à compléter) → `complete` (texte et métadonnées en base) ; ou `external` (page hors Légifrance, sans
+texte) ; `unresolved` (introuvable, retentée plus tard) ; `error` (échec réseau, retentée après `ERROR_RETRY_MS`).
+
+### Identifiants
+
+- `decisionKey` (`ids.ts`) extrait la clef d'une décision depuis un identifiant ou une adresse : identifiant
+  Légifrance (`CETATEXT…`, `JURITEXT…`, `CONSTEXT…`), adresse ArianeWeb, page du Conseil constitutionnel, page RGD.
+- Une `DecisionRecord.id` est cette clef quand elle est connue, sinon la clef de la référence ou `fiche:<chemin>`.
+- Les clefs de références (`refs.key`) sont fabriquées par le parseur (`makeKey`) : `decision|court=ce|number=…`,
+  `decision|court=ce|decided=…|name=…`, `article|…`. **Changer la façon de fabriquer une clef impose une
+  migration** (§5).
+
+## 4. La base SQLite (`references/database.ts`)
+
+sql.js (SQLite en WebAssembly) : la base **vit en mémoire** ; le plugin écrit le fichier `legifrance.sqlite` du
+dossier du plugin à chaque série de modifications (`saveDatabaseSoon` dans `main.ts`, dernière écriture à la
+fermeture). Conséquences :
+
+- une requête sur toute la base n'est pas coûteuse en disque, mais le **travail en JavaScript autour** l'est.
+  Préférez filtrer, trier et paginer en SQL (modèle : `articlePage` dans `corpus.ts`) ;
+- pas de clefs étrangères (`Database.export()` réinitialise les pragmas) : les suppressions en cascade sont
+  faites à la main (`prune`, `remove`, `rename` dans `index.ts`) ;
+- `LegalDatabase.version` s'incrémente à chaque écriture : c'est la clef des caches (voir §7).
+
+Tables principales :
+
+| Table | Contenu |
+|---|---|
+| `notes` | Notes analysées (`mtime` : on ne réanalyse que ce qui a changé). |
+| `refs` | Une ligne par référence distincte (décision, texte, article, identifiant, droit de l'Union). |
+| `citations` | Qui cite quoi : note, référence, rang, nombre. |
+| `links` | Adresse retrouvée, texte et **statut de vigueur** d'un article ; `previous_status` et `changed_at` pour la veille. |
+| `misses` | Recherches infructueuses (retentées après un délai). |
+| `fiches` | Notes reconnues comme fiches, avec l'identifiant Légifrance. |
+| `decisions` | Métadonnées, texte intégral (HTML et Markdown), thèmes, résumé, vocabulaire (`terms`). |
+| `decision_articles` | Articles visés par le texte de chaque décision. |
+| `decision_relations` | Généalogie (confirme, renverse, précise, écarte, cite). |
+| `article_versions` | Versions d'un article (identifiant, état, dates de vigueur), relevées sur l'API à la demande. |
+| `decision_merges`, `decision_dismissed` | Rapprochements manuels et suggestions écartées. |
+| `documents` | Documents consultés dans la recherche (cache avant l'API). |
+| `meta` | Version du schéma et du parseur. |
+
+**Ajouter une colonne** : l'inscrire dans `ADDED_COLUMNS` (ajoutée aux bases existantes à l'ouverture), pas
+seulement dans `SCHEMA`. **Ajouter une table** : `CREATE TABLE IF NOT EXISTS` dans `SCHEMA` suffit.
+
+## 5. Tâches de fond et migrations
+
+### Tâches (`references/indexer.ts`)
+
+Chaque tâche est un objet `Task` lancé par `plugin.runTask` (`main.ts`) : elle rend la main à l'interface
+régulièrement, signale sa progression (`taskState`, événement `TASK_EVENT`), et peut être annulée
+(`cancelTask`). Toutes passent par le **limiteur de débit** (`api/rateLimiter.ts`) : jamais plus de N requêtes
+par minute, priorité aux actions interactives sur les travaux de fond (`Lane`).
+
+| Tâche | Commande | Effet |
+|---|---|---|
+| `INDEX_TASK` | Indexer les références juridiques du coffre | Analyse toutes les notes modifiées. |
+| `ARTICLES_TASK` | Retrouver les articles et textes cités | Adresse, texte et statut de chaque article. |
+| `ENRICH_TASK` | Compléter les fiches de décisions | Lit chaque décision sur l'API, analyse son texte. |
+| `RETRY_UNRESOLVED_TASK` | Réessayer les décisions introuvables | Relance les `unresolved`. |
+| `GENEALOGY_TASK` | Analyser la généalogie | Relations entre décisions (local, sans requête). |
+| `REFRESH_TASK` | Actualiser les articles | Revérifie les liens de plus de 6 mois ; garde l'ancien statut. |
+| `COMPLETE_FICHES_TASK` | Compléter toutes les fiches | Renseigne les propriétés des fiches. |
+
+### Migrations (`references/migrate.ts`)
+
+Quand le parseur change (clefs, libellés), `PARSER_VERSION` est incrémenté et `migrateParser` /
+`upgradeParserData` réécrivent les références **sans perdre** liens, textes et thèmes. Toute modification de
+`makeKey` ou de `cleanPartyName` s'accompagne d'une migration **et** d'un test dans `migrate.test.ts`.
+
+## 6. Interface
+
+- **Vues** (`views/*.tsx`) : chacune est un `ItemView` qui monte un composant React (`ReactItemView.tsx`) dans un
+  `PluginContext`. `usePlugin()` (`views/hooks.tsx`) donne accès au plugin.
+- **Événements** : `REFERENCES_EVENT` (lien retrouvé, base modifiée), `TASK_EVENT` (progression d'une tâche),
+  `HISTORY_EVENT`. `useDatabaseVersion()` renvoie un numéro qui change quand la base change (lissé par un
+  `debounce`) : les analyses en dépendent pour se recalculer.
+- **Panneau des références** (`components/references/`) : références de la note active, avec la pastille
+  d'état des décisions ; pour une fiche, `FicheInsights`.
+- **Analyse de la jurisprudence** (`components/jurisprudence/`) : onglets Articles (par défaut, lu en SQL, page par
+  page, avec filtres texte / vigueur et deux tris ; la version applicable à la date de chaque décision se
+  demande par un bouton), Chronologie et Graphe (ils recensent toutes les décisions à l'ouverture) et Recherche (dans les
+  textes, sans recensement). Le bouton « À faire → » mène à la vue Base de données.
+- **Vue Base de données** (`components/database/`) : trois onglets — *Cycle de la donnée* (`CycleOverview` : les cinq
+  étapes, leur avancement, un bouton par tâche, la légende des pastilles), *À faire* (`TodoTab` : fiches à
+  créer, écarts, articles abrogés, citations à vérifier) et *Tables* (contenu brut de la base).
+- `Shared.tsx` rassemble les briques communes (`Card`, `Row`, `DecisionRow`, `DecisionInfo`, `Genealogy`).
+
+## 7. Performances : ce qu'il faut savoir
+
+- `decisionsOf(plugin)` (`insights.ts`) recense **toutes** les décisions (parcourt `refs`, `decisions`, fiches,
+  fusionne les alias). Son résultat est gardé en cache tant que `LegalDatabase.version` et
+  `plugin.notesVersion` (changements de notes et de liens) n'ont pas bougé. Ne le rappelez pas dans une boucle
+  de rendu sans `useMemo`, mais l'appeler plusieurs fois ne coûte rien si rien n'a changé.
+- Un nouvel onglet qui n'a pas besoin des décisions ne doit **pas** appeler `decisionsOf` : lisez la base
+  directement, en paginant (`articlePage`).
+- Ajouter une analyse sur toutes les décisions = ajouter un coût à l'ouverture : préférez une requête SQL, ou
+  chargez à la demande (au clic).
+- `ReferenceIndex` garde en mémoire tous les liens (`links`) : l'interface les lit à chaque affichage.
+
+## 8. Les tests
+
+Les tests sont des scripts Node sans framework : chacun est un fichier `*.test.ts` compilé par esbuild en un
+fichier `.xxx-test.js` (ignoré par git) puis exécuté. Le script `npm test` les enchaîne et s'arrête au premier
+qui échoue ; chacun affiche `tout passe` ou `ÉCHEC <nom>` avec la valeur obtenue et la valeur attendue.
+
+Deux petites aides sont définies en tête de chaque fichier : `eq(nom, obtenu, attendu)` (comparaison par JSON)
+et `check(nom, condition, détail)`. Les tests qui ouvrent une base sont asynchrones (`LegalDatabase.open`) et
+se compilent avec `--loader:.wasm=binary` pour embarquer le moteur SQLite.
+
+| Fichier | Ce qu'il vérifie |
+|---|---|
+| `references/parser.test.ts` | **Parseur de citations.** Libellés (loi + décret, décisions, droit de l'Union, RGPD, CPCE, Charte de l'environnement) ; absence de faux positifs ; clefs stables (une décision citée de deux façons = une clef ; deux décisions distinctes = deux clefs) ; nettoyage des noms de parties (crochets, points, « et », initiales, noms longs) ; dates (année seule, mois et année, jours distincts) ; indices (nom, date) attachés à une citation par numéro ; plages de texte des citations. |
+| `references/fiches.test.ts` | **Fiches de décisions.** Reconnaissance d'une fiche (propriété, frontmatter vide) ; identifiant Légifrance lu dans le lien ou la propriété ; propriétés à compléter, écrasement ou non ; clefs ArianeWeb / Légifrance / Conseil constitutionnel / Journal officiel / RGD ; requête de recherche tirée du frontmatter (numéro, nom, citation, juridiction) ; comparaison des formations de jugement (sections, chambres réunies, sigles) ; **zéros en tête** des numéros ; titres RGD (Blanco, Despujol, CJUE…). |
+| `api/rateLimiter.test.ts` | **Limiteur de débit.** Fenêtre glissante (jamais plus de N requêtes par fenêtre), ordre d'attente, suspension après un refus de quota, changement de limite à chaud, mesure de l'usage, priorité de l'interactif sur le fond. Utilise de vraies durées courtes (centaines de ms). |
+| `references/insights.test.ts` | **Analyses.** Thèmes (CE, Cassation, CC) et thème de plus haut niveau ; solution du Conseil constitutionnel ; résumé ; vocabulaire et décisions proches (TF-IDF) ; écarts entre fiche et Légifrance ; filtres de la chronologie ; dates (année d'après le numéro du CC, dates de libellés, date la plus précise) ; **fusion des alias** d'une même décision (Labonne, Despujol, Septfonds, Piccoli…, avec les cas où il ne faut *pas* fusionner) ; rapprochements manuels et suggestions ; comparaison de numéros et de dates des citations ; généalogie. |
+| `references/corpus.test.ts` | **Lecture de la base.** Pagination et filtre des articles en SQL (1 200 articles, plus de plafond), jokers `%` et `_` pris à la lettre, filtres par texte de loi et par vigueur, deux tris (plus appliqués ; texte puis numéro, 99 avant 1103), libellés des statuts de vigueur (« Abrogé », « Transféré »…), articles périmés avec leurs notes, compteur de version de la base. |
+| `references/graph.test.ts` | **Graphe des citations.** Sur un petit corpus (Blanco, Couitéas, une note isolée) : décisions pivots, notes isolées, nœuds et liens du graphe complet, degrés, indicateurs (pivot, fiche, isolée), filtres par thème et par note, limites (décisions, articles), liens vers des nœuds absents exclus ; disposition finie, dans le cadre, déterministe, avec les nœuds liés plus proches que la moyenne, 300 nœuds en moins de 3 s ; lecture en base (décision citée de plusieurs façons = un nœud, articles des notes). |
+| `references/textSearch.test.ts` | **Recherche dans les textes.** Réduction du texte (accents, casse, apostrophes, longueur conservée) ; mots et expressions entre guillemets ; extraits (mot surligné avec sa graphie d'origine, contexte tronqué, extraits proches réunis, Markdown aplati) ; sur base synthétique : décisions complètes seulement et sans doublon, plus récentes d'abord, articles, documents consultés, portées, tous les mots requis, pagination. |
+| `references/versions.test.ts` | **Versions d'un article.** Lecture de la réponse de l'API (réponse réelle abrégée de l'art. 1240 : ancienne version 1804-2016, version actuelle) ; version applicable la veille, le jour même (début inclus, fin exclue) et après une réforme ; date incomplète (année ou mois) exacte ou ambiguë ; article inexistant à la date, lacune, date illisible. |
+| `references/lifecycle.test.ts` | **Cycle de la donnée.** Les cinq étapes dans l'ordre, une tâche par étape ; compteurs sur une base synthétique (notes analysées, articles retrouvés / introuvables / hors de portée / à retrouver, décisions traitées, généalogie, fiches reliées) ; état d'une source (fichée, citée, fiche non citée). |
+| `references/migrate.test.ts` | **Migrations sur base synthétique.** Anciennes clefs réunies (Monpeurt, Bouguen, Camino, Labonne) sans perdre citations, liens ni fiches complètes ; échecs oubliés quand le nom était abîmé, conservés sinon ; idempotence ; veille des articles (statut ou texte modifié, « Vu ») ; enregistrement et relecture de la généalogie. |
+
+### Écrire un test
+
+1. Mettez la logique dans un module pur.
+2. Ajoutez le cas dans le fichier de test le plus proche (ou créez `xxx.test.ts` et ajoutez-le au script `test`
+   de `package.json`, ainsi que `.xxx-test.js` à `.gitignore`).
+3. Pour une régression constatée dans le coffre : **reproduisez-la avec des données inventées**, jamais avec le
+   contenu réel des notes ou de la base. Les tests existants (Monpeurt, Labonne, Despujol…) sont des décisions
+   publiques.
+
+### Ce qui n'est pas testé
+
+Les vues React, les appels réels à l'API (résolution, consultation), l'écriture dans le coffre (création et
+correction de fiches) et les tâches de fond de bout en bout. Pour les changer, vérifiez à la main dans
+Obsidian, avec `npm run dev`.
+
+## 9. Conventions
+
+- Commentaires et textes d'interface en **français**, un commentaire de documentation (`/** … */`) par fonction
+  exportée et par module : dire *pourquoi*, pas répéter le code.
+- Pas d'accès direct à la base depuis les composants quand une fonction de `corpus.ts` / `index.ts` existe.
+- Un statut de l'API ne s'affiche jamais brut : passer par `statusLabel` (`corpus.ts`).
+- Les listes de notes affichent le **nom** de la note (`noteName`), jamais le chemin complet.
+- Une nouvelle source de décisions (Judilibre, EUR-Lex…) : implémenter `DecisionSource`
+  (`references/sources/types.ts`), l'ajouter à `SOURCES` (`sources/index.ts`) et enseigner à `decisionKey`
+  (`ids.ts`) la forme de son identifiant.
+- Données du coffre et de la base : on n'en copie jamais le contenu dans le dépôt, les tests ni les journaux.
+
+## 10. Pièges connus
+
+- **Boucle de rendu** : `useNoteReferences` distingue `reparse` (relance l'analyse) de `refresh` (simple
+  réaffichage). Relancer l'analyse depuis l'événement émis par la résolution fige Obsidian.
+- **Obsidian émet `create` pour chaque note au démarrage** : le plugin ignore ces événements tant que
+  `workspace.layoutReady` est faux.
+- **Requêtes Légifrance** : un fond ou un champ erroné renvoie un 400 ; une recherche approchée peut renvoyer un
+  autre document, d'où le contrôle du numéro, de la date et des parties dans `resolver.ts`.
+- **Numéros de décisions** : comparés sans espaces, points, tirets ni zéros de tête (`04749` = `4749`) ; au
+  Conseil constitutionnel, sans le type (`DC`, `QPC`).

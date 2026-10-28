@@ -6,7 +6,7 @@
  */
 import { ID_PATHS } from "api/urls";
 import { CODE_PATTERN, LEGIFRANCE_PAGES, PREAMBLE_1946, officialCodeName } from "./codes";
-import { FULL_DATE_PATTERN, MONTH_PATTERN, plain } from "./dates";
+import { FULL_DATE_PATTERN, MONTH_PATTERN, parseCitedDate, plain } from "./dates";
 import { EU_PATTERN, euArticleUrl, euCelexOf, euLabelOf } from "./eulaw";
 
 export type RefKind = "decision" | "texte" | "article" | "eu" | "identifiant";
@@ -17,8 +17,9 @@ export type Court = "cassation" | "ce" | "cc" | "tc";
 /**
  * Référence juridique détectée dans une note. `data` garde ce qu'il faut pour
  * la retrouver via l'API :
- * - `decision` : `court` et `number` ; ou, pour une décision citée par ses parties,
- *   `court`, `name` et `decided` (date ou année citée) ;
+ * - `decision` : `court` et `number` (et, si la citation les donne, `name` et `decided` comme
+ *   indices, hors de la clef) ; ou, pour une décision citée par ses parties, `court`, `name` et
+ *   `decided` (date normalisée AAAA-MM-JJ, AAAA-MM ou AAAA) ;
  * - `texte` : `nature` (loi, ordonnance…) et `number` ; ou `nature` et `date` pour une loi
  *   citée par sa seule date (« la loi du 6 janvier 1978 ») ;
  * - `article` : `code` (nom officiel, ou texte constitutionnel) et `number` ;
@@ -87,7 +88,9 @@ const CASSATION = new RegExp(
 );
 /** Conseil d'État ou Tribunal des conflits, sous leurs désignations usuelles. */
 const COURT_CE = "\\bC\\.\\s?E\\.|\\bCE\\b|\\bConseil d['’]État|\\bT\\.\\s?C\\.|\\bTC\\b|\\bTribunal des conflits";
-const CONSEIL_ETAT = new RegExp(`(?:${COURT_CE})${PAYLOAD}n\\s?[°º]\\s*(?<number>\\d{5,7})\\b`, "g");
+/** Texte entre la juridiction et le numéro, sans traverser le sigle d'une autre citation (« CE, 1919, Labonne et CE, 1930, Despujol, n° 97263 »). */
+const PAYLOAD_SAME_CITATION = `(?:(?!${COURT_CE})[^\\n;()]){0,70}?`;
+const CONSEIL_ETAT = new RegExp(`(?:${COURT_CE})${PAYLOAD_SAME_CITATION}n\\s?[°º]\\s*(?<number>\\d{5,7})\\b`, "g");
 /** Formation de jugement facultative (« Ass. », « Sect. », « 9e et 10e ch. réunies »). */
 const FORMATION =
 	"(?:\\s*,\\s*(?:[Aa]ss(?:emblée)?\\.?|[Ss]ect(?:ion)?\\.?|(?:\\d{1,2}(?:e|ème|ᵉ)?(?:\\s*(?:et|-)\\s*\\d{1,2}(?:e|ème|ᵉ)?)?\\s*)?(?:ss?\\.?-?\\s?sect\\.?(?:ions)?|ch\\.)(?:\\s*réunies)?)(?=\\s*,))?";
@@ -98,15 +101,18 @@ const FORMATION =
  * parenthèse ou à la fin de la ligne ; le recueil Lebon n'est pas exigé.
  */
 /** Une partie (nom d'une décision) : majuscule initiale, jusqu'à la virgule, au tiret entouré d'espaces ou à la parenthèse. */
-const PARTY = "\\p{Lu}(?:(?!\\s[-–—]\\s)[^,;()\\n]){1,59}";
+const PARTY = `[*_]{0,3}\\p{Lu}(?:(?!\\s[-–—]\\s)(?!\\s(?:pp?\\.?\\s?\\d|n\\s?°|req\\b|concl\\b))(?!\\s(?:${COURT_CE}))[^,;()\\n\\[\\]=«»:]){1,79}`;
 /** Parties suivantes, jusqu'au recueil : « Sarran, Levacher, Rec. p. 368 ». */
-const MORE_PARTIES = "(?:,\\s*(?!(?:Rec|Lebon)\\b)(?:(?!\\s[-–—]\\s)[^,;()\\n]){2,60})*";
+const MORE_PARTIES = `(?:,\\s*(?!(?:Rec|Lebon)\\b)(?:(?!\\s[-–—]\\s)(?!\\s(?:pp?\\.?\\s?\\d|n\\s?°|req\\b|concl\\b))(?!\\s(?:${COURT_CE}))[^,;()\\n\\[\\]=«»:]){2,60})*`;
 const CITED_BY_NAME = new RegExp(
 	`(?:${COURT_CE})${FORMATION}[,.]?\\s*,?\\s*(?<date>${FULL_DATE_PATTERN}|(?:(?:${MONTH_PATTERN})\\s+)?\\d{4})\\s*,?\\s*` +
 		// Plusieurs parties : seulement si le recueil suit ; sinon la première partie suffit.
 		`(?:(?<names>${PARTY}${MORE_PARTIES})(?=\\s*,\\s*(?:Rec|Lebon)\\b)|(?<name>${PARTY}))`,
 	"gu"
 );
+
+/** Nom et date d'une décision écrits dans une citation par numéro : même motif que la citation par les parties, sans l'indicateur global. */
+const NAMED_HINT = new RegExp(CITED_BY_NAME.source, "u");
 
 // --- Bloc de constitutionnalité : Préambule de 1946 (cité par alinéa) --------------------------
 
@@ -174,6 +180,39 @@ const ID_REGEX = new RegExp(`\\b(${Object.keys(ID_PATHS).join("|")})\\d{12}\\b`,
 
 const clean = (text: string) => text.replace(/\s+/g, " ").trim().replace(/^,+|,+$/g, "");
 
+/** Mot de liaison resté en fin de nom quand une autre citation suit (« Labonne et » + « CE, 1930… »). */
+const TRAILING_CONNECTOR = /\s(?:et|ou|puis|voir|cf\.?|comp\.?|contra)\s*$/i;
+const ABBREVIATIONS = "Mme|Mmes|Mlle|Mlles|MM|Cie|Cies|Sté|Stés|Soc|Ets|Éts|Ste|St|Dr|Pr|Me|Mgr|Sarl|Sas";
+const SENTENCE_END = new RegExp(`(?<=\\p{L}{3})(?<!\\b(?:${ABBREVIATIONS}))\\.\\s.*$`, "su");
+
+/**
+ * Nom d'une décision débarrassé de la mise en forme et de ce qui n'en fait pas partie : crochets de lien,
+ * ponctuation, sous-titre après deux-points (« Camino : contrôle des faits »), renvoi de page (« Camino p. 15 »),
+ * reste de phrase (« Monpeurt]] = « bien que… »).
+ */
+export function cleanPartyName(raw: string) {
+	const [name] = raw.replace(/<[^>]+>/g, "").replace(/\[\[|\]\]/g, " ").replace(/[*_]+/g, "").split(/\s=\s|[«»]|\s?:\s|\s(?:pp?\.?\s?\d|n\s?°|req\.?\s|concl\.?\s)/i);
+	// Fin de phrase (« Labonne. On fait la », « Sieur Remoux. Rec ») : un point après au moins trois lettres, sauf abréviation (« Mme. », « Cie. »).
+	return clean(name).replace(SENTENCE_END, "").replace(TRAILING_CONNECTOR, "").replace(/[\s.,;:!?)\]]+$/g, "");
+}
+
+/** Libellé d'une citation sans crochets de lien ni ponctuation finale. */
+export const tidyLabel = (label: string) => clean(label.replace(/\[\[|\]\]/g, " ")).replace(/[\s.,;:]+$/g, "");
+
+/** Nom comparable : sans accents, casse, ponctuation ni mise en forme (« Société Générale. » = « societe generale »). */
+export const normalizedName = (name: string) => plain(name).replace(/[^a-z0-9]+/g, " ").trim();
+
+/** Date citée (« 31 juill. 1942 », « 1942 ») au format AAAA-MM-JJ, AAAA-MM ou AAAA, ou `undefined`. */
+export function decidedIso(text: string) {
+	const date = parseCitedDate(text);
+	if (!date) return undefined;
+	const pad = (n: number) => String(n).padStart(2, "0");
+	return date.month ? (date.day ? `${date.year}-${pad(date.month)}-${pad(date.day)}` : `${date.year}-${pad(date.month)}`) : String(date.year);
+}
+
+/** Clef d'une décision citée par ses parties : juridiction, date normalisée et nom normalisé. */
+export const namedDecisionKey = (court: string, name: string, decided: string) => makeKey("decision", { court, decided, name: normalizedName(name) });
+
 /** Clef de cache : type, puis les données triées (insensible à la casse). */
 function makeKey(kind: RefKind, data: Record<string, string>) {
 	const parts = Object.entries(data)
@@ -199,6 +238,8 @@ interface AddOptions {
 	url?: string;
 	fallbackUrl?: string;
 	length?: number;
+	/** Clef de la référence, si elle ne se déduit pas telle quelle de `data`. */
+	key?: string;
 }
 
 /** Références d'un texte avec leur plage, avant suppression des chevauchements. */
@@ -210,12 +251,12 @@ function scan(text: string): Candidate[] {
 		label: string,
 		query: string,
 		data: Record<string, string>,
-		{ url, fallbackUrl, length }: AddOptions = {}
+		{ url, fallbackUrl, length, key }: AddOptions = {}
 	) =>
 		found.push({
 			start: match.index ?? 0,
 			end: (match.index ?? 0) + (length ?? match[0].length),
-			ref: { key: makeKey(kind, data), kind, label, query, data, ...(url && { url }), ...(fallbackUrl && { fallbackUrl }) },
+			ref: { key: key ?? makeKey(kind, data), kind, label, query, data, ...(url && { url }), ...(fallbackUrl && { fallbackUrl }) },
 		});
 
 	// Articles de codes et de textes constitutionnels. Charte de l'environnement : sa page seulement ;
@@ -284,7 +325,18 @@ function scan(text: string): Candidate[] {
 		for (const match of text.matchAll(pattern)) {
 			let number = clean(match.groups!.number);
 			if (court === "cassation") number = number.replace(/^(\d{2}-\d{2})[.\s]?(\d{3})$/, "$1.$2");
-			add(match, "decision", clean(match[0]), number, { court, number }, {
+			// Au Conseil d'État, le nom et la date écrits avant le numéro (« CE, 10 janvier 1930, Despujol, n° 97263 ») sont
+			// conservés comme indices, hors de la clef : ils permettent de rapprocher cette citation de la même décision citée
+			// par son nom, sans attendre que l'API les relie.
+			const data: Record<string, string> = { court, number };
+			const hint = court === "ce" ? NAMED_HINT.exec(match[0]) : null;
+			const hintName = hint && cleanPartyName(hint.groups!.names ?? hint.groups!.name);
+			if (hint && hintName) {
+				data.name = hintName;
+				data.decided = decidedIso(clean(hint.groups!.date)) ?? clean(hint.groups!.date);
+			}
+			add(match, "decision", clean(match[0]), number, data, {
+				key: makeKey("decision", { court, number }),
 				fallbackUrl: court === "cassation" ? JUDILIBRE_SEARCH + encodeURIComponent(number) : undefined,
 			});
 		}
@@ -292,9 +344,15 @@ function scan(text: string): Candidate[] {
 
 	for (const match of text.matchAll(CITED_BY_NAME)) {
 		const court = /^(?:T\.?\s?C\.?|Tribunal)/.test(match[0]) ? "tc" : "ce";
-		const name = clean(match.groups!.names ?? match.groups!.name);
-		const decided = clean(match.groups!.date);
-		add(match, "decision", clean(match[0]), `${name} ${decided}`, { court, name, decided });
+		const raw = match.groups!.names ?? match.groups!.name;
+		const name = cleanPartyName(raw);
+		if (!name) continue;
+		const written = clean(match.groups!.date);
+		// La date est conservée normalisée : « 31 juillet 1942 » et « 31 juill. 1942 » sont la même décision.
+		const decided = decidedIso(written) ?? written;
+		// Le libellé s'arrête au nom retenu (pas au reste de la phrase).
+		const label = tidyLabel(match[0].slice(0, match[0].length - raw.length) + name);
+		add(match, "decision", label, `${name} ${written}`, { court, name, decided }, { key: namedDecisionKey(court, name, decided) });
 	}
 
 	for (const match of text.matchAll(ECLI)) {
@@ -334,12 +392,18 @@ export interface Citation {
 	count: number;
 }
 
+/** Citation retenue dans un texte, avec sa plage (indices de caractères). */
+export interface CitationSpan {
+	ref: LegalRef;
+	start: number;
+	end: number;
+}
+
 /**
- * Extrait les références juridiques d'un texte, une fois chacune (dans l'ordre de première
- * apparition), avec leur nombre de citations. Une citation déjà couverte par une autre (même plage)
- * n'est comptée qu'une fois ; l'ordre de `scan` donne la priorité.
+ * Citations d'un texte, dans l'ordre d'apparition, chacune avec sa plage. Une citation déjà couverte
+ * par une autre (même plage) est écartée ; l'ordre de `scan` donne la priorité.
  */
-export function parseCitations(text: string): Citation[] {
+export function citationSpans(text: string): CitationSpan[] {
 	const taken: Candidate[] = [];
 	for (const candidate of scan(text)) {
 		const overlaps = taken.some(
@@ -351,9 +415,16 @@ export function parseCitations(text: string): Citation[] {
 		);
 		if (!overlaps) taken.push(candidate);
 	}
+	return taken.sort((a, b) => a.start - b.start).map(({ ref, start, end }) => ({ ref, start, end }));
+}
 
+/**
+ * Extrait les références juridiques d'un texte, une fois chacune (dans l'ordre de première
+ * apparition), avec leur nombre de citations.
+ */
+export function parseCitations(text: string): Citation[] {
 	const citations = new Map<string, Citation>();
-	for (const { ref } of taken.sort((a, b) => a.start - b.start)) {
+	for (const { ref } of citationSpans(text)) {
 		const known = citations.get(ref.key);
 		if (known) known.count++;
 		else citations.set(ref.key, { ref, count: 1 });

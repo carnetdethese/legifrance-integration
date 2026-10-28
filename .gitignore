@@ -30,3 +30,18 @@ help-dev
 release
 
 .parser-test.js
+
+# Build output
+dist
+.fiches-test.js
+.limiter-test.js
+.insights-test.js
+.migrate-test.js
+.corpus-test.js
+.lifecycle-test.js
+.versions-test.js
+.textsearch-test.js
+.graph-test.js
+
+# Notes personnelles (jamais commitées)
+IDEES.md

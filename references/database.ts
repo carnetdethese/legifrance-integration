@@ -6,9 +6,10 @@
  */
 import initSqlJs, { Database, SqlValue } from "sql.js";
 import wasm from "sql.js/dist/sql-wasm.wasm";
+import { foldText } from "./textSearch";
 
 /** Version du schéma, enregistrée dans `meta` ; à incrémenter avec une migration. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -51,6 +52,15 @@ CREATE TABLE IF NOT EXISTS links (
 );
 CREATE TABLE IF NOT EXISTS misses (ref_key TEXT PRIMARY KEY, at INTEGER NOT NULL);
 
+-- Notes du coffre reconnues comme fiches de décisions (voir fiches.ts) ; l'identifiant Légifrance
+-- lie la fiche aux décisions citées.
+CREATE TABLE IF NOT EXISTS fiches (
+	note_path TEXT PRIMARY KEY,
+	legifrance_id TEXT,
+	indexed_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS fiches_id ON fiches (legifrance_id);
+
 -- Fiche de chaque décision de justice retrouvée : métadonnées et texte intégral.
 -- status : pending (à compléter), complete, external (page hors Légifrance, sans texte),
 -- unresolved (introuvable), error.
@@ -71,16 +81,111 @@ CREATE TABLE IF NOT EXISTS decisions (
 	error TEXT
 );
 CREATE INDEX IF NOT EXISTS decisions_status ON decisions (status);
+
+-- Articles visés par le texte d'une décision (décision = identifiant Légifrance, article = clef de la
+-- référence dans refs/le parseur) : relie la jurisprudence aux textes.
+CREATE TABLE IF NOT EXISTS decision_articles (
+	decision_id TEXT NOT NULL,
+	article_key TEXT NOT NULL,
+	label TEXT NOT NULL,
+	count INTEGER NOT NULL,
+	PRIMARY KEY (decision_id, article_key)
+);
+CREATE INDEX IF NOT EXISTS decision_articles_key ON decision_articles (article_key);
+
+-- Rapprochements faits à la main dans la chronologie : la décision alias_id est la même que target_id
+-- (identifiants des décisions de la chronologie, voir DecisionRecord.id) ; target_id est celle qui est conservée.
+CREATE TABLE IF NOT EXISTS decision_merges (
+	alias_id TEXT PRIMARY KEY,
+	target_id TEXT NOT NULL
+);
+
+-- Documents consultés (résultats de la recherche Légifrance : textes, articles, décisions), indépendamment
+-- des citations des notes : la base sert de cache avant l'API. Le HTML est celui de la consultation.
+CREATE TABLE IF NOT EXISTS documents (
+	id TEXT PRIMARY KEY,
+	origin TEXT,
+	title TEXT NOT NULL,
+	date TEXT,
+	number TEXT,
+	court TEXT,
+	formation TEXT,
+	solution TEXT,
+	url TEXT,
+	text_html TEXT,
+	text_markdown TEXT,
+	fetched_at INTEGER NOT NULL
+);
+
+-- Généalogie : décisions citées dans le texte d'une décision, et façon de les citer (voir genealogy.ts).
+CREATE TABLE IF NOT EXISTS decision_relations (
+	from_id TEXT NOT NULL,
+	to_key TEXT NOT NULL,
+	to_label TEXT NOT NULL,
+	to_court TEXT,
+	to_number TEXT,
+	kind TEXT NOT NULL,
+	extract TEXT NOT NULL,
+	PRIMARY KEY (from_id, to_key)
+);
+CREATE INDEX IF NOT EXISTS decision_relations_to ON decision_relations (to_number);
+
+-- Versions d'un article (identifiant, état, dates de début et de fin), relevées sur l'API à la demande :
+-- permettent de retrouver la version en vigueur à la date d'une décision (voir versions.ts).
+CREATE TABLE IF NOT EXISTS article_versions (
+	article_key TEXT PRIMARY KEY,
+	versions TEXT NOT NULL,
+	fetched_at INTEGER NOT NULL
+);
+
+-- Suggestions de rapprochement écartées par l'utilisateur (paire d'identifiants de la chronologie).
+CREATE TABLE IF NOT EXISTS decision_dismissed (
+	a_id TEXT NOT NULL,
+	b_id TEXT NOT NULL,
+	PRIMARY KEY (a_id, b_id)
+);
 `;
+
+/**
+ * Colonnes ajoutées après la première version du schéma (ajoutées aux bases existantes à l'ouverture) :
+ * - v2 : thèmes (JSON), résumé et vocabulaire (JSON) des décisions ; statut de vigueur d'un article lié.
+ * - veille : statut précédent et date du dernier changement (statut ou texte) d'un article lié.
+ */
+const ADDED_COLUMNS: [table: string, column: string, type: string][] = [
+	["decisions", "themes", "TEXT"],
+	["decisions", "summary", "TEXT"],
+	["decisions", "terms", "TEXT"],
+	["links", "status", "TEXT"],
+	["links", "previous_status", "TEXT"],
+	["links", "changed_at", "INTEGER"],
+	["decisions", "relations_at", "INTEGER"],
+];
 
 /** Valeur acceptée en paramètre d'une requête. */
 export type Param = string | number | null | Uint8Array;
 
 export class LegalDatabase {
+	/** Nombre d'écritures depuis l'ouverture : permet aux analyses de savoir si leur cache est périmé. */
+	version = 0;
+
 	private constructor(
 		private db: Database,
-		private onChange: () => void
+		private notify: () => void
 	) {}
+
+	/**
+	 * Fonctions SQL du plugin. `Database.export()` de sql.js ferme puis rouvre la base et efface les
+	 * fonctions déclarées : elles sont donc redéclarées après chaque export.
+	 */
+	private registerFunctions() {
+		// Texte réduit (minuscules, sans accents) pour la recherche dans les textes (voir textSearch.ts).
+		this.db.create_function("fold", (value: unknown) => (typeof value === "string" ? foldText(value) : ""));
+	}
+
+	private onChange() {
+		this.version++;
+		this.notify();
+	}
 
 	/**
 	 * Ouvre la base depuis le contenu du fichier (`undefined` : base vide) et crée les tables
@@ -89,8 +194,13 @@ export class LegalDatabase {
 	static async open(bytes: Uint8Array | undefined, onChange: () => void) {
 		const SQL = await initSqlJs({ wasmBinary: wasm.buffer.slice(wasm.byteOffset, wasm.byteOffset + wasm.byteLength) as ArrayBuffer });
 		const database = new LegalDatabase(new SQL.Database(bytes), onChange);
+		database.registerFunctions();
 		database.db.run(SCHEMA);
-		database.db.run("INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', ?)", [String(SCHEMA_VERSION)]);
+		for (const [table, column, type] of ADDED_COLUMNS) {
+			const columns = database.all<{ name: string }>(`PRAGMA table_info(${table})`).map((c) => c.name);
+			if (!columns.includes(column)) database.db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+		}
+		database.db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', ?)", [String(SCHEMA_VERSION)]);
 		return database;
 	}
 
@@ -133,7 +243,9 @@ export class LegalDatabase {
 
 	/** Contenu du fichier SQLite. */
 	export(): Uint8Array {
-		return this.db.export();
+		const bytes = this.db.export();
+		this.registerFunctions();
+		return bytes;
 	}
 
 	close() {

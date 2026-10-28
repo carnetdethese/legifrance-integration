@@ -3,7 +3,7 @@
  * complétés par des citations réelles de notes (décisions sans recueil, titres de section).
  * Lancer : `npm test`.
  */
-import { parseReferences } from "./parser";
+import { citationSpans, parseReferences } from "./parser";
 const labels = (t: string) => parseReferences(t).map((r) => r.label);
 let fail = 0;
 const eq = (name: string, got: unknown, want: unknown) => { const g = JSON.stringify(got), w = JSON.stringify(want); if (g !== w) { fail++; console.log("ÉCHEC", name, "\n   obtenu :", g, "\n   attendu:", w); } };
@@ -40,17 +40,17 @@ for (const [t, court, number] of [
  ["Cons. const., 28 févr. 2020, n° 2019-828/829 QPC", "cc", "2019-828/829 QPC"],
  ["décision n° 2012-653 DC du 9 août 2012", "cc", "2012-653 DC"],
  ["décision 94-359 DC", "cc", "94-359 DC"],
-]) eq("décision: " + t, parseReferences(t).map((r) => r.data), [{ court, number }]);
+]) eq("décision: " + t, parseReferences(t).map((r) => ({ court: r.data.court, number: r.data.number })), [{ court, number }]);
 for (const [t, name, decided] of [
- ["CE, 7 juillet 1950, Dehaene, Rec., p. 426", "Dehaene", "7 juillet 1950"],
- ["CE, 7 août 1909, Winkell, Rec", "Winkell", "7 août 1909"],
- ["CE, 14 mars 1956, Hublin, Rec., p. 117.", "Hublin", "14 mars 1956"],
- ["CE, Ass., 30 octobre 1998, Sarran, Levacher, Rec. p. 368", "Sarran, Levacher", "30 octobre 1998"],
- ["CE, sect., 6 juin 1958, Syndicat des X, Rec. 123", "Syndicat des X", "6 juin 1958"],
- ["CE, 7 juill. 1950, Dehaene, Lebon 426", "Dehaene", "7 juill. 1950"],
- ["TC, 8 février 1873, Blanco, Rec. 1er suppl. p. 61", "Blanco", "8 février 1873"],
+ ["CE, 7 juillet 1950, Dehaene, Rec., p. 426", "Dehaene", "1950-07-07"],
+ ["CE, 7 août 1909, Winkell, Rec", "Winkell", "1909-08-07"],
+ ["CE, 14 mars 1956, Hublin, Rec., p. 117.", "Hublin", "1956-03-14"],
+ ["CE, Ass., 30 octobre 1998, Sarran, Levacher, Rec. p. 368", "Sarran, Levacher", "1998-10-30"],
+ ["CE, sect., 6 juin 1958, Syndicat des X, Rec. 123", "Syndicat des X", "1958-06-06"],
+ ["CE, 7 juill. 1950, Dehaene, Lebon 426", "Dehaene", "1950-07-07"],
+ ["TC, 8 février 1873, Blanco, Rec. 1er suppl. p. 61", "Blanco", "1873-02-08"],
 ]) { const r = parseReferences(`Voir ${t} et la suite.`); eq("nommée: " + t, r.map((x) => [x.data.name, x.data.decided]), [[name, decided]]); }
-eq("doublon numéroté", parseReferences("CE, 3 mars 2020, Société X, n° 423456, Rec. p. 12").map((r) => r.data), [{ court: "ce", number: "423456" }]);
+eq("doublon numéroté", parseReferences("CE, 3 mars 2020, Société X, n° 423456, Rec. p. 12").map((r) => r.data), [{ court: "ce", number: "423456", name: "Société X", decided: "2020-03-03" }]);
 eq("deux décisions", parseReferences("CE, 7 juillet 1950, Dehaene, Rec., p. 426 ; CE, 14 mars 1956, Hublin, Rec., p. 117.").map((r) => r.data.name), ["Dehaene", "Hublin"]);
 eq("même décision 2x", parseReferences("CE, 7 juillet 1950, Dehaene, Rec. ; CE, 7 juillet 1950, Dehaene, Rec., p. 426").length, 1);
 eq("UE", parseReferences("CJUE, 16 juill. 2020, aff. C-311/18 ; règlement (UE) 2016/679 ; règlement (CE) n° 44/2001 ; directive (UE) 2016/680 ; CELEX:32016R0679").map((r) => r.data), [{ case: "C-311/18" }, { celex: "32016R0679" }, { celex: "32001R0044" }, { celex: "32016L0680" }]);
@@ -69,9 +69,65 @@ eq("Charte de l'environnement inchangée", labels("l'article 4 de la Charte de l
 eq("aucun faux positif", labels("la tue ; une DSA ; art. 32 de la loi"), []);
 
 // Décisions citées par leur nom sans recueil, dans un titre de section, avec l'année seule.
-eq("titre de section", parseReferences("## Document n° 1 : C.E., 21 décembre 2001, M. Hoffmann - article 34 / 37 - compétence PM").map((r) => r.data), [{ court: "ce", name: "M. Hoffmann", decided: "21 décembre 2001" }]);
+eq("titre de section", parseReferences("## Document n° 1 : C.E., 21 décembre 2001, M. Hoffmann - article 34 / 37 - compétence PM").map((r) => r.data), [{ court: "ce", name: "M. Hoffmann", decided: "2001-12-21" }]);
 eq("année seule", parseReferences("CE, 2006, Ordre des avocats au barreau de Paris").map((r) => r.data), [{ court: "ce", name: "Ordre des avocats au barreau de Paris", decided: "2006" }]);
 eq("loi par sa date rattachée", parseReferences("loi n° 78-17 du 6 janvier 1978 ; la loi du 6 janvier 1978").length, 1);
 eq("aucune référence", parseReferences("Un passage sans référence, sauf le nombre 2016-1547.").length, 0);
+// Une même décision citée de plusieurs façons : liens internes, ponctuation, date abrégée → une seule clef.
+const keyOf = (t: string) => parseReferences(t).filter((r) => r.kind === "decision").map((r) => r.key);
+const monpeurt = keyOf("CE, 31 juillet 1942, Monpeurt");
+eq("une clef", monpeurt.length, 1);
+for (const [name, text] of [
+	["point final", "C.E., assemblée., 31 juillet 1942, Monpeurt."],
+	["date abrégée", "CE, 31 juill. 1942, Monpeurt"],
+	["lien interne", "voir [[CE, 31 juillet 1942, Monpeurt]] pour la suite"],
+	["lien interne et ponctuation", "[[CE, Ass., 31 juillet 1942, Monpeurt]]."],
+	["lien avec alias", "[[Fiches/CE Monpeurt#Cité|CE, 31 juillet 1942, Monpeurt]]"],
+	["crochets orphelins", "CE, 31 juillet 1942, Monpeurt]]"],
+	["suite de phrase après =", "[[CE, 31 juillet 1942, Monpeurt]] = « bien que le législateur n'en ait pas fait de"],
+	["casse et accents", "CE, 31 juillet 1942, MONPEURT"],
+	["gras", "CE, 31 juillet 1942, *Monpeurt*"],
+] as [string, string][]) eq(`même décision : ${name}`, keyOf(text), monpeurt);
+eq("nom sans reste de phrase", parseReferences("[[CE, Ass., 1942, Montpeurt]] = « bien que le législateur n'en ait pas fait de").map((r) => r.data), [{ court: "ce", name: "Montpeurt", decided: "1942" }]);
+eq("nom sans crochets ni point", parseReferences("CE, Ass., 2 avril 1943, Bouguen]].").map((r) => [r.label, r.data]), [["CE, Ass., 2 avril 1943, Bouguen", { court: "ce", name: "Bouguen", decided: "1943-04-02" }]]);
+eq("dates distinctes, décisions distinctes", new Set([...keyOf("CE, 13 février 1942, Ville de Dôle"), ...keyOf("CE, 31 juillet 1942, Ville de Dôle")]).size, 2);
+eq("mois et année", parseReferences("CE, juin 1950, Quéméneur").map((r) => r.data.decided), ["1950-06"]);
+
+// Titres de notes et de sections : « décision : sujet », renvoi de page, nom tronqué à 60 caractères.
+const camino = keyOf("CE, 14 janvier 1916, Camino");
+eq("Camino : une clef", camino.length, 1);
+for (const [name, text] of [
+	["sous-titre", "CE, 14 janvier 1916, Camino : contrôle de l'exactitude matérielle des faits"],
+	["sous-titre long", "CE, 14 janvier 1916, Camino : L'administration considère que l'administré ne reçoit pas de réponse"],
+	["sous-titre sans espace avant", "CE, 14 janvier 1916, Camino: l'erreur dans l'exactitude matérielle des faits"],
+	["renvoi de page", "CE, 14 janvier 1916, Camino p. 15"],
+	["renvoi de page sans espace", "CE, 14 janvier 1916, Camino p.15"],
+	["lien et sous-titre", "[[CE, 14 janvier 1916, Camino : contrôle des faits]]"],
+] as [string, string][]) eq(`même décision : ${name}`, keyOf(text), camino);
+eq("numéro cité : la décision est identifiée par son numéro", keyOf("CE, 14 janvier 1916, Camino n° 59619"), ["decision|court=ce|number=59619"]);
+eq("nom long conservé en entier", parseReferences("CE, 30 mars 1916, Compagnie générale d'éclairage de Bordeaux : hausse du prix du gaz").map((r) => r.data.name), ["Compagnie générale d'éclairage de Bordeaux"]);
+eq("nom avec point (initiale)", parseReferences("CE, 21 décembre 2001, M. Hoffmann : liberté").map((r) => r.data.name), ["M. Hoffmann"]);
+eq("décisions différentes le même jour", new Set([...keyOf("CE, 30 mars 1916, Compagnie générale d'éclairage de Bordeaux"), ...keyOf("CE, 30 mars 1916, Camino")]).size, 2);
+
+// Fin de phrase, noms tronqués, et indices d'une citation par numéro.
+eq("fin de phrase", parseReferences("CE 8 août 1919, Labonne. On fait la suite").map((r) => [r.label, r.data.name]), [["CE 8 août 1919, Labonne", "Labonne"]]);
+eq("fin de phrase : Rec sans virgule", parseReferences("CE, Section, 28 février 1930, Sieur Remoux. Rec").map((r) => r.data.name), ["Sieur Remoux"]);
+eq("abréviations conservées", parseReferences("CE, 21 décembre 2001, Mme. Dupont et M. Durand").map((r) => r.data.name), ["Mme. Dupont et M. Durand"]);
+eq("nom long (>60 car.)", parseReferences("CE, 16 juin 1922, Compagnie générale des eaux c/ ministre de la marine et de la marchande").map((r) => r.data.name), ["Compagnie générale des eaux c/ ministre de la marine et de la marchande"]);
+const despujol = parseReferences("CE, Section, 10 janvier 1930, Despujol, n° 97263");
+eq("numéro : indices nom et date", despujol.map((r) => r.data), [{ court: "ce", number: "97263", name: "Despujol", decided: "1930-01-10" }]);
+eq("numéro : la clef ne dépend pas des indices", despujol[0].key === parseReferences("CE, n° 97263")[0].key, true);
+eq("numéro sans nom : pas d'indices", parseReferences("CE, 10 janvier 1930, n° 97263").map((r) => r.data), [{ court: "ce", number: "97263" }]);
+
+// Deux citations qui se suivent : aucune ne déborde sur l'autre (le numéro de la seconde ne reçoit pas le nom de la première).
+const deux = parseReferences("CE, 8 août 1919, Labonne et CE, Section, 10 janvier 1930, Despujol, n° 97263");
+eq("deux citations : chacune la sienne", deux.map((r) => r.data), [{ court: "ce", name: "Labonne", decided: "1919-08-08" }, { court: "ce", number: "97263", name: "Despujol", decided: "1930-01-10" }]);
+eq("deux citations : TC puis CE", parseReferences("CE, 16 juin 1923, Septfonds et TC, 16 juin 1923, Septfonds").map((r) => r.data), [{ court: "ce", name: "Septfonds", decided: "1923-06-16" }, { court: "tc", name: "Septfonds", decided: "1923-06-16" }]);
+eq("nom avec « et » conservé", parseReferences("CE, 30 juin 1930, Boyer et Jullian").map((r) => r.data.name), ["Boyer et Jullian"]);
+
+// Plages des citations (surlignage dans le panneau des mentions).
+const phrase = "Voir CE, 8 février 2007, Arcelor, et l'art. 1240 du Code civil.";
+eq("plages : le texte de la plage est la citation", citationSpans(phrase).map((s) => phrase.slice(s.start, s.end)), ["CE, 8 février 2007, Arcelor", "art. 1240 du Code civil"]);
+
 console.log(fail ? `${fail} échec(s)` : "tout passe");
 process.exit(fail ? 1 : 0);

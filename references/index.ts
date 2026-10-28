@@ -1,6 +1,9 @@
 import { LegalDatabase } from "./database";
+import type { Relation, RelationRow } from "./genealogy";
+import { decisionKey } from "./ids";
 import { LegalRef, parseCitations } from "./parser";
 import { ResolvedLink } from "./resolver";
+import type { ArticleVersion } from "./versions";
 
 /** Délai avant de relancer la recherche d'une référence introuvable (24 h). */
 const MISS_RETRY_MS = 24 * 60 * 60 * 1000;
@@ -9,7 +12,7 @@ export const ERROR_RETRY_MS = 60 * 60 * 1000;
 
 /** Contenu d'une fiche de décision (table `decisions`). */
 export interface DecisionFields {
-	status: "complete" | "external" | "unresolved" | "error";
+	status: "pending" | "complete" | "external" | "unresolved" | "error";
 	legifranceId?: string;
 	court?: string;
 	number?: string;
@@ -21,6 +24,45 @@ export interface DecisionFields {
 	html?: string;
 	markdown?: string;
 	error?: string;
+	/** Chemins de thèmes, résumé et vocabulaire (JSON) : voir `themes.ts` et `similarity.ts`. */
+	themes?: string[];
+	summary?: string;
+	terms?: string;
+}
+
+/** Ligne de la table `decisions`. */
+export interface StoredDecision {
+	ref_key: string;
+	status: string;
+	legifrance_id: string | null;
+	court: string | null;
+	number: string | null;
+	title: string | null;
+	date: string | null;
+	formation: string | null;
+	ecli: string | null;
+	solution: string | null;
+	text_html: string | null;
+	text_markdown: string | null;
+	themes: string | null;
+	summary: string | null;
+	terms: string | null;
+}
+
+/** Document consulté (table `documents`). */
+export interface StoredDocument {
+	id: string;
+	origin: string | null;
+	title: string;
+	date: string | null;
+	number: string | null;
+	court: string | null;
+	formation: string | null;
+	solution: string | null;
+	url: string | null;
+	text_html: string | null;
+	text_markdown: string | null;
+	fetched_at: number;
 }
 
 /** Ligne de la table `refs`. */
@@ -53,10 +95,15 @@ export class ReferenceIndex {
 	/** Liens et échecs, gardés en mémoire : l'interface les lit à chaque affichage. */
 	private links = new Map<string, ResolvedLink>();
 	private misses = new Map<string, number>();
+	/** Fiches de décisions : identifiant Légifrance → chemin de la note. */
+	private fichesById = new Map<string, string>();
 
 	constructor(readonly db: LegalDatabase) {
-		for (const row of db.all<{ ref_key: string; url: string; title: string; text: string | null }>("SELECT ref_key, url, title, text FROM links")) {
-			this.links.set(row.ref_key, { url: row.url, titre: row.title, texte: row.text ?? undefined });
+		for (const row of db.all<{ note_path: string; legifrance_id: string | null }>("SELECT note_path, legifrance_id FROM fiches")) {
+			if (row.legifrance_id) this.fichesById.set(row.legifrance_id, row.note_path);
+		}
+		for (const row of db.all<{ ref_key: string; url: string; title: string; text: string | null; status: string | null }>("SELECT ref_key, url, title, text, status FROM links")) {
+			this.links.set(row.ref_key, { url: row.url, titre: row.title, texte: row.text ?? undefined, statut: row.status ?? undefined });
 		}
 		for (const row of db.all<{ ref_key: string; at: number }>("SELECT ref_key, at FROM misses")) {
 			this.misses.set(row.ref_key, row.at);
@@ -75,15 +122,25 @@ export class ReferenceIndex {
 		this.db.transaction(() => {
 			this.db.run("DELETE FROM citations WHERE note_path = ?", [path]);
 			citations.forEach(({ ref, count }, ord) => {
+				// Une même décision citée par numéro peut porter un nom et une date (indices) dans une note et pas dans l'autre : on les garde.
+				const data = { ...(this.hintsOf(ref) ?? {}), ...ref.data };
 				this.db.run(
 					"INSERT OR REPLACE INTO refs (key, kind, label, query, data, url, fallback_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
-					[ref.key, ref.kind, ref.label, ref.query, JSON.stringify(ref.data), ref.url ?? null, ref.fallbackUrl ?? null]
+					[ref.key, ref.kind, ref.label, ref.query, JSON.stringify(data), ref.url ?? null, ref.fallbackUrl ?? null]
 				);
 				this.db.run("INSERT INTO citations (note_path, ref_key, ord, count) VALUES (?, ?, ?, ?)", [path, ref.key, ord, count]);
 			});
 			this.db.run("INSERT OR REPLACE INTO notes (path, mtime, indexed_at) VALUES (?, ?, ?)", [path, mtime, Date.now()]);
 		});
 		return citations.map(({ ref }) => ref);
+	}
+
+	/** Indices (nom, date) déjà enregistrés pour une décision citée par son numéro. */
+	private hintsOf(ref: LegalRef): { name: string; decided: string } | undefined {
+		if (ref.kind !== "decision" || !ref.data.number || ref.data.name) return undefined;
+		const stored = this.db.get<{ data: string }>("SELECT data FROM refs WHERE key = ?", [ref.key]);
+		const data = stored ? (JSON.parse(stored.data) as Record<string, string>) : undefined;
+		return data?.name && data.decided ? { name: data.name, decided: data.decided } : undefined;
 	}
 
 	/** Références déjà analysées d'une note si elle n'a pas changé depuis, sans rien lire. */
@@ -101,7 +158,9 @@ export class ReferenceIndex {
 		this.db.transaction(() => {
 			this.db.run("UPDATE notes SET path = ? WHERE path = ?", [newPath, oldPath]);
 			this.db.run("UPDATE citations SET note_path = ? WHERE note_path = ?", [newPath, oldPath]);
+			this.db.run("UPDATE fiches SET note_path = ? WHERE note_path = ?", [newPath, oldPath]);
 		});
+		for (const [id, path] of this.fichesById) if (path === oldPath) this.fichesById.set(id, newPath);
 	}
 
 	remove(path: string) {
@@ -109,6 +168,164 @@ export class ReferenceIndex {
 			this.db.run("DELETE FROM citations WHERE note_path = ?", [path]);
 			this.db.run("DELETE FROM notes WHERE path = ?", [path]);
 		});
+		this.removeFiche(path);
+	}
+
+	// --- Généalogie ------------------------------------------------------------------------------
+
+	/** Enregistre les décisions citées par le texte de `fromId` et note que son texte a été analysé. */
+	saveRelations(fromId: string, relations: Relation[]) {
+		this.db.transaction(() => {
+			this.db.run("DELETE FROM decision_relations WHERE from_id = ?", [fromId]);
+			for (const { ref, kind, extract } of relations) {
+				this.db.run(
+					"INSERT OR REPLACE INTO decision_relations (from_id, to_key, to_label, to_court, to_number, kind, extract) VALUES (?, ?, ?, ?, ?, ?, ?)",
+					[fromId, ref.key, ref.label, ref.data.court ?? null, ref.data.number ?? null, kind, extract]
+				);
+			}
+			this.db.run("UPDATE decisions SET relations_at = ? WHERE legifrance_id = ?", [Date.now(), fromId]);
+		});
+	}
+
+	/** Toutes les relations enregistrées. */
+	allRelations(): RelationRow[] {
+		return this.db.all<RelationRow>("SELECT from_id, to_key, to_label, to_court, to_number, kind, extract FROM decision_relations");
+	}
+
+	/** Décisions complètes dont le texte n'a pas encore été analysé pour la généalogie. */
+	decisionsWithoutRelations() {
+		return this.db.all<{ legifrance_id: string; text_markdown: string }>(
+			"SELECT legifrance_id, text_markdown FROM decisions WHERE status = 'complete' AND relations_at IS NULL AND text_markdown IS NOT NULL AND legifrance_id IS NOT NULL"
+		);
+	}
+
+	// --- Documents consultés ---------------------------------------------------------------------
+
+	/** Enregistre (ou remplace) un document consulté ; le surlignage de la recherche (`<mark>`) n'est pas conservé. */
+	saveDocument(doc: Omit<StoredDocument, "fetched_at">) {
+		const unmark = (html: string | null) => html?.replace(/<\/?mark\b[^>]*>/gi, "") ?? null;
+		this.db.run(
+			`INSERT OR REPLACE INTO documents (id, origin, title, date, number, court, formation, solution, url, text_html, text_markdown, fetched_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			[doc.id, doc.origin, doc.title, doc.date, doc.number, doc.court, doc.formation, doc.solution, doc.url, unmark(doc.text_html), unmark(doc.text_markdown), Date.now()]
+		);
+	}
+
+	/** Document consulté, s'il est en base. */
+	documentFor(id: string): StoredDocument | undefined {
+		return this.db.get<StoredDocument>("SELECT * FROM documents WHERE id = ?", [id]);
+	}
+
+	/** Lien (et texte) d'un article ou d'un texte retrouvé pour les citations, d'après l'identifiant de son adresse. */
+	linkByDocumentId(id: string) {
+		return this.db.get<{ url: string; title: string; text: string | null; status: string | null }>(
+			"SELECT url, title, text, status FROM links WHERE url LIKE ? AND text IS NOT NULL LIMIT 1",
+			[`%${id}%`]
+		);
+	}
+
+	// --- Versions des articles -------------------------------------------------------------------
+
+	/** Versions d'un article relevées sur l'API, ou `undefined` si elles ne l'ont pas encore été. */
+	articleVersions(key: string): ArticleVersion[] | undefined {
+		const row = this.db.get<{ versions: string }>("SELECT versions FROM article_versions WHERE article_key = ?", [key]);
+		return row ? (JSON.parse(row.versions) as ArticleVersion[]) : undefined;
+	}
+
+	saveArticleVersions(key: string, versions: ArticleVersion[]) {
+		this.db.run("INSERT OR REPLACE INTO article_versions (article_key, versions, fetched_at) VALUES (?, ?, ?)", [key, JSON.stringify(versions), Date.now()]);
+	}
+
+	// --- Rapprochements manuels ------------------------------------------------------------------
+
+	/** Rapprochements faits à la main : [identifiant rapproché, identifiant conservé]. */
+	manualMerges(): [string, string][] {
+		return this.db.all<{ alias_id: string; target_id: string }>("SELECT alias_id, target_id FROM decision_merges").map((r) => [r.alias_id, r.target_id]);
+	}
+
+	/** Enregistre des rapprochements ([identifiant rapproché, identifiant conservé]). */
+	mergeDecisions(merges: [string, string][]) {
+		this.db.transaction(() => {
+			for (const [alias, target] of merges) {
+				// Une décision conservée jusque-là qui est rapprochée à son tour : ses propres alias suivent.
+				this.db.run("UPDATE decision_merges SET target_id = ? WHERE target_id = ?", [target, alias]);
+				this.db.run("INSERT OR REPLACE INTO decision_merges (alias_id, target_id) VALUES (?, ?)", [alias, target]);
+			}
+		});
+	}
+
+	/** Défait les rapprochements manuels qui touchent ces identifiants. */
+	unmergeDecisions(ids: string[]) {
+		this.db.transaction(() => {
+			for (const id of ids) this.db.run("DELETE FROM decision_merges WHERE alias_id = ? OR target_id = ?", [id, id]);
+		});
+	}
+
+	/** Suggestions de rapprochement écartées : paires d'identifiants. */
+	dismissedMerges(): [string, string][] {
+		return this.db.all<{ a_id: string; b_id: string }>("SELECT a_id, b_id FROM decision_dismissed").map((r) => [r.a_id, r.b_id]);
+	}
+
+	/** Écarte une suggestion de rapprochement pour toutes les références des deux décisions. */
+	dismissMerge(a: string[], b: string[]) {
+		this.db.transaction(() => {
+			for (const x of a) for (const y of b) this.db.run("INSERT OR REPLACE INTO decision_dismissed (a_id, b_id) VALUES (?, ?)", [x, y]);
+		});
+	}
+
+	// --- Fiches de décisions ---------------------------------------------------------------------
+
+	/**
+	 * Enregistre une note comme fiche de décision (avec son identifiant Légifrance, s'il est connu).
+	 * @returns `true` si la base a changé.
+	 */
+	setFiche(path: string, legifranceId?: string) {
+		const current = this.db.get<{ legifrance_id: string | null }>("SELECT legifrance_id FROM fiches WHERE note_path = ?", [path]);
+		if (current && (current.legifrance_id ?? undefined) === legifranceId) return false;
+		this.db.run("INSERT OR REPLACE INTO fiches (note_path, legifrance_id, indexed_at) VALUES (?, ?, ?)", [path, legifranceId ?? null, Date.now()]);
+		for (const [id, notePath] of this.fichesById) if (notePath === path) this.fichesById.delete(id);
+		if (legifranceId) this.fichesById.set(legifranceId, path);
+		return true;
+	}
+
+	/** La note n'est plus une fiche. @returns `true` si elle l'était. */
+	removeFiche(path: string) {
+		if (!this.db.get("SELECT 1 FROM fiches WHERE note_path = ?", [path])) return false;
+		this.db.run("DELETE FROM fiches WHERE note_path = ?", [path]);
+		for (const [id, notePath] of this.fichesById) if (notePath === path) this.fichesById.delete(id);
+		return true;
+	}
+
+	/** Chemins des notes enregistrées comme fiches. */
+	fichePaths() {
+		return this.db.all<{ note_path: string }>("SELECT note_path FROM fiches").map((row) => row.note_path);
+	}
+
+	/**
+	 * Fiche de la décision citée : celle dont l'identifiant Légifrance est celui de la référence
+	 * (identifiant cité, adresse directe, lien retrouvé via l'API ou fiche complétée).
+	 */
+	ficheFor(ref: LegalRef): string | undefined {
+		if (this.fichesById.size === 0 || (ref.kind !== "decision" && ref.kind !== "identifiant")) return undefined;
+		const candidates = [
+			decisionKey(ref.label),
+			ref.url && decisionKey(ref.url),
+			this.links.get(ref.key) && decisionKey(this.links.get(ref.key)!.url),
+			this.db.get<{ legifrance_id: string | null }>("SELECT legifrance_id FROM decisions WHERE ref_key = ?", [ref.key])?.legifrance_id,
+		];
+		for (const id of candidates) {
+			const path = id ? this.fichesById.get(id) : undefined;
+			if (path) return path;
+		}
+		return undefined;
+	}
+
+	ficheStats() {
+		const count = (sql: string) => this.db.get<{ n: number }>(sql)?.n ?? 0;
+		return {
+			fiches: count("SELECT COUNT(*) AS n FROM fiches"),
+			identified: count("SELECT COUNT(*) AS n FROM fiches WHERE legifrance_id IS NOT NULL"),
+		};
 	}
 
 	/**
@@ -136,18 +353,57 @@ export class ReferenceIndex {
 	}
 
 	setLink(ref: LegalRef, link: ResolvedLink) {
+		const before = this.links.get(ref.key);
 		this.links.set(ref.key, link);
 		this.misses.delete(ref.key);
+		// Veille : un statut de vigueur ou un texte qui change entre deux consultations est signalé.
+		const changed = !!before && (before.statut !== link.statut || (!!before.texte && !!link.texte && before.texte !== link.texte));
 		this.db.transaction(() => {
-			this.db.run("INSERT OR REPLACE INTO links (ref_key, url, title, text, resolved_at) VALUES (?, ?, ?, ?, ?)", [
-				ref.key,
-				link.url,
-				link.titre,
-				link.texte ?? null,
-				Date.now(),
-			]);
+			this.db.run(
+				`INSERT INTO links (ref_key, url, title, text, resolved_at, status) VALUES (?, ?, ?, ?, ?, ?)
+				 ON CONFLICT(ref_key) DO UPDATE SET url = excluded.url, title = excluded.title, text = excluded.text, resolved_at = excluded.resolved_at, status = excluded.status`,
+				[ref.key, link.url, link.titre, link.texte ?? null, Date.now(), link.statut ?? null]
+			);
+			if (changed) this.db.run("UPDATE links SET previous_status = ?, changed_at = ? WHERE ref_key = ?", [before!.statut ?? null, Date.now(), ref.key]);
 			this.db.run("DELETE FROM misses WHERE ref_key = ?", [ref.key]);
 		});
+	}
+
+	/** Articles et textes dont le lien a été vérifié avant `before` (ms), les plus citées d'abord. */
+	articlesToRefresh(before: number): LegalRef[] {
+		return this.db
+			.all<RefRow>(
+				`SELECT r.* FROM refs r JOIN links l ON l.ref_key = r.key
+				 LEFT JOIN (SELECT ref_key, SUM(count) AS total FROM citations GROUP BY ref_key) c ON c.ref_key = r.key
+				 WHERE r.kind IN ('article', 'texte') AND l.resolved_at < ?
+				 ORDER BY COALESCE(c.total, 0) DESC, l.resolved_at`,
+				[before]
+			)
+			.map(toRef);
+	}
+
+	/** Le lien vient d'être revérifié sans nouvelle information : il ne sera pas redemandé avant le prochain délai. */
+	touchLink(key: string) {
+		this.db.run("UPDATE links SET resolved_at = ? WHERE ref_key = ?", [Date.now(), key]);
+	}
+
+	/** Articles et textes dont le statut ou le texte a changé depuis la dernière vérification, non encore signalés comme vus. */
+	changedArticles(): { key: string; label: string; url: string; status: string | null; previousStatus: string | null; changedAt: number; notes: string[] }[] {
+		const notes = new Map<string, string[]>();
+		for (const { ref_key, note_path } of this.db.all<{ ref_key: string; note_path: string }>("SELECT ref_key, note_path FROM citations")) {
+			notes.set(ref_key, [...(notes.get(ref_key) ?? []), note_path]);
+		}
+		return this.db
+			.all<{ key: string; label: string; url: string; status: string | null; previous_status: string | null; changed_at: number }>(
+				`SELECT r.key, r.label, l.url, l.status, l.previous_status, l.changed_at FROM links l JOIN refs r ON r.key = l.ref_key
+				 WHERE l.changed_at IS NOT NULL ORDER BY l.changed_at DESC`
+			)
+			.map((row) => ({ key: row.key, label: row.label, url: row.url, status: row.status, previousStatus: row.previous_status, changedAt: row.changed_at, notes: notes.get(row.key) ?? [] }));
+	}
+
+	/** L'utilisateur a pris connaissance du changement. */
+	acknowledgeChange(key: string) {
+		this.db.run("UPDATE links SET changed_at = NULL, previous_status = NULL WHERE ref_key = ?", [key]);
 	}
 
 	/**
@@ -160,10 +416,45 @@ export class ReferenceIndex {
 		this.db.run("INSERT OR REPLACE INTO misses (ref_key, at) VALUES (?, ?)", [ref.key, at]);
 	}
 
+	/** Une recherche a-t-elle déjà échoué pour cette clef (référence ou fiche), quel que soit son âge ? */
+	hasMiss(key: string) {
+		return this.misses.has(key);
+	}
+
+	/** Mémorise une recherche infructueuse sous une clef libre (fiche sans identifiant). */
+	setMissKey(key: string) {
+		const at = Date.now();
+		this.misses.set(key, at);
+		this.db.run("INSERT OR REPLACE INTO misses (ref_key, at) VALUES (?, ?)", [key, at]);
+	}
+
 	/** Une recherche récente a-t-elle déjà échoué pour cette référence ? */
 	isRecentMiss(ref: LegalRef) {
 		const at = this.misses.get(ref.key);
 		return at !== undefined && Date.now() - at < MISS_RETRY_MS;
+	}
+
+	/** Décisions citées que la recherche n'a pas retrouvées, les plus citées d'abord. */
+	unresolvedDecisions(): (LegalRef & { citations: number; notes: string[] })[] {
+		const notes = new Map<string, string[]>();
+		for (const { ref_key, note_path } of this.db.all<{ ref_key: string; note_path: string }>(
+			"SELECT c.ref_key, c.note_path FROM citations c JOIN decisions d ON d.ref_key = c.ref_key WHERE d.status = 'unresolved'"
+		)) {
+			notes.set(ref_key, [...(notes.get(ref_key) ?? []), note_path]);
+		}
+		return this.db
+			.all<RefRow & { total: number }>(
+				`SELECT r.*, SUM(c.count) AS total FROM refs r JOIN decisions d ON d.ref_key = r.key JOIN citations c ON c.ref_key = r.key
+				 WHERE d.status = 'unresolved' GROUP BY r.key ORDER BY total DESC, r.label`
+			)
+			.map((row) => ({ ...toRef(row), citations: row.total, notes: notes.get(row.key) ?? [] }));
+	}
+
+	/** Articles et textes cités dont l'adresse n'est pas connue et dont la recherche n'a pas échoué récemment, les plus cités d'abord. */
+	unresolvedArticles(): LegalRef[] {
+		return [...this.allReferences("article"), ...this.allReferences("texte")]
+			.filter((ref) => !this.linkFor(ref) && !this.isRecentMiss(ref))
+			.sort((a, b) => b.citations - a.citations || a.label.localeCompare(b.label));
 	}
 
 	/** Toutes les références du coffre, avec leur nombre total de citations. */
@@ -201,12 +492,18 @@ export class ReferenceIndex {
 		);
 	}
 
-	/** Références des décisions dont la fiche reste à compléter (ou à retenter). */
-	pendingDecisions(): LegalRef[] {
+	/**
+	 * Références des décisions dont la fiche reste à compléter : jamais traitées, ou en erreur
+	 * technique. Les décisions marquées « introuvables » ne sont reprises que sur demande
+	 * (`retryUnresolved`) : chaque nouvel essai coûte des requêtes.
+	 */
+	pendingDecisions(retryUnresolved = false): LegalRef[] {
 		return this.db
 			.all<RefRow>(
 				`SELECT r.* FROM decisions d JOIN refs r ON r.key = d.ref_key
-				 WHERE d.status IN ('pending', 'unresolved', 'error') ORDER BY r.label`
+				 WHERE d.status IN ('pending', 'error'${retryUnresolved ? ", 'unresolved'" : ""})
+				    OR (d.status = 'complete' AND d.themes IS NULL) -- complétées avant la lecture des thèmes (une liste vide compte)
+				 ORDER BY r.label`
 			)
 			.map(toRef);
 	}
@@ -215,7 +512,7 @@ export class ReferenceIndex {
 	saveDecision(refKey: string, fields: DecisionFields) {
 		this.db.run(
 			`UPDATE decisions SET status = ?, legifrance_id = ?, court = ?, number = ?, title = ?, date = ?, formation = ?,
-			 ecli = ?, solution = ?, text_html = ?, text_markdown = ?, fetched_at = ?, error = ? WHERE ref_key = ?`,
+			 ecli = ?, solution = ?, text_html = ?, text_markdown = ?, fetched_at = ?, error = ?, themes = ?, summary = ?, terms = ? WHERE ref_key = ?`,
 			[
 				fields.status,
 				fields.legifranceId ?? null,
@@ -230,9 +527,81 @@ export class ReferenceIndex {
 				fields.markdown ?? null,
 				Date.now(),
 				fields.error ?? null,
+				fields.status === "complete" ? JSON.stringify(fields.themes ?? []) : null,
+				fields.summary ?? null,
+				fields.terms ?? null,
 				refKey,
 			]
 		);
+	}
+
+	/**
+	 * Fiche déjà complétée d'une décision (par son identifiant Légifrance), lue dans la base : évite de
+	 * la redemander à l'API.
+	 * @param analyzed exige aussi les thèmes et le vocabulaire (fiche complétée depuis la lecture des thèmes).
+	 */
+	completeDecision(textId: string, analyzed = false) {
+		return this.db.get<StoredDecision>(
+			`SELECT * FROM decisions WHERE legifrance_id = ? AND status = 'complete' ${analyzed ? "AND themes IS NOT NULL AND terms IS NOT NULL" : ""} ORDER BY fetched_at DESC LIMIT 1`,
+			[textId]
+		);
+	}
+
+	/** Recopie dans la fiche de `refKey` une fiche déjà complétée (même décision citée d'une autre façon). */
+	copyDecision(from: StoredDecision, refKey: string) {
+		this.saveDecision(refKey, {
+			status: "complete",
+			legifranceId: from.legifrance_id ?? undefined,
+			court: from.court ?? undefined,
+			number: from.number ?? undefined,
+			title: from.title ?? undefined,
+			date: from.date ?? undefined,
+			formation: from.formation ?? undefined,
+			ecli: from.ecli ?? undefined,
+			solution: from.solution ?? undefined,
+			html: from.text_html ?? undefined,
+			markdown: from.text_markdown ?? undefined,
+			themes: from.themes ? (JSON.parse(from.themes) as string[]) : [],
+			summary: from.summary ?? undefined,
+			terms: from.terms ?? undefined,
+		});
+	}
+
+	/** Enregistre les articles visés par une décision (remplace les précédents). */
+	saveDecisionArticles(decisionId: string, articles: { key: string; label: string; count: number }[]) {
+		this.db.transaction(() => {
+			this.db.run("DELETE FROM decision_articles WHERE decision_id = ?", [decisionId]);
+			for (const { key, label, count } of articles) {
+				this.db.run("INSERT OR REPLACE INTO decision_articles (decision_id, article_key, label, count) VALUES (?, ?, ?, ?)", [decisionId, key, label, count]);
+			}
+		});
+	}
+
+	/** Avancement du complément des fiches de décisions : décisions citées, par état de leur fiche. */
+	decisionProgress() {
+		const count = (sql: string) => this.db.get<{ n: number }>(sql)?.n ?? 0;
+		const cited = count(
+			`SELECT COUNT(*) AS n FROM refs WHERE kind = 'decision' OR (kind = 'identifiant' AND (label LIKE 'JURITEXT%' OR label LIKE 'CETATEXT%' OR label LIKE 'CONSTEXT%'))`
+		);
+		const status = (value: string) => count(`SELECT COUNT(*) AS n FROM decisions WHERE status = '${value}'`);
+		const complete = status("complete");
+		const external = status("external");
+		const unresolved = status("unresolved");
+		const errors = status("error");
+		return { cited, complete, external, unresolved, errors, pending: Math.max(0, cited - complete - external - unresolved - errors) };
+	}
+
+	/** Notes reconnues comme fiches, avec l'identifiant de leur décision (s'il est connu). */
+	ficheEntries() {
+		return this.db.all<{ note_path: string; legifrance_id: string | null }>("SELECT note_path, legifrance_id FROM fiches ORDER BY note_path").map((row) => ({
+			path: row.note_path,
+			id: row.legifrance_id ?? undefined,
+		}));
+	}
+
+	/** Date de la dernière analyse d'une note (ms), ou 0. */
+	lastIndexedAt() {
+		return this.db.get<{ at: number | null }>("SELECT MAX(indexed_at) AS at FROM notes")?.at ?? 0;
 	}
 
 	/** Effectifs de la base, pour les réglages. */
@@ -250,8 +619,9 @@ export class ReferenceIndex {
 	/** Vide la base (notes, références, liens, fiches). */
 	clear() {
 		this.db.transaction(() => {
-			for (const table of ["notes", "refs", "citations", "links", "misses", "decisions"]) this.db.run(`DELETE FROM ${table}`);
+			for (const table of ["notes", "refs", "citations", "links", "misses", "decisions", "decision_articles", "fiches", "documents", "decision_relations"]) this.db.run(`DELETE FROM ${table}`);
 		});
+		this.fichesById.clear();
 		this.links.clear();
 		this.misses.clear();
 	}

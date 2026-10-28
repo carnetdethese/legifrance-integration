@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getDocumentInfo, legalDocument } from "abstracts/document";
 import { documentSearchFieldsClass } from "abstracts/searchHandler";
 import { resultatsRechercheClass } from "abstracts/searches";
+import { documentRow, storedLegalDocument } from "references/stored";
 import { usePlugin } from "views/hooks";
 import { ResultCard } from "./ResultCard";
 import { ResultsNav } from "./ResultsNav";
@@ -55,8 +56,16 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 
 	async function openDocument(selected: legalDocument) {
 		try {
+			// La base d'abord : un document déjà connu (cité dans le coffre, ou consulté avant) n'est pas redemandé à l'API.
+			const stored = storedLegalDocument(plugin, selected.id);
+			if (stored) {
+				await plugin.openDocument(await plugin.addToHistory(stored));
+				return;
+			}
 			const full = await getDocumentInfo(selected, searchHandler.getSearchedString(), plugin.agent);
 			if (!full) throw new Error("Document vide");
+			// Le texte consulté rejoint la base : le lecteur et les fiches pourront le relire sans requête.
+			if (full.texteIntegralHTML || full.texteIntegral) plugin.references.saveDocument(documentRow(full));
 			await plugin.openDocument(await plugin.addToHistory(full));
 		} catch (error) {
 			console.error("Erreur lors de l'ouverture du document :", error);

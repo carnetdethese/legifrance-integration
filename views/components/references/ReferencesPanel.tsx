@@ -1,10 +1,18 @@
-import { ExternalLink, Search } from "lucide-react";
-import { Notice, setTooltip } from "obsidian";
-import { useState } from "react";
+import { Mentions } from "./Mentions";
+import { Section } from "./Section";
+import { BookOpen, ExternalLink, FileText, Search } from "lucide-react";
+import { decisionKey } from "references/ids";
+import { storedLegalDocument } from "references/stored";
+import { Notice, TFile, setTooltip } from "obsidian";
+import { useMemo, useState } from "react";
 import { ArticleModal } from "views/ArticleModal";
 import { canResolve } from "references/resolver";
 import { LegalRef, RefKind } from "references/parser";
-import { useNoteReferences, usePlugin } from "views/hooks";
+import { isFiche } from "references/fiches";
+import { countApplying, statusLabel } from "references/corpus";
+import { decisionsOf } from "references/insights";
+import { Genealogy, RelatedList, SourceBadge } from "views/components/jurisprudence/Shared";
+import { useDatabaseVersion, useNoteReferences, usePlugin } from "views/hooks";
 import LegifrancePlugin from "main";
 
 /** Rubriques d'affichage, dans l'ordre. */
@@ -49,6 +57,7 @@ export const ReferencesPanel = () => {
 	return (
 		<div className="legifrance-references">
 			<h4>{file.basename}</h4>
+			{isFiche(plugin.app.metadataCache.getFileCache(file)?.frontmatter, plugin.settings) && <FicheInsights file={file} />}
 			{refs.length === 0 && (
 				<p className="legifrance-empty">Aucune référence juridique détectée dans cette note.</p>
 			)}
@@ -72,12 +81,11 @@ export const ReferencesPanel = () => {
 				const group = refs.filter((ref) => ref.kind === kind);
 				return (
 					group.length > 0 && (
-						<section key={kind}>
-							<h5>{title}</h5>
+						<Section key={kind} id={`group-${kind}`} title={title} count={group.length}>
 							{group.map((ref) => (
 								<ReferenceItem key={ref.key} reference={ref} disabled={busy} onResolve={() => resolve([ref])} />
 							))}
-						</section>
+						</Section>
 					)
 				);
 			})}
@@ -98,6 +106,45 @@ async function copyDiagnostic(plugin: LegifrancePlugin, path: string, refs: Lega
 	new Notice("Diagnostic copié dans le presse-papiers.");
 }
 
+/** Ce que la base sait d'une fiche : où la décision est citée, articles visés, décisions proches. */
+const FicheInsights = ({ file }: { file: TFile }) => {
+	const plugin = usePlugin();
+	const version = useDatabaseVersion();
+	const records = useMemo(() => decisionsOf(plugin), [plugin, version]);
+	const record = records.find((r) => r.fichePath === file.path);
+	const articles = record
+		? plugin.references.db.all<{ key: string; label: string; count: number }>(
+				"SELECT article_key AS key, label, count FROM decision_articles WHERE decision_id = ? ORDER BY count DESC LIMIT 8",
+				[record.id]
+			)
+		: [];
+
+	if (!record) {
+		return <p className="setting-item-description">Fiche de décision, non reliée aux citations de vos notes (identifiant Légifrance manquant, ou décision jamais citée).</p>;
+	}
+	return (
+		<div className="legifrance-fiche-insights">
+			<Section id="fiche" title="Fiche de décision">
+				<Mentions record={record} version={version} />
+				{record.themes.length > 0 && <div className="setting-item-description">{record.themes.slice(0, 3).map((t) => <span key={t} className="legifrance-chip">{t}</span>)}</div>}
+				{articles.length > 0 && (
+					<Section id="articles-vises" title="Articles visés" count={articles.length}>
+						{articles.map((a) => (
+							<div key={a.key}><a onClick={() => void plugin.activateJurisprudenceView({ tab: "articles", articleKey: a.key })}>{a.label}</a></div>
+						))}
+					</Section>
+				)}
+				<Section id="genealogy" title="Généalogie" defaultOpen={false}>
+					<Genealogy record={record} records={records} />
+				</Section>
+				<Section id="related" title="Décisions proches" defaultOpen={false}>
+					<RelatedList record={record} records={records} />
+				</Section>
+			</Section>
+		</div>
+	);
+};
+
 interface ReferenceItemProps {
 	reference: LegalRef;
 	disabled: boolean;
@@ -111,18 +158,39 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 	const missed = plugin.references.isRecentMiss(reference);
 
 	let status = reference.url || reference.fallbackUrl ? "Lien vers la page du texte." : "Lien de recherche Légifrance.";
-	if (link) status = link.titre;
+	// Le titre d'un article est son libellé : l'afficher deux fois n'apprend rien.
+	if (link) status = link.titre === reference.label ? "" : link.titre;
 	else if (pending) status = "Recherche sur Légifrance…";
 	else if (missed) status = "Introuvable via l'API : lien de recherche.";
 
+	const fichePath = plugin.references.ficheFor(reference);
+	const fiche = fichePath ? plugin.app.vault.getAbstractFileByPath(fichePath) : null;
+
+	const applying = reference.kind === "article" ? countApplying(plugin.references, reference.key) : 0;
+	const inForce = !link?.statut || ["VIGUEUR", "VIGUEUR_DIFF"].includes(link.statut);
+
 	const texte = link?.texte;
+	// Texte déjà en base (décision complétée, article retrouvé) : lisible dans le lecteur, sans requête.
+	const documentId = link ? decisionKey(link.url) ?? /(?:LEGIARTI|LEGITEXT|JORFTEXT|JORFARTI)\d{12}/.exec(link.url)?.[0] : undefined;
+	const readable = !!documentId && !!storedLegalDocument(plugin, documentId);
 	const trace = plugin.settings.debugRefs ? plugin.referenceTraces.get(reference.key) : undefined;
 
 	return (
 		<div className="setting-item">
 			<div className="setting-item-info">
-				<div className="setting-item-name">{reference.label}</div>
-				<div className="setting-item-description">{status}</div>
+				<div className="setting-item-name">
+					{reference.label}
+					{reference.kind === "decision" && <SourceBadge fiche={fiche instanceof TFile} notes={1} />}
+				</div>
+				{status && <div className="setting-item-description">{status}</div>}
+				{!inForce && <div className="setting-item-description legifrance-warning">⚠ Version en vigueur introuvable (statut : {statusLabel(link?.statut).toLowerCase()}).</div>}
+				{applying > 0 && (
+					<div className="setting-item-description">
+						<a onClick={() => void plugin.activateJurisprudenceView({ tab: "articles", articleKey: reference.key })}>
+							Appliqué par {applying} décision{applying > 1 ? "s" : ""} de votre base
+						</a>
+					</div>
+				)}
 				{plugin.settings.debugRefs && (
 					<details className="legifrance-trace">
 						<summary>Diagnostic</summary>
@@ -144,6 +212,20 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 				)}
 			</div>
 			<div className="setting-item-control">
+				{fiche instanceof TFile && (
+					<button
+						className="clickable-icon"
+						aria-label={`Ouvrir la fiche : ${fiche.basename}`}
+						onClick={() => void plugin.app.workspace.getLeaf(false).openFile(fiche)}
+					>
+						<FileText size={16} />
+					</button>
+				)}
+				{readable && (
+					<button className="clickable-icon" aria-label="Lire le texte (base de données)" onClick={() => void plugin.openStoredDocument(documentId!)}>
+						<BookOpen size={16} />
+					</button>
+				)}
 				{!link && !pending && canResolve(reference) && (
 					<button
 						className="clickable-icon"

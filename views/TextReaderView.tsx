@@ -1,6 +1,7 @@
 import { ViewStateResult } from "obsidian";
 import { ReactNode } from "react";
 import { removeTags } from "lib/tools";
+import { storedLegalDocument } from "references/stored";
 import { ReaderView } from "./components/reader/ReaderView";
 import { ReactItemView } from "./ReactItemView";
 import { documentDataStorage } from "./viewsData";
@@ -8,17 +9,21 @@ import { documentDataStorage } from "./viewsData";
 export const TEXT_READER_VIEW = "text-reader-view";
 
 interface ReaderState extends Record<string, unknown> {
+	/** Document de l'historique. */
 	docId?: string;
+	/** Document de la base de données (décision, article, texte), par son identifiant ou son adresse. */
+	storedId?: string;
 }
 
 /**
- * Lecteur d'un document de l'historique.
+ * Lecteur d'un document : de l'historique de la recherche, ou de la base de données.
  *
- * Le document est identifié par son id dans l'état de la vue (`getState` /
- * `setState`) : Obsidian restaure donc les onglets ouverts au redémarrage.
+ * Le document est identifié dans l'état de la vue (`getState` / `setState`) : Obsidian restaure
+ * donc les onglets ouverts au redémarrage.
  */
 export class TextReaderView extends ReactItemView {
 	document?: documentDataStorage;
+	private storedId?: string;
 
 	getViewType() {
 		return TEXT_READER_VIEW;
@@ -33,13 +38,17 @@ export class TextReaderView extends ReactItemView {
 	}
 
 	getState(): ReaderState {
-		return { docId: this.document?.data.id };
+		return this.storedId ? { storedId: this.storedId } : { docId: this.document?.data.id };
 	}
 
 	async setState(state: ReaderState, result: ViewStateResult) {
-		this.document = this.plugin.historiqueDocuments.find(
-			(doc) => doc.data.id === state?.docId
-		);
+		this.storedId = state?.storedId;
+		if (this.storedId) {
+			const data = storedLegalDocument(this.plugin, this.storedId);
+			this.document = data ? { id: 0, data } : undefined;
+		} else {
+			this.document = this.plugin.historiqueDocuments.find((doc) => doc.data.id === state?.docId);
+		}
 		await super.setState(state, result);
 		this.update();
 	}
@@ -49,7 +58,7 @@ export class TextReaderView extends ReactItemView {
 			<ReaderView data={this.document.data} />
 		) : (
 			<p className="legifrance-empty">
-				Ce document ne figure plus dans l'historique.
+				{this.storedId ? "Ce document n'est plus dans la base de données." : "Ce document ne figure plus dans l'historique."}
 			</p>
 		);
 	}

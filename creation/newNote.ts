@@ -1,6 +1,8 @@
 import * as Handlebars from "handlebars";
 import { App, Notice, normalizePath } from "obsidian";
 import { legalDocument } from "abstracts/document";
+import { removeTags } from "lib/tools";
+import { solutionFromTitle } from "references/themes";
 import { LegifranceSettings } from "settings/settings";
 
 /**
@@ -15,9 +17,24 @@ function targetFolder(data: legalDocument, dossierBase: string) {
 	);
 }
 
+/**
+ * Variables du modèle : les champs du document, plus des alias lisibles. `{{solution}}` reprend la
+ * solution (champ `abstract` des décisions issues d'une recherche, ou fin du titre d'une décision du
+ * Conseil constitutionnel) ; `{{court}}` et `{{number}}` sont ceux de `juridiction` et `numero`.
+ */
+export function templateContext(data: legalDocument) {
+	return {
+		...data,
+		solution: data.solution ?? data.abstract ?? solutionFromTitle(removeTags(data.titre)),
+		court: data.juridiction,
+		number: data.numero,
+		title: removeTags(data.titre),
+	};
+}
+
 /** Compile un gabarit Handlebars (sans échappement HTML) et l'applique à `data`. */
 function render(template: string, data: legalDocument) {
-	return Handlebars.compile(template, { noEscape: true })(data);
+	return Handlebars.compile(template, { noEscape: true })(templateContext(data));
 }
 
 /**

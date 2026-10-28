@@ -1,6 +1,7 @@
 import { FilePlus, Sparkles } from "lucide-react";
 import { legalDocument } from "abstracts/document";
 import { removeTags } from "lib/tools";
+import { templateContext } from "creation/newNote";
 import { usePlugin } from "views/hooks";
 
 interface InfoCardProps {
@@ -18,7 +19,7 @@ export const InfoCard = ({ data }: InfoCardProps) => {
 		["Formation", data.formation],
 		["Date", data.date],
 		["Numéro", data.numero],
-		["Solution", data.abstract],
+		["Solution", templateContext(data).solution],
 	];
 	const pdfLink =
 		data.origin == "CIRC"

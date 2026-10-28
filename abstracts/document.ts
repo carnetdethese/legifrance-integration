@@ -45,6 +45,8 @@ export interface legalDocument {
 	sommaires?: Sommaire[];
 	sommaire?:resumeDocument[];
 	abstract?:string;
+	/** Solution de la décision (« Non conformité partielle », « Rejet »…) ; `abstract` la porte aussi pour les décisions issues d'une recherche. */
+	solution?: string;
 	auteur?:string;
 	motsCles?:string[];
 	motsClesLibres?:string;

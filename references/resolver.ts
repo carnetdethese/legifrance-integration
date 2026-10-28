@@ -7,13 +7,16 @@
  */
 import { htmlToMarkdown } from "obsidian";
 import { ApiError } from "api/client";
+import type { Lane } from "api/rateLimiter";
 import { agentSearch } from "api/utilities";
+import { findCcSiteDecision } from "./conseilConstitutionnel";
+import { findRgdByName, findRgdByNumber } from "./rgd";
 import { findAriaDecision } from "./ariane";
 import { LEGIFRANCE_TEXTS } from "./codes";
 import { FULL_DATE_PATTERN, isoDay, matchesDate, parseCitedDate, plain, significantWords, titleDates } from "./dates";
 import { LegalRef } from "./parser";
 
-const BASE_URL = "https://www.legifrance.gouv.fr";
+export const BASE_URL = "https://www.legifrance.gouv.fr";
 
 /** Longueur maximale du texte d'un article conservé dans le cache. */
 const MAX_TEXT_LENGTH = 20000;
@@ -25,28 +28,30 @@ export interface ResolvedLink {
 	titre: string;
 	/** Texte (Markdown) d'un article, pour l'aperçu. */
 	texte?: string;
+	/** Statut de l'article trouvé (`VIGUEUR`, `ABROGE`, `MODIFIE`…) ; absent pour les autres documents. */
+	statut?: string;
 }
 
 /** Requête à l'API : chemin et corps JSON. */
-interface Query {
+export interface Query {
 	path: string;
 	body: object;
 }
 
 /** Réponse de `/search`, réduite à ce que l'on lit. */
-interface SearchResponse {
+export interface SearchResponse {
 	totalResultNumber?: number;
 	results?: SearchResult[];
 }
 
-interface SearchResult {
+export interface SearchResult {
 	text?: string;
 	titles?: { id?: string; cid?: string; title?: string }[];
 	sections?: { extracts?: { id?: string; num?: string; legalStatus?: string; values?: string[] }[] }[];
 }
 
 /** Ce que l'on tire d'une réponse : adresse, titre, identifiant d'article éventuel. */
-type Match = { url: string; titre: string; articleId?: string };
+type Match = { url: string; titre: string; articleId?: string; status?: string };
 
 /** Requêtes à essayer dans l'ordre, et lecture de leurs réponses. */
 interface Resolution {
@@ -59,7 +64,7 @@ interface Resolution {
 }
 
 /** Fond, page Légifrance, préfixe d'identifiant et champs essayés (dans l'ordre) par juridiction. */
-const COURTS: Record<string, { fond: string; page: string; prefix: string; fields: [string, "number" | "bare"][] }> = {
+export const COURTS: Record<string, { fond: string; page: string; prefix: string; fields: [string, "number" | "bare"][] }> = {
 	cassation: { fond: "JURI", page: "juri", prefix: "JURITEXT", fields: [["NUM_AFFAIRE", "number"], ["ALL", "number"]] },
 	ce: { fond: "CETAT", page: "ceta", prefix: "CETATEXT", fields: [["NUM_AFFAIRE", "number"], ["NUM_DEC", "number"], ["ALL", "number"]] },
 	// Le fond du Conseil constitutionnel n'indexe pas le suffixe (« DC ») du numéro.
@@ -81,12 +86,12 @@ const LAW_NATURES: Record<string, string> = {
 	arrêté: "ARRETE",
 };
 
-function field(typeChamp: string, valeur: string) {
-	return { typeChamp, operateur: "ET", criteres: [{ typeRecherche: "EXACTE", valeur, operateur: "ET" }] };
+export function field(typeChamp: string, valeur: string, typeRecherche = "EXACTE") {
+	return { typeChamp, operateur: "ET", criteres: [{ typeRecherche, valeur, operateur: "ET" }] };
 }
 
 /** Requête `POST /search` sur un fond. */
-function searchQuery(fond: string, champs: object[], filtres: object[] = []): Query {
+export function searchQuery(fond: string, champs: object[], filtres: object[] = []): Query {
 	return {
 		path: "/search",
 		body: {
@@ -107,11 +112,11 @@ function describeSearch(response: SearchResponse) {
 const compact = (number: string) => number.replace(/[.\s]/g, "");
 
 /** Le titre d'une décision porte-t-il ce numéro ? (écarte les résultats approchés) */
-const cites = (title: string, number: string) =>
+export const cites = (title: string, number: string) =>
 	new RegExp(`(?<![\\w.-])${number.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w-])`).test(title.replace(/\s+/g, " "));
 
 /** Le résultat mentionne-t-il toutes les parties citées (titre, texte ou extraits surlignés) ? */
-function mentionsParties(result: SearchResult, name: string) {
+export function mentionsParties(result: SearchResult, name: string) {
 	const extracts = (result.sections ?? []).flatMap((s) => (s.extracts ?? []).flatMap((e) => e.values ?? []));
 	const haystack = plain([result.text ?? "", ...extracts, ...(result.titles ?? []).map((t) => t.title ?? "")].join(" "));
 	return significantWords(name).every((word) => haystack.includes(word));
@@ -123,16 +128,19 @@ function mentionsParties(result: SearchResult, name: string) {
  * citation et s'il mentionne les parties. Au Conseil d'État, ArianeWeb prend le relais : Légifrance
  * n'a pas les décisions anciennes.
  */
-function buildNamed(ref: LegalRef): Resolution | null {
+function buildNamed(ref: LegalRef, useRgd: boolean): Resolution | null {
 	const court = COURTS[ref.data.court];
 	const cited = parseCitedDate(ref.data.decided);
 	if (!court || !cited) return null;
 
-	const fields = [field("ALL", ref.data.name)];
+	// « Fédération X et autres » : la phrase exacte n'existe pas dans le texte, seul le nom des parties y figure.
+	const name = ref.data.name.replace(/\s+(?:et|ou)\s+(?:autres?|consorts?)\b.*$/i, "").trim() || ref.data.name;
 	const day = isoDay(cited);
+	const dateRange = day ? { start: day, end: day } : { start: `${cited.year}-01-01`, end: `${cited.year}-12-31` };
 	const queries = [
-		...(day ? [searchQuery(court.fond, fields, [{ facette: "DATE_DECISION", dates: { start: day, end: day } }])] : []),
-		searchQuery(court.fond, fields),
+		// Tous les mots du nom, dans la date citée (le jour, ou l'année s'il n'est pas donné) ; puis la phrase exacte sans filtre.
+		searchQuery(court.fond, [field("ALL", name, "TOUS_LES_MOTS_DANS_UN_CHAMP")], [{ facette: "DATE_DECISION", dates: dateRange }]),
+		searchQuery(court.fond, [field("ALL", name)]),
 	];
 	return {
 		queries,
@@ -143,7 +151,7 @@ function buildNamed(ref: LegalRef): Resolution | null {
 					if (
 						title.id?.startsWith(court.prefix) &&
 						titleDates(title.title ?? "").some((d) => matchesDate(cited, d)) &&
-						mentionsParties(result, ref.data.name)
+						mentionsParties(result, name)
 					) {
 						return { url: `${BASE_URL}/${court.page}/id/${title.id}`, titre: title.title ?? ref.label };
 					}
@@ -151,7 +159,16 @@ function buildNamed(ref: LegalRef): Resolution | null {
 			}
 			return null;
 		},
-		fallback: ["ce", "tc"].includes(ref.data.court) ? () => findAriaDecision(ref.data.court, ref.data.name, cited) : undefined,
+		// Derniers recours : ArianeWeb (Conseil d'État), puis la Revue générale du droit (grands arrêts, anciens ou non).
+		fallback: async () => {
+			if (["ce", "tc"].includes(ref.data.court)) {
+				const aria = await findAriaDecision(ref.data.court, name, cited).catch(() => null);
+				if (aria) return aria;
+			}
+			if (!useRgd) return null;
+			const found = await findRgdByName(name, ref.data.court === "tc" ? "tc" : ref.data.court, isoDay(cited) ?? String(cited.year));
+			return found.length === 1 ? { url: found[0].key, titre: found[0].title } : null;
+		},
 	};
 }
 
@@ -225,7 +242,7 @@ function buildTextArticle(ref: LegalRef): Resolution {
 	};
 }
 
-function build(ref: LegalRef): Resolution | null {
+function build(ref: LegalRef, useRgd = true): Resolution | null {
 	const { data } = ref;
 
 	if (ref.kind === "article") {
@@ -260,7 +277,7 @@ function build(ref: LegalRef): Resolution | null {
 					(e) => compact(e.num ?? "") === number && e.id?.startsWith("LEGIARTI")
 				);
 				const best = candidates.find((e) => !e.legalStatus || e.legalStatus === "VIGUEUR") ?? candidates[0];
-				return best ? { url: `${BASE_URL}/codes/article_lc/${best.id}`, titre: ref.label, articleId: best.id } : null;
+				return best ? { url: `${BASE_URL}/codes/article_lc/${best.id}`, titre: ref.label, articleId: best.id, status: best.legalStatus ?? (best.id ? "VIGUEUR" : undefined) } : null;
 			},
 			describe: (raw) => {
 				const response = raw as SearchResponse;
@@ -291,22 +308,39 @@ function build(ref: LegalRef): Resolution | null {
 	}
 
 	if (ref.kind === "decision") {
-		if (!data.number) return buildNamed(ref);
+		if (!data.number) return buildNamed(ref, useRgd);
 		const court = COURTS[data.court];
 		if (!court) return null;
 		const values = { number: data.number, bare: data.number.split(" ")[0] };
+		const isCc = data.court === "cc";
 		return {
-			queries: court.fields.map(([typeChamp, value]) => searchQuery(court.fond, [field(typeChamp, values[value])])),
+			queries: [
+				...court.fields.map(([typeChamp, value]) => searchQuery(court.fond, [field(typeChamp, values[value])])),
+				// Certaines décisions du Conseil constitutionnel ne sont qu'au Journal officiel (« Décision n° 2017-670 QPC du… »).
+				...(isCc ? [searchQuery("JORF", [field("ALL", data.number)])] : []),
+			],
 			read: (raw) => {
-			const response = raw as SearchResponse;
+				const response = raw as SearchResponse;
 				for (const result of response.results ?? []) {
 					for (const title of result.titles ?? []) {
 						if (title.id?.startsWith(court.prefix) && cites(title.title ?? "", data.number)) {
 							return { url: `${BASE_URL}/${court.page}/id/${title.id}`, titre: title.title ?? ref.label };
 						}
+						const jorf = isCc && /^JORFTEXT\d{12}/.exec(title.cid || title.id || "")?.[0];
+						if (jorf && /^décision n°/i.test(title.title ?? "") && cites(title.title ?? "", data.number)) {
+							return { url: `${BASE_URL}/jorf/id/${jorf}`, titre: title.title ?? ref.label };
+						}
 					}
 				}
 				return null;
+			},
+			// Dernier recours : la page du site du Conseil constitutionnel, d'adresse prévisible.
+			fallback: async () => {
+				const site = isCc ? await findCcSiteDecision(data.number) : null;
+				if (site) return { url: site.url, titre: site.titre };
+				if (!useRgd) return null;
+				const found = await findRgdByNumber(data.number, data.court);
+				return found.length === 1 ? { url: found[0].key, titre: found[0].title } : null;
 			},
 		};
 	}
@@ -317,10 +351,11 @@ function build(ref: LegalRef): Resolution | null {
 export const canResolve = (ref: LegalRef) => !ref.url && build(ref) !== null;
 
 /** Texte Markdown d'un article (`POST /consult/getArticle`), borné. */
-async function fetchArticleText(agent: agentSearch, id: string) {
+export async function fetchArticleText(agent: agentSearch, id: string, lane?: Lane) {
 	const response = await agent.dilaApi.fetch<{ article?: ArticleBody } & ArticleBody>({
 		path: "/consult/getArticle",
 		params: { id },
+		lane,
 	});
 	const article = response.article ?? response;
 	const html = article.texteHtml ?? article.texte;
@@ -342,9 +377,11 @@ interface ArticleBody {
 export async function resolveReference(
 	agent: agentSearch,
 	ref: LegalRef,
-	trace: (line: string) => void = () => undefined
+	trace: (line: string) => void = () => undefined,
+	lane?: Lane,
+	useRgd = true
 ): Promise<ResolvedLink | null> {
-	const resolution = build(ref);
+	const resolution = build(ref, useRgd);
 	if (!resolution) {
 		trace("Référence non résoluble par l'API.");
 		return null;
@@ -356,7 +393,7 @@ export async function resolveReference(
 	for (const query of resolution.queries) {
 		trace(`→ POST ${query.path} ${JSON.stringify(query.body)}`);
 		try {
-			const response = await agent.dilaApi.fetch<SearchResponse>({ path: query.path, params: query.body });
+			const response = await agent.dilaApi.fetch<SearchResponse>({ path: query.path, params: query.body, lane });
 			match = resolution.read(response);
 			answered = true;
 			trace(`← ${resolution.describe?.(response) ?? describeSearch(response)}${match ? " → correspondance trouvée" : " → aucune correspondance"}`);
@@ -382,7 +419,7 @@ export async function resolveReference(
 		return null;
 	}
 
-	const texte = match.articleId ? await fetchArticleText(agent, match.articleId).catch(() => undefined) : undefined;
+	const texte = match.articleId ? await fetchArticleText(agent, match.articleId, lane).catch(() => undefined) : undefined;
 	trace(`✔ ${match.url}${texte ? " (texte récupéré)" : match.articleId ? " (texte de l'article indisponible)" : ""}`);
-	return { url: match.url, titre: match.titre, texte };
+	return { url: match.url, titre: match.titre, texte, statut: match.status };
 }

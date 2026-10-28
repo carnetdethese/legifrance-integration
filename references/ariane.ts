@@ -89,3 +89,88 @@ export async function findAriaDecision(court: string, name: string, cited: Cited
 	}
 	return null;
 }
+
+/** Décision d'ArianeWeb telle que la liste de résultats la présente. */
+export interface AriaCandidate extends AriaMatch {
+	number: string;
+	/** AAAA-MM-JJ */
+	date: string;
+}
+
+const toCandidate = (doc: AriaDocument): AriaCandidate | null => {
+	const iso = doc.SourceDateTime1?.slice(0, 10);
+	if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso) || !doc.SourceStr5) return null;
+	const [y, m, d] = iso.split("-");
+	return {
+		url: `${BASE_URL}/fr/arianeweb${doc.SourceStr39 || "/CE/decision/"}${iso}/${doc.SourceStr5}`,
+		titre: `Conseil d'État, ${d}/${m}/${y}, n° ${doc.SourceStr5}`,
+		number: doc.SourceStr5,
+		date: iso,
+	};
+};
+
+/** Numéro comparé sans espaces, points, tirets ni zéros de tête (« 448 948 » et « 448948 », « 04749 » et « 4749 » sont le même). */
+const bareNumber = (number: string) => number.replace(/[\s.-]/g, "").toLowerCase().replace(/^0+(?=\d)/, "");
+
+/**
+ * Décisions d'ArianeWeb portant ce numéro (n° de requête). Le filtre sur le numéro est celui du moteur
+ * (`SourceStr5`) ; le résultat est contrôlé ici de toute façon.
+ *
+ * @throws Error si ArianeWeb est injoignable.
+ */
+export async function findAriaByNumber(court: string, number: string): Promise<AriaCandidate[]> {
+	const source = SOURCES[court];
+	if (!source) return [];
+	const params = new URLSearchParams({
+		type: "json",
+		advanced: "1",
+		SourceStr4: source,
+		SourceStr5: number,
+		SkipCount: "20",
+		SkipFrom: "0",
+		sort: "SourceDateTime1.asc,SourceStr5.desc",
+	});
+	const response = await requestUrl({ url: `${BASE_URL}/xsearch?${params}`, throw: false });
+	if (response.status !== 200) throw new Error(`ArianeWeb : erreur HTTP ${response.status}`);
+	const documents: AriaDocument[] = response.json?.Documents ?? [];
+	return documents
+		.filter((doc) => doc.SourceStr5 && bareNumber(doc.SourceStr5) === bareNumber(number))
+		.map(toCandidate)
+		.filter((candidate): candidate is AriaCandidate => candidate !== null);
+}
+
+/**
+ * Décisions d'ArianeWeb de la date citée dont les extraits mentionnent les parties (plusieurs
+ * résultats possibles : à l'utilisateur de choisir).
+ *
+ * @throws Error si ArianeWeb est injoignable ou illisible.
+ */
+export async function findAriaByName(court: string, name: string, cited: CitedDate): Promise<AriaCandidate[]> {
+	const source = SOURCES[court];
+	if (!source) return [];
+	const found: AriaCandidate[] = [];
+	for (let page = 0; page < MAX_PAGES; page++) {
+		const params = new URLSearchParams({
+			type: "json",
+			advanced: "1",
+			SourceStr4: source,
+			"text.add": name.replace(/,/g, " "),
+			synonyms: "true",
+			scmode: "smart",
+			SkipCount: String(PAGE_SIZE),
+			SkipFrom: String(page * PAGE_SIZE),
+			sort: "SourceDateTime1.asc,SourceStr5.desc",
+		});
+		const response = await requestUrl({ url: `${BASE_URL}/xsearch?${params}`, throw: false });
+		if (response.status !== 200) throw new Error(`ArianeWeb : erreur HTTP ${response.status}`);
+		const documents: AriaDocument[] = response.json?.Documents ?? [];
+		for (const doc of documents) {
+			const day = documentDay(doc);
+			const candidate = day && matchesDate(cited, day) && mentions(doc, name) ? toCandidate(doc) : null;
+			if (candidate) found.push(candidate);
+		}
+		const last = documents.length ? documentDay(documents[documents.length - 1]) : null;
+		if ((last && last.year > cited.year) || documents.length < PAGE_SIZE) break;
+	}
+	return found;
+}

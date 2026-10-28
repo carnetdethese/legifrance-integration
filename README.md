@@ -148,11 +148,11 @@ Le plugin tient, dans le dossier du plugin, une base SQLite (`legifrance.sqlite`
 
 ### Fonctionnalités intéressantes à développer (si le temps le permet)
 
--   [ ] Un _parser_ permettant de lister facilement tous les textes juridiques présents dans le coffre ;
-    -   [ ] _Parser_ de décisions.
-    -   [ ] _Parser_ de textes législatifs.
+-   [x] Un _parser_ permettant de lister facilement tous les textes juridiques présents dans le coffre ;
+    -   [x] _Parser_ de décisions.
+    -   [x] _Parser_ de textes législatifs.
 -   [x] Un _parser_ des notes : liste des décisions, textes et articles cités, avec liens Légifrance, dans un panneau latéral (commande « Afficher les références juridiques de la note »). Pistes : reconnaître davantage de formats de citation, ouvrir les documents retrouvés dans le lecteur du plugin.
--   [ ] Une prévisualisation des textes (peut-être sous la forme d'un pop-up lorsqu'on passe la souris au dessus d'un lien lié à Légifrance ?)
+-   [x] Une prévisualisation des textes (peut-être sous la forme d'un pop-up lorsqu'on passe la souris au dessus d'un lien lié à Légifrance ?)
 
 ## Discord
 

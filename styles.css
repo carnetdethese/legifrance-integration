@@ -231,3 +231,889 @@
 	border-radius: var(--radius-s);
 	user-select: text;
 }
+
+/* --- Base de données ------------------------------------------------------ */
+
+.legifrance-view.view-content:has(> .legifrance-database) {
+	padding: var(--size-4-3);
+}
+
+.legifrance-database {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	height: 100%;
+}
+
+.legifrance-database-tabs,
+.legifrance-database-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--size-2-3);
+}
+
+.legifrance-database-scroll {
+	overflow: auto;
+	flex: 1;
+}
+
+.legifrance-database table {
+	border-collapse: collapse;
+	font-size: var(--font-ui-smaller);
+}
+
+.legifrance-database th,
+.legifrance-database td {
+	padding: var(--size-2-1) var(--size-4-2);
+	border-bottom: 1px solid var(--background-modifier-border);
+	text-align: left;
+	vertical-align: top;
+	max-width: 420px;
+}
+
+.legifrance-database th {
+	position: sticky;
+	top: 0;
+	background: var(--background-primary);
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.legifrance-database details pre {
+	white-space: pre-wrap;
+	max-height: 40vh;
+	overflow: auto;
+	margin: var(--size-2-2) 0 0;
+}
+
+.legifrance-database-null {
+	color: var(--text-faint);
+}
+
+/* --- Réglages : onglets et correspondance des propriétés ------------------- */
+
+.legifrance-settings-tabs {
+	display: flex;
+	gap: var(--size-2-3);
+	margin-bottom: var(--size-4-3);
+}
+
+/* Table de correspondance : trois colonnes alignées (propriété, champ, bouton), avec en-têtes. */
+.legifrance-mapping-header,
+.legifrance-mapping-row .setting-item-control {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--size-4-8);
+	gap: var(--size-4-3);
+	align-items: center;
+}
+
+.legifrance-mapping-header {
+	padding: var(--size-4-2) 0 var(--size-2-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.legifrance-mapping-row {
+	padding: var(--size-2-2) 0;
+	border-top: none;
+}
+
+.legifrance-mapping-row .setting-item-info {
+	display: none;
+}
+
+.legifrance-mapping-row .setting-item-control {
+	flex: 1 1 100%;
+	justify-content: stretch;
+}
+
+.legifrance-mapping-row input[type="text"],
+.legifrance-mapping-row select {
+	width: 100%;
+}
+
+/* --- Réglages : avancement des indexations -------------------------------- */
+
+.legifrance-status {
+	margin-bottom: var(--size-4-4);
+}
+
+.legifrance-status-row {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-1);
+	padding: var(--size-4-2) 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.legifrance-status-title {
+	font-weight: var(--font-semibold);
+}
+
+.legifrance-status-row progress {
+	width: 100%;
+}
+
+.legifrance-status-row button {
+	align-self: flex-start;
+}
+
+.legifrance-status-lines {
+	white-space: pre-line;
+}
+
+/* --- Analyse de la jurisprudence ------------------------------------------- */
+
+.legifrance-view.view-content:has(> .legifrance-juris) {
+	padding: var(--size-4-4) var(--size-4-5);
+}
+
+.legifrance-juris {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-4);
+	width: 100%;
+	max-width: 1100px;
+	height: 100%;
+	margin: 0 auto;
+}
+
+/* Chiffres clés */
+.legifrance-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+	gap: var(--size-4-3);
+}
+
+.legifrance-stat {
+	padding: var(--size-4-3) var(--size-4-4);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+}
+
+.legifrance-stat-value {
+	font-size: var(--font-ui-larger);
+	font-weight: var(--font-semibold);
+	line-height: 1.2;
+	font-variant-numeric: tabular-nums;
+}
+
+.legifrance-stat-label {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+/* Onglets : l'onglet actif est entouré d'un contour et d'un fond, comme un champ sélectionné */
+.legifrance-tabs {
+	display: flex;
+	gap: var(--size-4-2);
+}
+
+.legifrance-tab {
+	height: auto;
+	padding: var(--size-4-1) var(--size-4-4);
+	border: 1px solid transparent;
+	border-radius: var(--radius-m);
+	background: none;
+	box-shadow: none;
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+.legifrance-tab:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.legifrance-tab.is-active {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-active-hover);
+	color: var(--text-normal);
+	font-weight: var(--font-medium);
+}
+
+.legifrance-tab:focus-visible {
+	box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.legifrance-juris-body {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding-right: var(--size-4-1);
+}
+
+/* Cartes : une rubrique = un titre, son effectif, une aide, des lignes */
+.legifrance-card {
+	margin-bottom: var(--size-4-4);
+	padding: var(--size-4-3) var(--size-4-4);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+}
+
+.legifrance-card-head {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+}
+
+.legifrance-card-head h5 {
+	margin: 0;
+	color: var(--text-normal);
+	font-size: var(--font-ui-medium);
+	font-weight: var(--font-semibold);
+	text-transform: none;
+}
+
+.legifrance-card-hint {
+	margin: var(--size-2-1) 0 var(--size-4-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.legifrance-badge {
+	padding: 0 var(--size-4-2);
+	border-radius: var(--radius-l);
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+}
+
+.legifrance-badge.is-alert {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.legifrance-empty {
+	margin: var(--size-4-2) 0;
+	color: var(--text-faint);
+}
+
+/* Ligne : repère (date) | titre et détails | actions */
+.legifrance-rows > .legifrance-row:first-child {
+	border-top: none;
+}
+
+.legifrance-row {
+	display: grid;
+	grid-template-columns: 6.5em minmax(0, 1fr) auto;
+	gap: var(--size-4-3);
+	align-items: start;
+	padding: var(--size-4-2) 0;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.legifrance-row.is-plain {
+	grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.legifrance-row-lead {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-variant-numeric: tabular-nums;
+	line-height: var(--line-height-normal);
+}
+
+.legifrance-row-title {
+	font-weight: var(--font-medium);
+	overflow-wrap: anywhere;
+}
+
+.legifrance-row-meta {
+	margin-top: var(--size-2-1);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.legifrance-row-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-1);
+}
+
+.legifrance-diff {
+	margin-top: var(--size-2-1);
+	font-size: var(--font-ui-smaller);
+}
+
+.legifrance-diff s {
+	color: var(--text-faint);
+}
+
+.legifrance-chip {
+	display: inline-block;
+	margin: 0 var(--size-2-2) var(--size-2-1) 0;
+	padding: 0 var(--size-4-2);
+	border-radius: var(--radius-s);
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.6;
+}
+
+.legifrance-warning {
+	color: var(--text-warning);
+}
+
+/* Décisions proches */
+.legifrance-related {
+	margin: var(--size-4-2) 0 0;
+	padding: var(--size-2-2) var(--size-4-3);
+	border-left: 2px solid var(--background-modifier-border);
+	list-style: none;
+}
+
+.legifrance-related li {
+	padding: var(--size-2-2) 0;
+}
+
+/* Chronologie : filtres, puis une colonne par année avec un filet vertical */
+.legifrance-filters {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+}
+
+.legifrance-filters select {
+	width: 100%;
+}
+
+.legifrance-count {
+	margin: 0 0 var(--size-4-3);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.legifrance-year {
+	display: grid;
+	grid-template-columns: 4.5em minmax(0, 1fr);
+	gap: var(--size-4-3);
+	margin-bottom: var(--size-4-3);
+}
+
+.legifrance-year-label {
+	position: sticky;
+	/* Sous le bandeau collant de la chronologie (sa hauteur est mesurée). */
+	top: var(--legifrance-bar-height, 0px);
+	align-self: start;
+	margin: 0;
+	padding-top: var(--size-4-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-semibold);
+	font-variant-numeric: tabular-nums;
+}
+
+.legifrance-year-items {
+	padding-left: var(--size-4-4);
+	border-left: 2px solid var(--background-modifier-border);
+}
+
+/* Articles : liste à gauche, décisions à droite */
+.legifrance-articles {
+	display: grid;
+	grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+	gap: var(--size-4-4);
+	align-items: start;
+}
+
+.legifrance-articles .legifrance-card {
+	margin-bottom: 0;
+}
+
+.legifrance-articles input[type="search"] {
+	width: 100%;
+	margin-bottom: var(--size-4-2);
+}
+
+.legifrance-article-filters {
+	display: grid;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+}
+
+.legifrance-article-filters select {
+	width: 100%;
+}
+
+.legifrance-article-list {
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.legifrance-article {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	padding: var(--size-2-3) var(--size-4-2);
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+
+.legifrance-article:hover {
+	background: var(--background-modifier-hover);
+}
+
+.legifrance-article.is-selected {
+	background: var(--background-modifier-active-hover);
+	font-weight: var(--font-medium);
+}
+
+.legifrance-article-count {
+	flex: none;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 700px) {
+	.legifrance-articles {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* Panneau des références : bloc d'une fiche */
+.legifrance-fiche-insights {
+	padding-bottom: var(--size-4-2);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.legifrance-timeline-bar {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-3);
+}
+
+.legifrance-timeline-bar .legifrance-count {
+	margin: 0;
+}
+
+.legifrance-timeline-bar button {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+}
+
+.legifrance-merge-list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-4);
+}
+
+.legifrance-merge-choice {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--size-4-2);
+	padding: var(--size-4-2);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	cursor: pointer;
+}
+
+.legifrance-merge-choice:has(input:checked) {
+	border-color: var(--interactive-accent);
+}
+
+.legifrance-timeline-bar {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	padding: var(--size-4-2) 0;
+	background: var(--background-primary);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.legifrance-suggestions {
+	margin-bottom: var(--size-4-4);
+	padding: var(--size-4-2) var(--size-4-3);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+}
+
+.legifrance-suggestions summary {
+	cursor: pointer;
+	font-weight: var(--font-semibold);
+}
+
+.legifrance-info {
+	margin-top: var(--size-4-2);
+	padding: var(--size-4-2) var(--size-4-3);
+	background: var(--background-secondary);
+	border-radius: var(--radius-m);
+	font-size: var(--font-ui-small);
+}
+
+.legifrance-info dl {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: var(--size-2-1) var(--size-4-3);
+	margin: 0;
+}
+
+.legifrance-info dl > div {
+	display: contents;
+}
+
+.legifrance-info dt {
+	color: var(--text-muted);
+}
+
+.legifrance-info dd {
+	margin: 0;
+}
+
+.legifrance-info ul {
+	margin: var(--size-4-2) 0 0;
+	padding-left: var(--size-4-4);
+}
+
+.legifrance-suggestion {
+	padding: var(--size-4-3) 0;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.legifrance-suggestion-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+	color: var(--text-muted);
+}
+
+.legifrance-suggestion-pair {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: var(--size-4-3);
+}
+
+.legifrance-mentions {
+	margin-bottom: var(--size-4-3);
+}
+
+.legifrance-mentions-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: var(--size-2-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.legifrance-mentions .search-result-file-match {
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.legifrance-section-head {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	padding: var(--size-2-2) 0;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	text-transform: uppercase;
+	cursor: pointer;
+	user-select: none;
+}
+
+.legifrance-section-head:hover,
+.legifrance-section-head:focus-visible {
+	color: var(--text-normal);
+}
+
+.legifrance-section-title {
+	flex: 1;
+	font-weight: var(--font-semibold);
+}
+
+.legifrance-section-body {
+	padding-left: var(--size-4-3);
+}
+
+.legifrance-section > .legifrance-section-body > .legifrance-section .legifrance-section-head {
+	text-transform: none;
+}
+
+.legifrance-genealogy {
+	margin-top: var(--size-4-2);
+	font-size: var(--font-ui-small);
+}
+
+.legifrance-genealogy h6 {
+	margin: 0 0 var(--size-2-2);
+	color: var(--text-muted);
+	text-transform: uppercase;
+	font-size: var(--font-ui-smaller);
+}
+
+.legifrance-genealogy .legifrance-chip {
+	cursor: pointer;
+}
+
+/* --- Cycle de la donnée et pastilles d'état des sources -------------------- */
+
+.legifrance-cycle {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-3);
+	max-width: 760px;
+}
+
+.legifrance-cycle-step {
+	padding: var(--size-4-3) var(--size-4-4);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+}
+
+.legifrance-cycle-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+}
+
+.legifrance-cycle-head h5,
+.legifrance-cycle-legend h5 {
+	margin: 0;
+}
+
+.legifrance-cycle-step progress {
+	width: 100%;
+}
+
+.legifrance-cycle-legend > div {
+	margin-top: var(--size-4-1);
+}
+
+.legifrance-source {
+	display: inline-block;
+	margin-left: var(--size-4-2);
+	padding: 0 var(--size-4-2);
+	border-radius: var(--radius-s);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-normal);
+	line-height: 1.6;
+	vertical-align: middle;
+}
+
+.legifrance-source-fiche {
+	background: rgba(var(--color-green-rgb), 0.18);
+	color: var(--color-green);
+}
+
+.legifrance-source-cite {
+	background: rgba(var(--color-yellow-rgb), 0.2);
+	color: var(--color-yellow);
+}
+
+.legifrance-source-orpheline {
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+}
+
+.legifrance-tabs .legifrance-tabs-aside {
+	flex: none;
+	color: var(--text-muted);
+}
+
+/* --- Recherche dans les textes, version d'un article à la date d'une décision -- */
+
+.legifrance-search-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-3);
+}
+
+.legifrance-search-bar input[type="search"] {
+	flex: 1 1 280px;
+}
+
+.legifrance-snippet {
+	margin-top: var(--size-2-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.legifrance-snippet mark {
+	background: var(--text-highlight-bg);
+	color: var(--text-normal);
+}
+
+.legifrance-version {
+	margin: 0 0 var(--size-4-2) var(--size-4-5);
+}
+
+.legifrance-version-item {
+	display: block;
+}
+
+.legifrance-version-item a {
+	margin-left: var(--size-4-2);
+}
+
+/* --- Graphe des citations --------------------------------------------------- */
+
+.legifrance-graph-options {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--size-4-4);
+	margin-bottom: var(--size-4-3);
+	font-size: var(--font-ui-small);
+}
+
+.legifrance-graph-options .legifrance-count {
+	margin: 0 0 0 auto;
+}
+
+.legifrance-graph-body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+	gap: var(--size-4-4);
+	align-items: start;
+}
+
+.legifrance-graph-canvas {
+	position: relative;
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+	overflow: hidden;
+}
+
+.legifrance-graph-canvas svg {
+	display: block;
+	width: 100%;
+	aspect-ratio: 1000 / 700;
+	cursor: grab;
+	touch-action: none;
+}
+
+.legifrance-graph-canvas svg:active {
+	cursor: grabbing;
+}
+
+.legifrance-graph-zoom {
+	position: absolute;
+	top: var(--size-4-2);
+	right: var(--size-4-2);
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-1);
+}
+
+.legifrance-edge {
+	stroke: var(--text-faint);
+	stroke-width: 1;
+	opacity: 0.55;
+}
+
+.legifrance-edge-mention {
+	stroke-dasharray: 3 3;
+}
+
+.legifrance-edge.is-lit {
+	stroke: var(--text-accent);
+	stroke-width: 1.6;
+	opacity: 1;
+}
+
+.legifrance-edge.is-dim {
+	opacity: 0.1;
+}
+
+.legifrance-node {
+	cursor: pointer;
+}
+
+.legifrance-node circle {
+	stroke: var(--background-secondary);
+	stroke-width: 1.5;
+}
+
+.legifrance-node-note circle {
+	fill: var(--color-blue);
+}
+
+.legifrance-node-note.is-isolated circle {
+	fill: transparent;
+	stroke: var(--color-blue);
+	stroke-width: 2;
+}
+
+.legifrance-node-decision circle {
+	fill: var(--color-orange);
+	stroke: var(--color-yellow);
+	stroke-width: 2.5;
+}
+
+.legifrance-node-decision.has-fiche circle {
+	stroke: var(--color-green);
+}
+
+.legifrance-node-article circle {
+	fill: var(--color-purple);
+}
+
+.legifrance-node.is-dim {
+	opacity: 0.2;
+}
+
+.legifrance-node.is-selected circle {
+	stroke: var(--text-normal);
+	stroke-width: 3;
+}
+
+.legifrance-node text {
+	fill: var(--text-normal);
+	font-size: 11px;
+	paint-order: stroke;
+	stroke: var(--background-secondary);
+	stroke-width: 3px;
+	pointer-events: none;
+}
+
+.legifrance-graph-legend {
+	margin: 0 0 var(--size-4-2);
+	padding: 0;
+	list-style: none;
+}
+
+.legifrance-key {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	margin-right: var(--size-4-2);
+	border-radius: 50%;
+	border: 2px solid transparent;
+	vertical-align: middle;
+}
+
+.legifrance-key-note {
+	background: var(--color-blue);
+}
+
+.legifrance-key-decision {
+	background: var(--color-orange);
+	border-color: var(--color-yellow);
+}
+
+.legifrance-key-decision.has-fiche {
+	border-color: var(--color-green);
+}
+
+.legifrance-key-article {
+	background: var(--color-purple);
+}
+
+@media (max-width: 800px) {
+	.legifrance-graph-body {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

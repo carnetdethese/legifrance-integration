@@ -1,8 +1,8 @@
-import { TFile } from "obsidian";
+import { TFile, debounce } from "obsidian";
 import { useContext, useEffect, useReducer, useState, useSyncExternalStore } from "react";
 import { LegalRef } from "references/parser";
 import { PluginContext } from "./context";
-import { HISTORY_EVENT, REFERENCES_EVENT } from "main";
+import { HISTORY_EVENT, REFERENCES_EVENT, TASK_EVENT } from "main";
 import { documentDataStorage } from "./viewsData";
 
 export const usePlugin = () => {
@@ -88,4 +88,26 @@ export const useNoteReferences = () => {
 	}, [file, version]);
 
 	return { file: file?.extension === "md" ? file : null, refs };
+};
+
+/**
+ * Numéro de version incrémenté à chaque changement de la base (analyse, lien retrouvé, tâche
+ * terminée) : les analyses en dépendent pour se recalculer.
+ */
+export const useDatabaseVersion = () => {
+	const plugin = usePlugin();
+	const [version, refresh] = useReducer((n: number) => n + 1, 0);
+	useEffect(() => {
+		// Les liens entre notes (`[[fiche]]`) changent quand Obsidian réanalyse une note, et une tâche longue
+		// signale chaque étape : chaque changement relance les analyses, on laisse donc passer les rafales.
+		const links = debounce(refresh, 2000, true);
+		const changed = debounce(refresh, 500, true);
+		const refs = [plugin.events.on(REFERENCES_EVENT, changed), plugin.events.on(TASK_EVENT, changed)];
+		const linkRef = plugin.app.metadataCache.on("resolved", links);
+		return () => {
+			refs.forEach((ref) => plugin.events.offref(ref));
+			plugin.app.metadataCache.offref(linkRef);
+		};
+	}, [plugin]);
+	return version;
 };

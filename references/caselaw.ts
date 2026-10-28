@@ -4,6 +4,7 @@
  * des plus proches de la racine aux plus profonds.
  */
 import { htmlToMarkdown } from "obsidian";
+import { extractSummary, extractThemes, solutionFromTitle } from "./themes";
 
 /** Clefs où l'on cherche, dans l'ordre de préférence, chaque champ. */
 const TEXT_KEYS = ["texteHtml", "textHtml", "texteIntegral", "texte", "text", "contenu", "content"];
@@ -13,11 +14,7 @@ const DATE_KEYS = ["dateTexte", "dateDecision", "dateDec", "date"];
 /** Suffixes du numéro d'une décision du Conseil constitutionnel (champ `nature` : « DC », « QPC »…). */
 const CC_NATURES = ["DC", "QPC", "LOM", "LP", "L", "AN", "SEN", "ELEC", "FNR", "PDR", "ORGA", "AUTO", "I", "D"];
 
-/** Identifiant Légifrance d'une décision (`JURITEXT…`, `CETATEXT…`, `CONSTEXT…`). */
-const TEXT_ID = /\b(?:CONSTEXT|CETATEXT|JURITEXT)\d{12}\b/;
-
-/** Identifiant de décision contenu dans une adresse Légifrance ou un identifiant, ou `undefined`. */
-export const decisionTextId = (url: string) => TEXT_ID.exec(url)?.[0];
+export { decisionTextId } from "./ids";
 
 /** Ce que l'on retient de la réponse de l'API. */
 export interface DecisionText {
@@ -32,6 +29,10 @@ export interface DecisionText {
 	/** Juridiction, telle que Légifrance la donne. */
 	court?: string;
 	formation?: string;
+	/** Chemins de thèmes (« Collectivités territoriales > Commune »), voir `themes.ts`. */
+	themes: string[];
+	/** Résumé et mots-clés de Légifrance. */
+	summary?: string;
 }
 
 /** Couples (clef, valeur) de tout l'arbre JSON, en largeur : les clefs proches de la racine d'abord. */
@@ -73,15 +74,19 @@ export function readDecision(response: unknown): DecisionText | null {
 	const nature = first(response, ["nature"]) as string | undefined;
 	if (number && nature && CC_NATURES.includes(nature)) number = `${number} ${nature}`; // « 2012-653 » + « DC »
 
+	const title = (first(response, TITLE_KEYS) as string | undefined) ?? "Décision";
+	const sommaire = first(response, ["sommaire"], ["object"]);
 	return {
-		title: (first(response, TITLE_KEYS) as string | undefined) ?? "Décision",
+		title,
 		html: body,
 		markdown: htmlToMarkdown(body).trim(),
 		date: toDate(first(response, DATE_KEYS, ["string", "number"])),
 		number,
 		ecli: first(response, ["ecli"]) as string | undefined,
-		solution: first(response, ["solution"]) as string | undefined,
-		court: first(response, ["juridiction"]) as string | undefined,
+		solution: (first(response, ["solution"]) as string | undefined) ?? solutionFromTitle(title),
+		court: (first(response, ["juridiction"]) ?? first(response, ["natureJuridiction"])) as string | undefined,
 		formation: first(response, ["formation"]) as string | undefined,
+		themes: extractThemes(sommaire, title),
+		summary: extractSummary(sommaire, first(response, ["motsCles"], ["object"])),
 	};
 }
