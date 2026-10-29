@@ -360,6 +360,11 @@ export class ReferenceIndex {
 		return true;
 	}
 
+	/** Chemin de la fiche liée à cet identifiant Légifrance, s'il y en a une. */
+	ficheByLegifranceId(id: string) {
+		return this.fichesById.get(id);
+	}
+
 	/** Chemins des notes enregistrées comme fiches. */
 	fichePaths() {
 		return this.db.all<{ note_path: string }>("SELECT note_path FROM fiches").map((row) => row.note_path);

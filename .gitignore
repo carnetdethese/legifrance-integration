@@ -47,3 +47,4 @@ dist
 IDEES.md
 .excerpts-test.js
 .plan-test.js
+.existing-test.js

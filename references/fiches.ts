@@ -198,9 +198,9 @@ export interface FicheDifference {
 	expected: string;
 }
 
-const plainText = (value: string) => value.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[’']/g, "'").replace(/\s+/g, " ").trim();
+export const plainText = (value: string) => value.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[’']/g, "'").replace(/\s+/g, " ").trim();
 /** Numéro comparé sans espaces, points, tirets, « n° » ni zéros de tête : « 19-12.345 » et « 1912345 », « 4749 » et « 04749 » sont le même. */
-const bareNumber = (value: string) => plainText(value).replace(/^n\s*°\s*/, "").replace(/[\s.-]/g, "").replace(/^0+(?=\d)/, "");
+export const bareNumber = (value: string) => plainText(value).replace(/^n\s*°\s*/, "").replace(/[\s.-]/g, "").replace(/^0+(?=\d)/, "");
 
 const ORDINALS: [RegExp, string][] = [[/\bpremiere?\b/g, "1"], [/\bdeuxieme\b/g, "2"], [/\btroisieme\b/g, "3"], [/\bquatrieme\b/g, "4"], [/\bcinquieme\b/g, "5"], [/\bsixieme\b/g, "6"], [/\bseptieme\b/g, "7"], [/\bhuitieme\b/g, "8"], [/\bneuvieme\b/g, "9"], [/\bdixieme\b/g, "10"]];
 const FORMATION_KINDS: [RegExp, string][] = [[/\b(?:reunies?|ssr)\b/, "reunies"], [/\b(?:civile?|civ)\b/, "civile"], [/\b(?:criminelle|crim)\b/, "criminelle"], [/\b(?:commerciale|com)\b/, "commerciale"], [/\b(?:sociale|soc)\b/, "sociale"], [/\bplenieres?\b/, "pleniere"], [/\bmixte\b/, "mixte"]];

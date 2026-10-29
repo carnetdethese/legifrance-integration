@@ -18,6 +18,7 @@ import { LegifranceApi } from "api/legifrance";
 import { LegalDocument } from "abstracts/document";
 import { DocumentSearch } from "abstracts/searchHandler";
 import { registerCommands } from "commands";
+import { shouldCreateNote } from "creation/linkExisting";
 import { createNote } from "creation/newNote";
 import { HISTORY_EVENT, REFERENCES_EVENT } from "lib/events";
 import { ReferenceIndex } from "references";
@@ -367,9 +368,13 @@ export default class LegifrancePlugin extends Plugin {
 		(leaf.view as SearchResultView).setSearch(search);
 	}
 
-	/** Crée la note d'un document de l'historique à partir du modèle des réglages. */
+	/**
+	 * Crée la note d'un document de l'historique à partir du modèle des réglages, sauf si le coffre en a déjà une
+	 * (ouverte à la place, ou choisie par l'utilisateur en cas de doute).
+	 */
 	async createNoteFor(data: LegalDocument) {
 		try {
+			if (!(await shouldCreateNote(this, data))) return;
 			await createNote(this.app, this.settings, data);
 		} catch (error) {
 			console.error(error);
