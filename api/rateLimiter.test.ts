@@ -1,6 +1,9 @@
 /** Tests du limiteur de débit. Lancer : `npm test`. */
 import { RateLimiter } from "./rateLimiter";
 
+// Le limiteur utilise `window.setTimeout` (fenêtres détachées d'Obsidian) : sous Node, `window` est l'objet global.
+(globalThis as { window?: unknown }).window ??= globalThis;
+
 let fail = 0;
 const check = (name: string, ok: boolean, detail = "") => { if (!ok) { fail++; console.log("ÉCHEC", name, detail); } };
 

@@ -12,7 +12,7 @@ interface ReaderViewProps {
  * (Revue générale du droit, ArianeWeb) et s'affiche dans l'application, qui n'est pas un navigateur cloisonné.
  */
 const sanitized = (html: string) => {
-	const holder = document.createElement("div");
+	const holder = createDiv();
 	holder.appendChild(sanitizeHTMLToDom(html));
 	return holder.innerHTML;
 };

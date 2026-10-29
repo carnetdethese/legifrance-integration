@@ -17,6 +17,10 @@ export class ResearchTextView extends ReactItemView {
 		return "scale";
 	}
 
+	protected contentClasses() {
+		return ["is-side-panel"];
+	}
+
 	protected renderContent() {
 		return <ResearchView />;
 	}

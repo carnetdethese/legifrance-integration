@@ -164,7 +164,7 @@ const Cell = ({ column, value }: { column: string; value: unknown }): ReactNode 
 	if (/^https?:\/\//.test(text)) return <a href={text} title={text}>{text.replace(/^https?:\/\/(www\.)?/, "").slice(0, CELL_LENGTH)}</a>;
 	if (NOTE_COLUMNS.has(column)) {
 		const file = plugin.app.vault.getAbstractFileByPath(text);
-		return file instanceof TFile ? <a onClick={() => plugin.app.workspace.getLeaf(false).openFile(file)}>{text}</a> : text;
+		return file instanceof TFile ? <a onClick={() => void plugin.app.workspace.getLeaf(false).openFile(file)}>{text}</a> : text;
 	}
 	if (text.length <= CELL_LENGTH) return text;
 	return (

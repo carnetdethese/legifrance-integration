@@ -83,15 +83,15 @@ export const ReferencesPanel = () => {
 
 			{plugin.settings.debugRefs && (
 				<div className="legifrance-debug-bar">
-					<button disabled={busy} onClick={() => resolve(refs.filter((ref) => canResolve(ref)))}>
+					<button disabled={busy} onClick={() => void resolve(refs.filter((ref) => canResolve(ref)))}>
 						Relancer toutes les recherches
 					</button>
-					<button onClick={() => copyDiagnostic(plugin, file.path, refs)}>Copier le diagnostic</button>
+					<button onClick={() => void copyDiagnostic(plugin, file.path, refs)}>Copier le diagnostic</button>
 				</div>
 			)}
 
 			{missing.length > 0 && !plugin.settings.autoResolveRefs && (
-				<button disabled={busy} onClick={() => resolve(missing)}>
+				<button disabled={busy} onClick={() => void resolve(missing)}>
 					{busy ? "Recherche…" : `Retrouver ${missing.length} lien${missing.length > 1 ? "s" : ""} via l'API`}
 				</button>
 			)}
@@ -288,7 +288,7 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 					</button>
 				)}
 				{readable && (
-					<button className="clickable-icon" aria-label="Lire le texte (base de données)" onClick={() => void plugin.openStoredDocument(documentId!)}>
+					<button className="clickable-icon" aria-label="Lire le texte (base de données)" onClick={() => void plugin.openStoredDocument(documentId)}>
 						<BookOpen size={16} />
 					</button>
 				)}

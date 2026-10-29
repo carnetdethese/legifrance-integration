@@ -36,9 +36,9 @@ Le plugin fait deux choses, qui se rejoignent dans la base SQLite :
 | `creation/` | Création d'une note à partir d'un document (`newNote.ts`, modèles Handlebars). |
 | `references/` | **Le cœur récent** : parseur, base, résolution par l'API, tâches, analyses. Voir §3 à §5. |
 | `references/sources/` | Sources pour retrouver la décision d'une fiche sans identifiant : Légifrance, ArianeWeb, RGD. |
-| `settings/` | Onglet de réglages (`settings.ts`) et blocs d'état (`status.ts`). |
+| `settings/` | Onglet de réglages, déclaratif (`settings.ts` : `getSettingDefinitions`, Obsidian 1.13), identifiants dans le trousseau (`credentials.ts`) et blocs d'état (`status.ts`). |
 | `views/` | Vues Obsidian (classes `ItemView`) et composants React (`views/components/`). |
-| `lib/` | Petits utilitaires (dates, suggestion de dossiers) et constantes d'événements (`events.ts`). |
+| `lib/` | Petits utilitaires (dates, noms de fichiers sûrs, compatibilité des versions d'Obsidian) et constantes d'événements (`events.ts`). |
 
 ### Ce que fait chaque objet du plugin
 

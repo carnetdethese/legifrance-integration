@@ -25,14 +25,14 @@ export const HistoriqueView = () => {
 						<button
 							className="clickable-icon"
 							aria-label="Ouvrir"
-							onClick={() => plugin.openDocument(doc)}
+							onClick={() => void plugin.openDocument(doc)}
 						>
 							<ExternalLink size={16} />
 						</button>
 						<button
 							className="clickable-icon"
 							aria-label="Retirer de l'historique"
-							onClick={() => plugin.removeFromHistory(doc.data.id)}
+							onClick={() => void plugin.removeFromHistory(doc.data.id)}
 						>
 							<X size={16} />
 						</button>

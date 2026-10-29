@@ -20,8 +20,13 @@ export abstract class ReactItemView extends ItemView {
 
 	protected abstract renderContent(): ReactNode;
 
+	/** Classes de mise en page propres à la vue, ajoutées à sa zone de contenu (voir `styles.css`). */
+	protected contentClasses(): string[] {
+		return [];
+	}
+
 	async onOpen() {
-		this.contentEl.addClass("legifrance-view");
+		this.contentEl.addClasses(["legifrance-view", ...this.contentClasses()]);
 		this.root = createRoot(this.contentEl);
 		this.update();
 	}

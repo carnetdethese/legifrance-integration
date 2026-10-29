@@ -18,6 +18,7 @@ export function chooseMain(app: App, records: DecisionRecord[]): Promise<Decisio
 					cls: "setting-item-description",
 				});
 				const list = this.contentEl.createDiv({ cls: "legifrance-merge-list" });
+				const choices: { label: HTMLElement; radio: HTMLInputElement }[] = [];
 				for (const record of records) {
 					const details = [displayDate(record.date), record.court, record.number && `n° ${record.number}`, `${record.notes.length} note${record.notes.length > 1 ? "s" : ""}`, record.fichePath && "fiche", record.complete && "texte intégral"]
 						.filter(Boolean)
@@ -25,7 +26,13 @@ export function chooseMain(app: App, records: DecisionRecord[]): Promise<Decisio
 					const label = list.createEl("label", { cls: "legifrance-merge-choice" });
 					const radio = label.createEl("input", { type: "radio", attr: { name: "legifrance-merge-main" } });
 					radio.checked = record === main;
-					radio.addEventListener("change", () => (main = record));
+					label.toggleClass("is-selected", radio.checked);
+					choices.push({ label, radio });
+					radio.addEventListener("change", () => {
+						main = record;
+						// Les boutons radio d'un groupe n'annoncent que celui qui vient d'être coché : on remet tous les repères à jour.
+						for (const choice of choices) choice.label.toggleClass("is-selected", choice.radio.checked);
+					});
 					const text = label.createDiv();
 					text.createDiv({ text: record.name ?? record.title ?? record.label, cls: "legifrance-row-title" });
 					if (record.name) text.createDiv({ text: record.title ?? record.label, cls: "legifrance-row-meta" });

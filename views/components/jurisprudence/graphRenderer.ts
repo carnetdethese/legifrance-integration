@@ -254,11 +254,10 @@ export class GraphRenderer {
 
 	/** Couleurs lues dans les variables du graphe d'Obsidian (celles que les thèmes règlent), à défaut dans le thème. */
 	private readPalette(): Palette {
-		const probe = this.canvas.ownerDocument.createElement("span");
-		probe.style.display = "none";
-		(this.canvas.parentElement ?? this.canvas.ownerDocument.body).appendChild(probe);
+		const probe = (this.canvas.parentElement ?? this.canvas.ownerDocument.body).createSpan();
+		probe.hide();
 		const color = (expression: string) => {
-			probe.style.color = "";
+			probe.setCssStyles({ color: "" });
 			probe.style.color = expression;
 			return this.win.getComputedStyle(probe).color;
 		};

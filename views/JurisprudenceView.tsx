@@ -17,6 +17,10 @@ export class JurisprudenceView extends ReactItemView {
 		return "gavel";
 	}
 
+	protected contentClasses() {
+		return ["is-juris"];
+	}
+
 	protected renderContent() {
 		return <JurisprudencePanel />;
 	}

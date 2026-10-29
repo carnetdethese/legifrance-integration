@@ -3,7 +3,7 @@
  * en trop attendent leur tour, dans l'ordre. Après un refus de l'API pour quota dépassé, `backoff`
  * suspend tout envoi pendant un délai. Module pur (sans Obsidian).
  */
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 /** Voie d'une requête : une action de l'utilisateur passe avant les tâches de fond (indexation, lots). */
 export type Lane = "interactive" | "background";

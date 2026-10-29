@@ -43,7 +43,7 @@ export async function findCandidates(plugin: LegifrancePlugin, query: DecisionQu
 				continue;
 			}
 			try {
-				const found = await source[mode]!(plugin, query, lane);
+				const found = await source[mode](plugin, query, lane);
 				if (found.length) return { ...outcome, candidates: found };
 			} catch (error) {
 				const quota = error instanceof ApiError && [401, 403, 429].includes(error.status ?? 0);

@@ -105,7 +105,7 @@ export const TodoTab = ({ records }: { records: DecisionRecord[] }) => {
 							record={record}
 							extra={
 								hasLegifranceId(record.id) ? (
-									<button onClick={() => create(record)}>Créer la fiche</button>
+									<button onClick={() => void create(record)}>Créer la fiche</button>
 								) : (
 									<span className="legifrance-row-meta" title="L'identifiant Légifrance sera connu une fois la décision retrouvée par l'API">identifiant inconnu</span>
 								)
@@ -205,7 +205,7 @@ export const TodoTab = ({ records }: { records: DecisionRecord[] }) => {
 						<Row
 							key={item.path}
 							title={<a onClick={() => openNote(item.path)}>{item.title}</a>}
-							actions={<button onClick={() => fix(item)}>Corriger</button>}
+							actions={<button onClick={() => void fix(item)}>Corriger</button>}
 						>
 							{item.differences.map((d) => (
 								<div key={d.property} className="legifrance-diff">

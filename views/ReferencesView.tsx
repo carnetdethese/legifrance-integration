@@ -17,6 +17,10 @@ export class ReferencesView extends ReactItemView {
 		return "landmark";
 	}
 
+	protected contentClasses() {
+		return ["is-side-panel"];
+	}
+
 	protected renderContent() {
 		return <ReferencesPanel />;
 	}

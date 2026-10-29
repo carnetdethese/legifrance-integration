@@ -82,10 +82,10 @@ export const useNoteReferences = () => {
 			return;
 		}
 		setRefs(cachedRefs(file));
-		plugin.getReferences(file).then((found) => {
+		void plugin.getReferences(file).then((found) => {
 			if (cancelled) return;
 			setRefs(found);
-			if (plugin.settings.autoResolveRefs) plugin.links.resolve(found);
+			if (plugin.settings.autoResolveRefs) void plugin.links.resolve(found);
 		});
 		return () => {
 			cancelled = true;

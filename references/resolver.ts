@@ -118,7 +118,7 @@ const compact = (number: string) => number.replace(/[.\s]/g, "");
 
 /** Le titre d'une décision porte-t-il ce numéro ? (écarte les résultats approchés) */
 export const cites = (title: string, number: string) =>
-	new RegExp(`(?<![\\w.-])${number.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w-])`).test(title.replace(/\s+/g, " "));
+	new RegExp(`(?:^|[^\\w.-])${number.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w-])`).test(title.replace(/\s+/g, " "));
 
 /** Le résultat mentionne-t-il toutes les parties citées (titre, texte ou extraits surlignés) ? */
 export function mentionsParties(result: SearchResult, name: string) {

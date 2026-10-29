@@ -77,7 +77,7 @@ export async function completeFiche(plugin: LegifrancePlugin, file: TFile, silen
 		}
 		let written: string[] = [];
 		await plugin.app.fileManager.processFrontMatter(file, (front) => {
-			const updates = ficheUpdates(front, settings, values!, key!);
+			const updates = ficheUpdates(front, settings, values!, key);
 			Object.assign(front, updates);
 			written = Object.keys(updates);
 		});
@@ -170,7 +170,7 @@ export async function completeAllFiches(plugin: LegifrancePlugin, progress: (don
 				report.already++;
 				continue;
 			}
-			await plugin.app.fileManager.processFrontMatter(file, (front) => Object.assign(front, ficheUpdates(front, settings, values!, key!)));
+			await plugin.app.fileManager.processFrontMatter(file, (front) => Object.assign(front, ficheUpdates(front, settings, values, key)));
 			report.completed++;
 		} catch (error) {
 			// Identifiants refusés ou quota dépassé : inutile d'insister.

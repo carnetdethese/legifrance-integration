@@ -1,5 +1,5 @@
 /** Tests des fiches de décisions. Lancer : `npm test`. */
-import { ariaValues, completableCount, courtCode, ficheDifferences, ficheId, ficheQuery, ficheUpdates, isFiche, missingProperties } from "./fiches";
+import { propertiesOf, withProperties, ariaValues, completableCount, courtCode, ficheDifferences, ficheId, ficheQuery, ficheUpdates, isFiche, missingProperties } from "./fiches";
 import { decisionKey, legifranceIdOf, spokenDate } from "./ids";
 import { datedTextMatches, stripMarks } from "./textMatch";
 import { numberSignature } from "./merge";
@@ -186,4 +186,14 @@ eq("titre RGD : pas une décision", parseRgdTitle("Les bases fondamentales de la
 eq("numéros RGD", [bareCaseNumber("00012"), bareCaseNumber("12"), bareCaseNumber("10BX00170")], ["12", "12", "10bx00170"]);
 eq("clef RGD", decisionKey("[Blanco](https://www.revuegeneraledudroit.eu/blog/decisions/tribunal-des-conflits-8-fevrier-1873-blanco-numero-00012-publie-au-recueil/?x=1)"), "https://www.revuegeneraledudroit.eu/blog/decisions/tribunal-des-conflits-8-fevrier-1873-blanco-numero-00012-publie-au-recueil/");
 eq("clef RGD sans schéma", decisionKey("www.revuegeneraledudroit.eu/blog/decisions/caa-bordeaux-x/"), "https://www.revuegeneraledudroit.eu/blog/decisions/caa-bordeaux-x/");
+// correspondance des propriétés (réglages)
+{
+	const mapping = [{ property: "date", field: "date" as const }, { property: "numero", field: "number" as const }, { property: "décision", field: "number" as const }];
+	eq("propriétés d'un champ", propertiesOf(mapping, "number"), "numero, décision");
+	eq("champ sans propriété", propertiesOf(mapping, "ecli"), "");
+	eq("remplacement d'un champ", withProperties(mapping, "number", " n , ").map((m) => `${m.field}:${m.property}`), ["date:date", "number:n"]);
+	eq("champ vidé", withProperties(mapping, "number", "").map((m) => m.field), ["date"]);
+	eq("champ ajouté", withProperties(mapping, "ecli", "ecli").map((m) => `${m.field}:${m.property}`), ["date:date", "number:numero", "number:décision", "ecli:ecli"]);
+}
+
 process.exit(fail ? 1 : 0);

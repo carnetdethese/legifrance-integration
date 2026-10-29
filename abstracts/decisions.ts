@@ -25,7 +25,7 @@ export const codeJuridiction = new Map<string, string>([
  * @returns le document complété, ou `undefined` si la réponse ne contient pas de texte.
  */
 export async function getDecisionInfo(document: LegalDocument, search: string, api: LegifranceApi): Promise<LegalDocument | undefined> {
-	const response = (await api.consultDecision(document.id, { searchedString: search, cnil: document.origin === "CNIL" })) as DocumentResponse;
+	const response = await api.consultDecision<DocumentResponse>(document.id, { searchedString: search, cnil: document.origin === "CNIL" });
 
 	document.titre = removeTags(document.titre);
 	const text = response.text;

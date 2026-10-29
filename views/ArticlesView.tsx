@@ -17,6 +17,10 @@ export class ArticlesView extends ReactItemView {
 		return "scroll-text";
 	}
 
+	protected contentClasses() {
+		return ["is-side-panel"];
+	}
+
 	protected renderContent() {
 		return <ArticlesPanel />;
 	}

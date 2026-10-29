@@ -306,11 +306,11 @@ export const DEFAULT_GRAPH_SETTINGS: GraphSettings = {
 export function mergeGraphSettings(saved: unknown): GraphSettings {
 	const raw = (saved && typeof saved === "object" ? saved : {}) as Record<string, unknown>;
 	const defaults = DEFAULT_GRAPH_SETTINGS;
-	const flag = (key: keyof GraphSettings) => (typeof raw[key] === "boolean" ? (raw[key] as boolean) : (defaults[key] as boolean));
+	const flag = (key: keyof GraphSettings) => (typeof raw[key] === "boolean" ? (raw[key]) : (defaults[key] as boolean));
 	const range = (key: keyof typeof GRAPH_RANGES) => {
 		const value = raw[key];
 		const { min, max } = GRAPH_RANGES[key];
-		return typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : (defaults[key] as number);
+		return typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : (defaults[key]);
 	};
 	const limit = typeof raw.maxDecisions === "number" ? GRAPH_LIMITS.find((n) => n >= (raw.maxDecisions as number)) ?? GRAPH_LIMITS[GRAPH_LIMITS.length - 1] : defaults.maxDecisions;
 	const groups = Array.isArray(raw.groups)

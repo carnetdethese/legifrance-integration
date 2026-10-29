@@ -440,7 +440,7 @@ export class ReferenceIndex {
 			);
 			// Un autre document : l'ancien statut et l'ancien signalement de changement ne le concernent pas.
 			if (before && before.url !== link.url) this.db.run("UPDATE links SET previous_status = NULL, changed_at = NULL WHERE ref_key = ?", [ref.key]);
-			if (changed) this.db.run("UPDATE links SET previous_status = ?, changed_at = ? WHERE ref_key = ?", [before!.statut ?? null, Date.now(), ref.key]);
+			if (changed) this.db.run("UPDATE links SET previous_status = ?, changed_at = ? WHERE ref_key = ?", [before.statut ?? null, Date.now(), ref.key]);
 			this.db.run("DELETE FROM misses WHERE ref_key = ?", [ref.key]);
 		});
 	}

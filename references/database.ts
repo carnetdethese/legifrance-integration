@@ -221,13 +221,13 @@ export class LegalDatabase {
 
 	/** Exécute une écriture. */
 	run(sql: string, params: Param[] = []) {
-		this.db.run(sql, params as SqlValue[]);
+		this.db.run(sql, params);
 		this.onChange();
 	}
 
 	/** Lignes d'une requête, sous forme d'objets (colonne → valeur). */
 	all<T = Record<string, SqlValue>>(sql: string, params: Param[] = []): T[] {
-		const statement = this.db.prepare(sql, params as SqlValue[]);
+		const statement = this.db.prepare(sql, params);
 		try {
 			const rows: T[] = [];
 			while (statement.step()) rows.push(statement.getAsObject() as T);

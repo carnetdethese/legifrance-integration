@@ -29,6 +29,16 @@ export interface FicheMapping {
 	field: FicheField;
 }
 
+/** Propriétés de la fiche qui reçoivent `field`, séparées par des virgules (la saisie des réglages). */
+export const propertiesOf = (mapping: FicheMapping[], field: FicheField) =>
+	mapping.filter((m) => m.field === field).map((m) => m.property).join(", ");
+
+/** La correspondance où `field` est reçu par les propriétés de `text` (séparées par des virgules) ; les autres champs sont inchangés. */
+export function withProperties(mapping: FicheMapping[], field: FicheField, text: string): FicheMapping[] {
+	const properties = text.split(",").map((property) => property.trim()).filter(Boolean);
+	return [...mapping.filter((m) => m.field !== field), ...properties.map((property) => ({ property, field }))];
+}
+
 /** Valeurs de la décision, telles que l'API les donne (champs absents : `undefined`). */
 export type DecisionValues = Partial<Record<FicheField, string>>;
 

@@ -50,13 +50,13 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 	}
 
 	useEffect(() => {
-		fetchResults();
+		void fetchResults();
 	}, []);
 
 	/** Applique une modification de la recherche puis relance la requête. */
 	function updateAndFetch(update: () => void) {
 		update();
-		fetchResults();
+		void fetchResults();
 	}
 
 	async function openDocument(selected: LegalDocument) {
@@ -109,7 +109,7 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 			)}
 			{status === "done" &&
 				results.map((result) => (
-					<ResultCard key={result.id} result={result} onOpen={openDocument} />
+					<ResultCard key={result.id} result={result} onOpen={(selected) => void openDocument(selected)} />
 				))}
 		</>
 	);

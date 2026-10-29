@@ -1,7 +1,8 @@
 import esbuild from "esbuild";
 import process from "process";
-import builtins from "builtin-modules";
+import { builtinModules as builtins } from "node:module";
 import { copyFileSync, mkdirSync, watchFile } from "fs";
+import { readFile } from "fs/promises";
 
 const outDir = "dist";
 const staticFiles = ["manifest.json", "styles.css"];
@@ -51,6 +52,16 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outfile: `${outDir}/main.js`,
 	plugins: [{
+		// sql.js teste s'il tourne sous Node et y charge `fs` et `path` pour lire son binaire ; ici le binaire est embarqué
+		// (voir `loader`), ces modules ne servent jamais : on ne les importe pas, le plugin n'accède ainsi à aucun fichier hors du coffre.
+		name: "sql-js-without-node-modules",
+		setup(build) {
+			build.onLoad({ filter: /sql\.js[\\/]dist[\\/]sql-wasm\.js$/ }, async (args) => {
+				const source = await readFile(args.path, "utf8");
+				return { contents: source.replace(/require\((["'])(?:fs|path)\1\)/g, "undefined"), loader: "js" };
+			});
+		},
+	}, {
 		name: "copy-static-files",
 		setup(build) {
 			build.onEnd(copyStatic);

@@ -4,7 +4,7 @@
  * (décisions proches, relations entre décisions), `SourceBadge` (pastille d'état d'une source), `useOpenNote`.
  */
 import { BookOpen, ExternalLink, FileText, Info, Sparkles } from "lucide-react";
-import { ReactNode, useMemo, useState } from "react";
+import { Fragment, ReactNode, useMemo, useState } from "react";
 import { relatedTo } from "references/corpus";
 import type { Excerpt } from "references/excerpts";
 import { sourceState } from "references/lifecycle";
@@ -163,7 +163,7 @@ export const DecisionInfo = ({ record, records }: { record: DecisionRecord; reco
 		<div className="legifrance-info">
 			<dl>
 				{facts.filter(([, value]) => value).map(([name, value]) => (
-					<div key={name}><dt>{name}</dt><dd>{value}</dd></div>
+					<Fragment key={name}><dt>{name}</dt><dd>{value}</dd></Fragment>
 				))}
 			</dl>
 			{record.summary && <p>{record.summary.length > 400 ? `${record.summary.slice(0, 400)}…` : record.summary}</p>}

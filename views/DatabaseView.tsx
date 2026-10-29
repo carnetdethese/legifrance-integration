@@ -17,6 +17,10 @@ export class DatabaseView extends ReactItemView {
 		return "database";
 	}
 
+	protected contentClasses() {
+		return ["is-database"];
+	}
+
 	protected renderContent() {
 		return <DatabasePanel />;
 	}

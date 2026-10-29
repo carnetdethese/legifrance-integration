@@ -208,7 +208,7 @@ check("800 nœuds : 20 pas en moins de 2 s (de quoi tenir 60 images par seconde)
 	const record = { id: "CETATEXT1", label: "CE, n° 1", themes: [`Responsabilité${THEME_SEPARATOR}Faute`, `Responsabilité${THEME_SEPARATOR}Risque`], complete: true, notes: ["a.md"], members: ["CETATEXT1", "CETATEXT1bis", "decision|x"], name: "Couitéas", fichePath: "f.md" } as DecisionRecord;
 	const loaded = loadGraphInput(index, [record]);
 	check("décision : nom, thème de plus haut niveau (sans doublon), fiche", JSON.stringify(loaded.decisions) === JSON.stringify([{ id: "CETATEXT1", label: "Couitéas", themes: ["Responsabilité"], fiche: true, notes: ["a.md"] }]), JSON.stringify(loaded.decisions));
-check("décision : sa date, pour l'animation", loadGraphInput(index, [{ ...record, date: "1923-11-30" } as DecisionRecord]).decisions[0].date === "1923-11-30");
+check("décision : sa date, pour l'animation", loadGraphInput(index, [{ ...record, date: "1923-11-30" }]).decisions[0].date === "1923-11-30");
 	check("articles visés rattachés à la décision regroupée, sans doublon, décision inconnue ignorée", loaded.decisionArticles.length === 1 && loaded.decisionArticles[0].count === 3, JSON.stringify(loaded.decisionArticles));
 	check("articles écrits dans les notes : codes et droit de l'Union, pas les décisions", loaded.noteArticles.map((a) => a.key).sort().join() === "article|1240,eu|celex=1|number=32", JSON.stringify(loaded.noteArticles));
 

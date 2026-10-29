@@ -31,7 +31,7 @@ export const NoteTaking = () => {
 	/** Modifie le document de l'historique, l'enregistre et rafraîchit l'affichage. */
 	function edit(mutate: (data: LegalDocument) => void) {
 		mutate(data);
-		plugin.saveSettings();
+		void plugin.saveSettings();
 		refresh();
 	}
 
@@ -117,7 +117,7 @@ export const NoteTaking = () => {
 				<button
 					className="mod-cta"
 					aria-label="Créer la note"
-					onClick={() => plugin.createNoteFor(data)}
+					onClick={() => void plugin.createNoteFor(data)}
 				>
 					<Rocket size={16} />
 				</button>

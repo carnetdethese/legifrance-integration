@@ -43,7 +43,7 @@ const kindOf = (sentence: string): RelationKind => FORMULAS.find(([, formula]) =
 /** Décisions citées par un texte, chacune avec la formule la plus forte parmi ses citations. */
 export function decisionRelations(markdown: string): Relation[] {
 	const found = new Map<string, Relation>();
-	for (const raw of markdown.split(/(?<=[.;!?])\s+/)) {
+	for (const raw of markdown.replace(/([.;!?])\s+/g, "$1\u0001").split("\u0001")) {
 		const sentence = raw.replace(/\s+/g, " ").trim();
 		if (sentence.length < 20) continue;
 		const refs = citationSpans(sentence).map((s) => s.ref).filter((ref) => ref.kind === "decision");

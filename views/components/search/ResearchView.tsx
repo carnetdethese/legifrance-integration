@@ -23,7 +23,7 @@ export const ResearchView = () => {
 			new Notice("Choisissez un fond.");
 			return;
 		}
-		plugin.activateResultsView(recherche);
+		void plugin.activateResultsView(recherche);
 	}
 
 	return (

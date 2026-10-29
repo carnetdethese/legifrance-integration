@@ -1,4 +1,5 @@
 import { App, Modal, Setting } from "obsidian";
+import { setDestructive } from "lib/compat";
 
 /** Demande une confirmation avant une action qui modifie de nombreuses notes. */
 export function confirmAction(app: App, title: string, message: string): Promise<boolean> {
@@ -15,7 +16,7 @@ export function confirmAction(app: App, title: string, message: string): Promise
 				this.contentEl.createEl("p", { text: message });
 				new Setting(this.contentEl)
 					.addButton((button) => button.setButtonText("Annuler").onClick(() => answer(false, this)))
-					.addButton((button) => button.setButtonText("Continuer").setWarning().onClick(() => answer(true, this)));
+					.addButton((button) => setDestructive(button.setButtonText("Continuer")).onClick(() => answer(true, this)));
 			}
 			onClose() {
 				this.contentEl.empty();

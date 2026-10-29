@@ -34,14 +34,14 @@ export const InfoCard = ({ data }: InfoCardProps) => {
 					<button
 						className="clickable-icon"
 						aria-label="Créer une note rapidement"
-						onClick={() => plugin.createNoteFor(data)}
+						onClick={() => void plugin.createNoteFor(data)}
 					>
 						<Sparkles size={18} />
 					</button>
 					<button
 						className="clickable-icon"
 						aria-label="Éditer une note"
-						onClick={(e) => plugin.activateNoteTakingView(e.metaKey || e.ctrlKey)}
+						onClick={(e) => void plugin.activateNoteTakingView(e.metaKey || e.ctrlKey)}
 					>
 						<FilePlus size={18} />
 					</button>

@@ -146,7 +146,7 @@ const PREAMBLE = new RegExp(
 
 // --- Droit de l'Union -------------------------------------------------------------------------
 
-const EU_CASE = /(?<![\w-])(?<case>[CTF]-\d{1,4}\/\d{2})(?!\d)/g;
+const EU_CASE = /(?<case>[CTF]-\d{1,4}\/\d{2})(?!\d)/g;
 const ECLI = /\bECLI:[A-Z]{2}:[A-Z0-9]+:\d{4}:[A-Za-z0-9.]+/g;
 const CELEX = /\bCELEX\s*:?\s*(?<celex>\d[0-9A-Z]\d{4}[A-Z]\d{4}(?:\(\d+\))?)/g;
 /** Acte de l'Union ; la date, quand elle suit, ne fait pas partie du libellé mais permet de retrouver l'acte cité plus loin par sa date seule. */
@@ -161,9 +161,9 @@ const SHORT_EU_ACT = new RegExp(
 );
 const EU_ACT_LETTER: Record<string, string> = { règlement: "R", directive: "L", décision: "D" };
 /** Directive citée à l'ancienne, année d'abord : « directive 95/46/CE », « directive 2002/58/CE ». */
-const EU_DIRECTIVE_OLD = /(?<![\w/])[Dd]irective\s+(?:n\s?[°º]\s*)?(?<year>\d{2}|\d{4})\/(?<number>\d{1,4})\/(?:CE|CEE|UE|Euratom)\b/g;
+const EU_DIRECTIVE_OLD = /[Dd]irective\s+(?:n\s?[°º]\s*)?(?<year>\d{2}|\d{4})\/(?<number>\d{1,4})\/(?:CE|CEE|UE|Euratom)\b/g;
 /** Texte de l'Union cité par son nom ou son sigle, sans article (« le RGPD », « le DSA »). */
-const EU_MENTION = new RegExp(`(?<![\\wÀ-ÿ])(?:${EU_PATTERN})`, "gu");
+const EU_MENTION = new RegExp(`(?:${EU_PATTERN})`, "gu");
 
 /** Texte de l'Union visé par un article : sigle ou nom (« RGPD »), ou acte cité par son numéro. */
 const EU_TARGET = `(?:(?<alias>${EU_PATTERN})|(?<type>[Rr]èglement|[Dd]irective|[Dd]écision)\\s+(?:d['’]exécution\\s+)?\\((?:UE|CE|CEE|Euratom)\\)\\s*(?:n\\s?[°º]\\s*)?(?<a>\\d{1,4})/(?<b>\\d{1,4}))`;
@@ -187,7 +187,7 @@ const COURT_CC = "\\bCons\\.\\s*const(?:it)?\\.|\\bC\\.\\s?C\\.|\\bCC\\b|\\b[Cc]
 // Le numéro (« 2011-210 QPC ») ne commence ni au milieu d'un nombre ni d'une date (« 2001-01-01 L'article » : « 01-01 L » n'est pas
 // un numéro), et la lettre de nature n'est pas le début d'un mot (« L'article », « Dans »).
 const CONSEIL_CONSTITUTIONNEL = new RegExp(
-	`(?:(?:${COURT_CC})[^\\n;()]{0,40}?,?\\s*|[Dd]écision\\s+)?(?:n\\s?[°º]\\s*)?(?<number>(?<![\\d/.-])\\d{2,4}-\\d+(?:/\\d+)*\\s+${CC_SUFFIX})(?![\\p{L}\\d'’-])(?:\\s+du\\s+\\d{1,2}(?:er)?\\s+\\p{L}+\\s+\\d{4})?`,
+	`(?:(?:${COURT_CC})[^\\n;()]{0,40}?,?\\s*|[Dd]écision\\s+)?(?:n\\s?[°º]\\s*)?(?<number>\\d{2,4}-\\d+(?:/\\d+)*\\s+${CC_SUFFIX})(?![\\p{L}\\d'’-])(?:\\s+du\\s+\\d{1,2}(?:er)?\\s+\\p{L}+\\s+\\d{4})?`,
 	"gu"
 );
 /** Décision du Conseil constitutionnel citée par sa seule date : « Cons. constit., 16 juillet 1971 », « C.C., … », « CC, … ». */
@@ -202,7 +202,19 @@ const clean = (text: string) => text.replace(/\s+/g, " ").trim().replace(/^,+|,+
 /** Mot de liaison resté en fin de nom quand une autre citation suit (« Labonne et » + « CE, 1930… »). */
 const TRAILING_CONNECTOR = /\s(?:et|ou|puis|voir|cf\.?|comp\.?|contra)\s*$/i;
 const ABBREVIATIONS = "Mme|Mmes|Mlle|Mlles|MM|Cie|Cies|Sté|Stés|Soc|Ets|Éts|Ste|St|Dr|Pr|Me|Mgr|Sarl|Sas";
-const SENTENCE_END = new RegExp(`(?<=\\p{L}{3})(?<!\\b(?:${ABBREVIATIONS}))\\.\\s.*$`, "su");
+const ABBREVIATION_END = new RegExp(`\\b(?:${ABBREVIATIONS})$`, "u");
+
+/**
+ * Le nom privé de sa fin de phrase : à partir du premier point suivi d'une espace et précédé d'au moins trois lettres,
+ * hors abréviation (« Mme. », « Cie. »).
+ */
+function withoutSentenceEnd(name: string) {
+	for (const match of name.matchAll(/\.\s/g)) {
+		const before = name.slice(0, match.index);
+		if (/\p{L}{3}$/u.test(before) && !ABBREVIATION_END.test(before)) return before;
+	}
+	return name;
+}
 
 /**
  * Nom d'une décision débarrassé de la mise en forme et de ce qui n'en fait pas partie : crochets de lien,
@@ -212,7 +224,7 @@ const SENTENCE_END = new RegExp(`(?<=\\p{L}{3})(?<!\\b(?:${ABBREVIATIONS}))\\.\\
 export function cleanPartyName(raw: string) {
 	const [name] = raw.replace(/<[^>]+>/g, "").replace(/\[\[|\]\]/g, " ").replace(/[*_]+/g, "").split(/\s=\s|[«»]|\s?:\s|\s(?:pp?\.?\s?\d|n\s?°|req\.?\s|concl\.?\s)/i);
 	// Fin de phrase (« Labonne. On fait la », « Sieur Remoux. Rec ») : un point après au moins trois lettres, sauf abréviation (« Mme. », « Cie. »).
-	return clean(name).replace(SENTENCE_END, "").replace(TRAILING_CONNECTOR, "").replace(/[\s.,;:!?)\]]+$/g, "");
+	return withoutSentenceEnd(clean(name)).replace(TRAILING_CONNECTOR, "").replace(/[\s.,;:!?)\]]+$/g, "");
 }
 
 /** Libellé d'une citation sans crochets de lien ni ponctuation finale. */
@@ -242,9 +254,30 @@ function makeKey(kind: RefKind, data: Record<string, string>) {
 
 /** Numéro d'article normalisé : « L121-1 » devient « L. 121-1 », « 1er » devient « 1 ». */
 function articleNumber(raw: string) {
-	const number = clean(raw).replace(/(?<=\d)er$/, "");
+	const number = clean(raw).replace(/(\d)er$/, "$1");
 	return /^[LRD]/.test(number) ? number.replace(/^([LRD])\*?\.?\s?/, "$1. ") : number;
 }
+
+/**
+ * Les correspondances de `regex` que `rejected` n'écarte pas. Remplace un lookbehind négatif, que les iOS
+ * antérieurs à 16.4 ne comprennent pas — et qui empêcherait le plugin de se charger : après un rejet, la recherche
+ * reprend un caractère plus loin, comme le ferait le moteur.
+ */
+function* matchesWhere(text: string, regex: RegExp, rejected: (match: RegExpExecArray) => boolean) {
+	const search = new RegExp(regex.source, regex.flags);
+	let match: RegExpExecArray | null;
+	while ((match = search.exec(text))) {
+		if (rejected(match)) {
+			search.lastIndex = match.index + 1;
+			continue;
+		}
+		if (match[0] === "") search.lastIndex++;
+		yield match;
+	}
+}
+
+/** Le caractère qui précède la position `index` de `text` est-il l'un de `chars` ? */
+const followsChar = (text: string, index: number, chars: RegExp) => index > 0 && chars.test(text[index - 1]);
 
 interface Candidate {
 	start: number;
@@ -399,8 +432,11 @@ function scanDecisions(text: string): Candidate[] {
 		["ce", CONSEIL_ETAT],
 		["cc", CONSEIL_CONSTITUTIONNEL],
 	];
+	/** Le numéro d'une décision du Conseil constitutionnel ne commence ni au milieu d'un nombre ni d'une date. */
+	const insideNumber = (m: RegExpExecArray) => followsChar(text, m.index + m[0].indexOf(m.groups!.number), /[\d/.-]/);
 	for (const [court, pattern] of decisions) {
-		for (const match of text.matchAll(pattern)) {
+		const matches = court === "cc" ? matchesWhere(text, pattern, insideNumber) : text.matchAll(pattern);
+		for (const match of matches) {
 			let number = clean(match.groups!.number);
 			if (court === "cassation") number = number.replace(/^(\d{2}-\d{2})[.\s]?(\d{3})$/, "$1.$2");
 			// Au Conseil d'État, le nom et la date écrits avant le numéro (« CE, 10 janvier 1930, Despujol, n° 97263 ») sont
@@ -483,11 +519,11 @@ function scanEuLaw(text: string): Candidate[] {
 		if (g.date) euActs.set(`${EU_ACT_LETTER[g.type.toLowerCase()]}|${dateKey(g.date)}`, celex);
 		euRef(match, celex, clean(g.label), g.label.length);
 	}
-	for (const match of text.matchAll(EU_CASE)) {
+	for (const match of matchesWhere(text, EU_CASE, (m) => followsChar(text, m.index, /[\w-]/))) {
 		const eu = match.groups!.case;
 		found.push(candidate(match, "eu", `aff. ${eu}`, eu, { case: eu }, { url: CURIA_SEARCH + encodeURIComponent(eu) }));
 	}
-	for (const match of text.matchAll(EU_DIRECTIVE_OLD)) {
+	for (const match of matchesWhere(text, EU_DIRECTIVE_OLD, (m) => followsChar(text, m.index, /[\w/]/))) {
 		const { year, number } = match.groups!;
 		const full = year.length === 2 ? (Number(year) >= 57 ? 1900 : 2000) + Number(year) : Number(year);
 		euRef(match, `3${full}L${number.padStart(4, "0")}`, clean(match[0]));
@@ -504,7 +540,7 @@ const AMBIGUOUS_ACRONYMS = new Set(["RIA", "DGA"]);
 
 /** Textes de l'Union cités par leur nom ou leur sigle, sans article. */
 function scanEuMentions(text: string): Candidate[] {
-	return [...text.matchAll(EU_MENTION)].flatMap((match) => {
+	return [...matchesWhere(text, EU_MENTION, (m) => followsChar(text, m.index, /[\wÀ-ÿ]/))].flatMap((match) => {
 		if (AMBIGUOUS_ACRONYMS.has(match[0])) return [];
 		const celex = euCelexOf(match[0]);
 		return celex ? [candidate(match, "eu", euLabelOf(celex) ?? clean(match[0]), celex, { celex }, { url: EURLEX_CELEX + encodeURIComponent(celex) })] : [];

@@ -13,11 +13,11 @@ import { useDatabaseVersion, usePlugin } from "views/hooks";
 
 /** Tâche qui fait avancer chaque étape, et libellé du bouton. */
 const TASKS: Record<CycleTask, { task: Task<unknown>; button: string }> = {
-	index: { task: INDEX_TASK as Task<unknown>, button: "Analyser les notes" },
-	articles: { task: ARTICLES_TASK as Task<unknown>, button: "Retrouver" },
-	enrich: { task: ENRICH_TASK as Task<unknown>, button: "Compléter" },
-	genealogy: { task: GENEALOGY_TASK as Task<unknown>, button: "Analyser" },
-	fiches: { task: COMPLETE_FICHES_TASK as Task<unknown>, button: "Compléter les fiches" },
+	index: { task: INDEX_TASK, button: "Analyser les notes" },
+	articles: { task: ARTICLES_TASK, button: "Retrouver" },
+	enrich: { task: ENRICH_TASK, button: "Compléter" },
+	genealogy: { task: GENEALOGY_TASK, button: "Analyser" },
+	fiches: { task: COMPLETE_FICHES_TASK, button: "Compléter les fiches" },
 };
 
 /**

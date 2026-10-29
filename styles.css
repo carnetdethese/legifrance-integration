@@ -34,7 +34,7 @@
 }
 
 /* Marges internes réduites pour les panneaux latéraux (recherche, références) ; titres resserrés. */
-.legifrance-view.view-content:has(> .legifrance-search, > .legifrance-references, > .legifrance-articles-panel) {
+.legifrance-view.view-content.is-side-panel {
 	padding: var(--size-4-4);
 }
 
@@ -165,12 +165,6 @@
 
 /* --- Réglages ------------------------------------------------------------- */
 
-.legifrance-template-input {
-	width: 400px;
-	max-width: 100%;
-	height: 200px;
-}
-
 /* --- Références juridiques ------------------------------------------------ */
 
 .legifrance-references {
@@ -234,7 +228,7 @@
 
 /* --- Base de données ------------------------------------------------------ */
 
-.legifrance-view.view-content:has(> .legifrance-database) {
+.legifrance-view.view-content.is-database {
 	padding: var(--size-4-4);
 }
 
@@ -293,46 +287,6 @@
 
 /* --- Réglages : onglets et correspondance des propriétés ------------------- */
 
-.legifrance-settings-tabs {
-	display: flex;
-	gap: var(--size-2-3);
-	margin-bottom: var(--size-4-3);
-}
-
-/* Table de correspondance : trois colonnes alignées (propriété, champ, bouton), avec en-têtes. */
-.legifrance-mapping-header,
-.legifrance-mapping-row .setting-item-control {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--size-4-8);
-	gap: var(--size-4-3);
-	align-items: center;
-}
-
-.legifrance-mapping-header {
-	padding: var(--size-4-2) 0 var(--size-2-2);
-	color: var(--text-muted);
-	font-size: var(--font-ui-smaller);
-}
-
-.legifrance-mapping-row {
-	padding: var(--size-2-2) 0;
-	border-top: none;
-}
-
-.legifrance-mapping-row .setting-item-info {
-	display: none;
-}
-
-.legifrance-mapping-row .setting-item-control {
-	flex: 1 1 100%;
-	justify-content: stretch;
-}
-
-.legifrance-mapping-row input[type="text"],
-.legifrance-mapping-row select {
-	width: 100%;
-}
-
 /* --- Réglages : avancement des indexations -------------------------------- */
 
 .legifrance-status {
@@ -365,7 +319,7 @@
 
 /* --- Analyse de la jurisprudence ------------------------------------------- */
 
-.legifrance-view.view-content:has(> .legifrance-juris) {
+.legifrance-view.view-content.is-juris {
 	padding: var(--size-4-4) var(--size-4-5);
 }
 
@@ -715,7 +669,7 @@
 	cursor: pointer;
 }
 
-.legifrance-merge-choice:has(input:checked) {
+.legifrance-merge-choice.is-selected {
 	border-color: var(--interactive-accent);
 }
 
@@ -753,10 +707,6 @@
 	grid-template-columns: max-content 1fr;
 	gap: var(--size-2-1) var(--size-4-3);
 	margin: 0;
-}
-
-.legifrance-info dl > div {
-	display: contents;
 }
 
 .legifrance-info dt {
@@ -1569,7 +1519,7 @@
 
 /* Analyse de la jurisprudence : même fond sombre que les autres vues (les panneaux latéraux et la vue Base de
    données). Les éléments collants de la chronologie reprennent ce fond, les cartes passent au fond clair. */
-.legifrance-view.view-content:has(> .legifrance-juris) {
+.legifrance-view.view-content.is-juris {
 	--legifrance-surface: var(--background-secondary);
 	background: var(--legifrance-surface);
 }

@@ -19,7 +19,7 @@ export class ArticleModal extends Modal {
 		this.component.load();
 		this.setTitle(this.reference.label);
 		const body = this.contentEl.createDiv({ cls: "legifrance-article-text" });
-		MarkdownRenderer.render(this.app, this.link.texte ?? "", body, "", this.component);
+		void MarkdownRenderer.render(this.app, this.link.texte ?? "", body, "", this.component);
 
 		this.contentEl.createEl("a", {
 			text: "Ouvrir sur Légifrance",

@@ -34,14 +34,14 @@ function sentenceBounds(text: string, start: number, end: number) {
 	let from = lo;
 	let to = hi;
 	for (const match of region.matchAll(SENTENCE_END)) {
-		const at = lo + match.index! + match[0].length;
+		const at = lo + match.index + match[0].length;
 		if (match[1]) {
-			const word = /(\p{L}+)$/u.exec(region.slice(Math.max(0, match.index! - 12), match.index!))?.[1] ?? "";
+			const word = /(\p{L}+)$/u.exec(region.slice(Math.max(0, match.index - 12), match.index))?.[1] ?? "";
 			if (word.length <= 3 || ABBREVIATIONS.has(word.toLowerCase())) continue;
 		}
 		if (at <= start) from = at;
-		else if (lo + match.index! >= end) {
-			to = lo + match.index! + (match[1] ? 1 : 0);
+		else if (lo + match.index >= end) {
+			to = lo + match.index + (match[1] ? 1 : 0);
 			break;
 		}
 	}

@@ -41,5 +41,5 @@ export function valuesOfDocument(data: LegalDocument): DecisionValues {
 		solution: data.solution,
 		url: data.lien,
 	};
-	return Object.fromEntries(Object.entries(values).filter(([, value]) => value)) as DecisionValues;
+	return Object.fromEntries(Object.entries(values).filter(([, value]) => value));
 }
