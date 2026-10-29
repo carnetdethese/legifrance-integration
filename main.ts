@@ -14,10 +14,12 @@
  * | événements pour les vues           | `lib/events.ts` (`plugin.events`)                     |
  */
 import { Events, Notice, Plugin, TFile, debounce } from "obsidian";
+import type { ConnectionSettings } from "api/client";
 import { LegifranceApi } from "api/legifrance";
 import { LegalDocument } from "abstracts/document";
 import { DocumentSearch } from "abstracts/searchHandler";
 import { registerCommands } from "commands";
+import { migrateCredentials } from "settings/credentials";
 import { shouldCreateNote } from "creation/linkExisting";
 import { createNote } from "creation/newNote";
 import { HISTORY_EVENT, REFERENCES_EVENT } from "lib/events";
@@ -94,7 +96,8 @@ export default class LegifrancePlugin extends Plugin {
 	async onload() {
 		LegifrancePlugin.instance = this;
 		const legacy = await this.loadSettings();
-		this.api = new LegifranceApi(this.settings);
+		this.api = new LegifranceApi(() => this.connection);
+		await this.moveCredentialsToKeychain();
 		await this.openDatabase(legacy);
 
 		this.registerView(RESEARCH_TEXT_VIEW, (leaf) => new ResearchTextView(leaf, this));
@@ -183,6 +186,19 @@ export default class LegifrancePlugin extends Plugin {
 		return saved?.references;
 	}
 
+	/**
+	 * Les anciennes versions gardaient les identifiants PISTE en clair dans `data.json` : ils passent dans le trousseau
+	 * d'Obsidian, puis disparaissent des données du plugin.
+	 */
+	private async moveCredentialsToKeychain() {
+		const { changed, stranded } = migrateCredentials(this.settings, this.app.secretStorage);
+		if (changed) {
+			await this.saveSettings();
+			new Notice("Vos identifiants PISTE sont maintenant dans le trousseau d'Obsidian et ne figurent plus dans les données du plugin.", 10000);
+		}
+		if (stranded.length) new Notice("Les identifiants PISTE n'ont pas pu être mis dans le trousseau d'Obsidian : saisissez-les à nouveau dans les réglages.", 10000);
+	}
+
 	/** Ouvre la base et y reprend les anciens liens de `data.json` (avant la base SQLite). */
 	private async openDatabase(legacy: PluginData["references"]) {
 		this.databaseFile = new DatabaseFile(this.app, this.manifest.dir!, () => this.saveDatabaseSoon());
@@ -217,7 +233,7 @@ export default class LegifrancePlugin extends Plugin {
 			settings: this.settings,
 			graph: this.graphSettings,
 		} satisfies PluginData);
-		this.api.updateConfig(this.settings);
+		this.api.updateConfig();
 	}
 
 	/**
@@ -312,7 +328,21 @@ export default class LegifrancePlugin extends Plugin {
 
 	/** Peut-on interroger l'API ? (identifiants renseignés) */
 	get hasCredentials() {
-		return !!(this.settings.clientId && this.settings.clientSecret);
+		const { clientId, clientSecret } = this.credentials;
+		return !!(clientId && clientSecret);
+	}
+
+	/** Identifiants PISTE, lus dans le trousseau d'Obsidian (vides si aucun secret n'est choisi). */
+	get credentials() {
+		const { secretStorage } = this.app;
+		const read = (name: string) => (name ? secretStorage.getSecret(name)?.trim() ?? "" : "");
+		return { clientId: read(this.settings.clientIdSecret), clientSecret: read(this.settings.clientSecretSecret) };
+	}
+
+	/** Paramètres de connexion à l'API : réglages et identifiants du trousseau. */
+	get connection(): ConnectionSettings {
+		const { apiHost, tokenHost, maxRequestsPerMinute } = this.settings;
+		return { apiHost, tokenHost, maxRequestsPerMinute, ...this.credentials };
 	}
 
 	/** Ouvre le document dans un onglet de lecture, en réutilisant celui déjà ouvert. */

@@ -2,10 +2,11 @@ import { requestUrl, RequestUrlResponse } from "obsidian";
 import { LegifranceSettings } from "settings/settings";
 import { Lane, RateLimiter } from "./rateLimiter";
 
-export type ConnectionSettings = Pick<
-	LegifranceSettings,
-	"clientId" | "clientSecret" | "apiHost" | "tokenHost" | "maxRequestsPerMinute"
->;
+/** Paramètres de connexion : les identifiants (lus dans le trousseau d'Obsidian) et les réglages de l'API. */
+export type ConnectionSettings = Pick<LegifranceSettings, "apiHost" | "tokenHost" | "maxRequestsPerMinute"> & {
+	clientId: string;
+	clientSecret: string;
+};
 
 /** Erreur de l'API, avec son code HTTP (400/404 : requête refusée, à essayer autrement). */
 export class ApiError extends Error {
@@ -31,13 +32,15 @@ export class DilaApiClient {
 	/** Débit des requêtes vers PISTE (réglage « requêtes par minute »), commun à tout le plugin. */
 	readonly limiter: RateLimiter;
 
-	constructor(connection: ConnectionSettings) {
-		this.connection = { ...connection };
-		this.limiter = new RateLimiter(connection.maxRequestsPerMinute);
+	/** @param settings lit les paramètres au moment voulu : les identifiants viennent du trousseau, qui peut changer. */
+	constructor(private readonly settings: () => ConnectionSettings) {
+		this.connection = { ...settings() };
+		this.limiter = new RateLimiter(this.connection.maxRequestsPerMinute);
 	}
 
-	/** Met à jour les identifiants/hôtes ; le jeton en cache n'est invalidé que s'ils ont changé. */
-	updateConfig(connection: ConnectionSettings) {
+	/** Relit les identifiants/hôtes ; le jeton en cache n'est invalidé que s'ils ont changé. */
+	updateConfig() {
+		const connection = this.settings();
 		const { clientId, clientSecret, apiHost, tokenHost } = this.connection;
 		if (
 			clientId !== connection.clientId ||
@@ -54,6 +57,7 @@ export class DilaApiClient {
 	/** Récupère (ou réutilise) un jeton via le flux `client_credentials`. */
 	private async getAccessToken(lane?: Lane): Promise<string> {
 		if (this.token) return this.token;
+		this.updateConfig();
 
 		const { tokenHost, clientId, clientSecret } = this.connection;
 		await this.limiter.acquire(lane);

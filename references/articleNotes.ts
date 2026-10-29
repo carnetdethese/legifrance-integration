@@ -7,6 +7,7 @@ import { Notice, TFile, normalizePath } from "obsidian";
 import type LegifrancePlugin from "main";
 import { ArticleNoteData, articleNoteContent, articleProperties, refreshArticleContent } from "./articleNote";
 import { decisionsApplying, statusLabel } from "./corpus";
+import { safePath } from "lib/paths";
 import { decisionsOf, internalLink, safeName } from "./insights";
 import { byDate } from "./timeline";
 
@@ -53,7 +54,7 @@ export async function ensureArticleNote(plugin: LegifrancePlugin, key: string): 
 
 	const data = articleNoteData(plugin, key);
 	if (!data) return undefined;
-	const folder = normalizePath(`${settings.dossierBase}/Articles`);
+	const folder = normalizePath(`${safePath(settings.dossierBase)}/Articles`);
 	const path = normalizePath(`${folder}/${safeName(data.label)}.md`);
 	const same = app.vault.getFileByPath(path);
 	// Un fichier du même nom que l'utilisateur a écrit lui-même : on le garde tel quel, sans le tenir à jour.

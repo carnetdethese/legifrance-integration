@@ -1,11 +1,11 @@
 {
 	"id": "legifrance-integration",
-	"name": "Légifrance Intégration",
-	"minAppVersion": "1.7.2",
+	"name": "Legifrance Integration",
+	"minAppVersion": "1.11.4",
 	"description": "Intégration de l'API Légifrance.",
 	"author": "hurj",
 	"authorUrl": "https://carnetdethese.amimms.fr/",
 	"fundingUrl": "https://ko-fi.com/hurj268746",
 	"isDesktopOnly": false,
-	"version": "1.5.7"
+	"version": "2.0.0"
 }

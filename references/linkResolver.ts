@@ -33,7 +33,7 @@ export class LinkResolver {
 
 	/** À appeler quand les réglages sont enregistrés : de nouveaux identifiants permettent de réessayer après un refus. */
 	settingsSaved() {
-		const { clientId, clientSecret } = this.plugin.settings;
+		const { clientId, clientSecret } = this.plugin.credentials;
 		const credentials = `${clientId}:${clientSecret}`;
 		if (credentials !== this.lastCredentials) this.authFailed = false;
 		this.lastCredentials = credentials;

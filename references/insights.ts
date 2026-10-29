@@ -2,6 +2,7 @@
  * Analyses de la jurisprudence du coffre qui touchent aux notes : fiches manquantes ou orphelines,
  * écarts avec Légifrance, table des décisions d'une note.
  */
+import { safeName, safePath } from "lib/paths";
 import { Notice, TFile, getLinkpath, normalizePath } from "obsidian";
 import { codeJuridiction } from "abstracts/decisions";
 import type LegifrancePlugin from "main";
@@ -120,8 +121,7 @@ export function noteDecisionsTable(plugin: LegifrancePlugin, file: TFile) {
 	});
 }
 
-/** Caractères interdits dans un nom de fichier. */
-export const safeName = (name: string) => name.replace(/[\\/:*?"<>|#^[\]]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+export { safeName };
 
 /**
  * Crée la fiche d'une décision citée : ses propriétés (réglage « correspondance ») sont remplies avec
@@ -147,7 +147,7 @@ export async function createFiche(plugin: LegifrancePlugin, record: DecisionReco
 	if (settings.ficheIdProperty.trim()) front[settings.ficheIdProperty.trim()] = record.id;
 	for (const { property, field } of settings.ficheMapping) if (property.trim() && values[field]) front[property.trim()] = values[field]!;
 
-	const folder = normalizePath(record.court && safeName(record.court) ? `${settings.dossierBase}/${safeName(record.court)}` : settings.dossierBase);
+	const folder = normalizePath([safePath(settings.dossierBase), record.court && safeName(record.court)].filter(Boolean).join("/") || "/");
 	if (!app.vault.getFolderByPath(folder)) await app.vault.createFolder(folder);
 	// Nom de la note : parties et année si on les connaît (« couiteas1923 »), sinon l'intitulé de la décision.
 	const fileName = safeName(ficheFileName(record) ?? record.title ?? record.label);

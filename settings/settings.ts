@@ -2,7 +2,7 @@
  * Réglages du plugin : identifiants PISTE, limite de débit, modèle de note, fiches de décisions, et l'onglet de
  * réglages d'Obsidian (`LegifranceSettingTab`) qui les présente, avec l'état de la base et des tâches (`status.ts`).
  */
-import { App, EventRef, PluginSettingTab, Setting, debounce } from "obsidian";
+import { App, EventRef, PluginSettingTab, SecretComponent, Setting, debounce } from "obsidian";
 import { FolderSuggest } from "lib/folderSugget";
 import LegifrancePlugin from "main";
 import { REFERENCES_EVENT, TASK_EVENT } from "lib/events";
@@ -25,8 +25,10 @@ const TASK_SETTINGS: [string, string, string, Task<unknown>][] = [
 
 /** Réglages persistés du plugin (`data.json`, clef `settings`). */
 export interface LegifranceSettings {
-	clientId: string;
-	clientSecret: string;
+	/** Nom du secret (trousseau d'Obsidian, `settings/credentials.ts`) qui contient l'identifiant client PISTE. */
+	clientIdSecret: string;
+	/** Nom du secret qui contient la clef secrète PISTE. */
+	clientSecretSecret: string;
 	apiHost: string;
 	tokenHost: string;
 	/** Requêtes envoyées à l'API au plus par minute (0 : sans limite) ; les suivantes attendent leur tour. */
@@ -70,8 +72,8 @@ export interface LegifranceSettings {
 }
 
 export const DEFAULT_SETTINGS: LegifranceSettings = {
-	clientId: '',
-	clientSecret: '',
+	clientIdSecret: '',
+	clientSecretSecret: '',
 	apiHost: 'https://api.piste.gouv.fr/dila/legifrance/lf-engine-app',
 	tokenHost: 'https://oauth.piste.gouv.fr',
 	maxRequestsPerMinute: 30,
@@ -128,18 +130,30 @@ export class LegifranceSettingTab extends PluginSettingTab {
 		name: string,
 		desc: string,
 		key: TextKey,
-		{ secret = false, placeholder = "", save = () => this.plugin.saveSettings() } = {}
+		{ placeholder = "", save = () => this.plugin.saveSettings() } = {}
 	) {
 		return new Setting(this.containerEl)
 			.setName(name)
 			.setDesc(desc)
 			.addText((text) => {
-				if (secret) text.inputEl.type = "password";
 				text.setPlaceholder(placeholder).setValue(this.plugin.settings[key]).onChange(async (value) => {
 					this.plugin.settings[key] = value.trim();
 					await save();
 				});
 			});
+	}
+
+	/** Ajoute le choix d'un secret du trousseau d'Obsidian ; les réglages ne gardent que son nom. */
+	private addSecretSetting(name: string, desc: string, key: "clientIdSecret" | "clientSecretSecret") {
+		return new Setting(this.containerEl)
+			.setName(name)
+			.setDesc(desc)
+			.addComponent((el) =>
+				new SecretComponent(this.app, el).setValue(this.plugin.settings[key]).onChange(async (value) => {
+					this.plugin.settings[key] = value ?? "";
+					await this.plugin.saveSettings();
+				})
+			);
 	}
 
 	/** Ajoute un interrupteur lié à la clef booléenne `key` des réglages. */
@@ -191,17 +205,12 @@ export class LegifranceSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl).setName("Connexion à PISTE").setHeading();
 
-		this.addTextSetting(
-			"Identifiant client",
-			"Client ID de votre application sur piste.gouv.fr (compte gratuit).",
-			"clientId"
-		);
-		this.addTextSetting(
-			"Clef secrète",
-			"Client secret de la même application. Il est stocké en clair dans les données du plugin.",
-			"clientSecret",
-			{ secret: true }
-		);
+		this.addSecretSetting("Identifiant client", "Client ID de votre application sur piste.gouv.fr (compte gratuit).", "clientIdSecret");
+		this.addSecretSetting("Clef secrète", "Client secret de la même application.", "clientSecretSecret");
+		containerEl.createEl("p", {
+			text: "Les identifiants sont gardés dans le trousseau d'Obsidian, pas dans les données du plugin : choisissez un secret existant ou créez-en un. Le trousseau est propre à chaque appareil.",
+			cls: "setting-item-description",
+		});
 		this.addTextSetting(
 			"Hôte de l'API",
 			"À modifier uniquement si PISTE change d'adresse.",
@@ -363,7 +372,9 @@ export class LegifranceSettingTab extends PluginSettingTab {
 			.setName("Vider la base")
 			.setDesc("Efface les notes analysées, références, liens et fiches. Les notes du coffre ne sont pas touchées.")
 			.addButton((button) =>
-				button.setButtonText("Vider").setWarning().onClick(() => {
+				button.setButtonText("Vider").setWarning().onClick(async () => {
+					const confirmed = await confirmAction(this.app, "Vider la base", "Les textes enregistrés, les liens retrouvés (y compris ceux que vous avez choisis à la main) et les précisions saisies seront effacés ; les retrouver coûte des requêtes à l'API. Aucune note du coffre n'est touchée.");
+					if (!confirmed) return;
 					plugin.references.clear();
 					plugin.fiches.sync();
 					this.display();

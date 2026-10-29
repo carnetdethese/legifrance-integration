@@ -13,6 +13,7 @@ Le module ne sert plus seulement à chercher et à créer des notes : il **lit v
 -   **Export de la bibliographie** (commande « Exporter la bibliographie… ») : Markdown, CSV, BibTeX, RIS, pour la note ouverte ou tout le coffre, avec filtre par thème ou par période.
 -   **Création de note sans doublon** : avant de créer une note depuis un document, le module vérifie que le coffre ne l'a pas déjà (par identifiant Légifrance, ou par numéro). Une note trouvée est ouverte ; en cas de doute, vous choisissez la fiche à lier ou demandez une nouvelle note.
 -   **Tous les fonds de l'API** : recherche et lecture des codes, lois et règlements, Journal officiel, circulaires, conventions collectives et accords d'entreprise, en plus de la jurisprudence.
+-   **Identifiants PISTE dans le trousseau d'Obsidian** : le client ID et la clef secrète ne sont plus écrits dans `data.json` mais dans le trousseau (*Réglages → Légifrance Intégration → Connexion à PISTE*). Vos identifiants actuels y sont déplacés automatiquement au premier lancement. Le trousseau est propre à chaque appareil : sur un autre appareil (mobile compris), il faut choisir ou saisir à nouveau les secrets. **Nécessite Obsidian 1.11.4 ou plus.**
 -   **Palette de commandes simplifiée** : *Nouvelle recherche*, *Afficher les références juridiques*, *Afficher les articles*, *Analyse de la jurisprudence*, *Afficher la base de données et cycle*, *Insérer…*, *Exporter la bibliographie…*. Les opérations de maintenance sont dans les réglages.
 
 ## Pour commencer
@@ -24,7 +25,10 @@ Le module ne sert plus seulement à chercher et à créer des notes : il **lit v
 
 > 🚨 Après la mise à jour, si le module ne se lance plus, désinstallez-le puis réinstallez-le.
 
-# Légifrance Intégration - Module Obsidian
+<!--  
+
+
+# Légifrance Intégration v. 1 - Module Obsidian
 
 Un tuto-vidéo est disponible ici :
 
@@ -164,9 +168,26 @@ Pour venir discuter du plugin ou de l'utilisation, en général, des outils num�
 
 https://discord.gg/ha3Vsk6DNQ
 
+-->
+
+## Roadmap
+
+- [ ] Ajout de Judilibre dans les sources
+- [ ] Ajout d'autres fonds (si vous avez des idées / besoins, n'hésitez pas !)
 
 ## Soutien
 
 Si vous souhaitez soutenir le projet, vous le pouvez via ce lien :
 
 <a href='https://ko-fi.com/O5O7WXMAR' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi2.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+
+
+## Note sur l'utilisation de l'IA pour le développement
+
+La première version du plugin (Légifrance Intégration v1) a été développée sans IA (ou marginalement). J'avais laissé le développement de côté par manque de temps et par blocage technique. L'amélioration des outils d'IA génératifs m'ont permis de redonner vie à ce projet.
+
+La v2 est donc le résultat d'une expérimentation avec Claude code (j'ai utilisé Sonnet 5.5, Medium / Élevé) pour pousser plus loin les capacités du module et intégré tout ce que j'avais envisagé lorsque j'ai commencé le projet. Je me suis assuré, à chaque étape, que les fonctionnalités ajoutées répondaient correctement à mes attentes, avec un processus itératif complet, la mise en place de tests visant à éviter les régressions, et de plusieurs audits, à différents stades de développement, visant à vérifier l'absence de failles de sécurité, l'amélioration de la performance et le maintien de l'intégrité à tout moment des notes. 
+
+Je n'ai intégré, dans le plugin lui-même, aucune fonctionnalité d'IA, par choix. Si les LLM m'aident à développer, je ne souhaite en revanche pas leur soumettre l'intégralité de mes notes. 
+
+Je n'ai sans doute pas le worflow parfait, mais je pense m'en être plutôt bien sorti et avoir réussi à produire un module fiable et utile pour le travail des juristes sur Obsidian ! 

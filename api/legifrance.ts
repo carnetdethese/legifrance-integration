@@ -20,7 +20,8 @@ import type { Lane } from "./rateLimiter";
 export class LegifranceApi {
 	private readonly client: DilaApiClient;
 
-	constructor(settings: ConnectionSettings) {
+	/** @param settings paramètres de connexion, lus à chaque authentification (identifiants du trousseau compris) */
+	constructor(settings: () => ConnectionSettings) {
 		this.client = new DilaApiClient(settings);
 	}
 
@@ -30,8 +31,8 @@ export class LegifranceApi {
 	}
 
 	/** Prend en compte de nouveaux identifiants, hôtes ou limite de débit. */
-	updateConfig(settings: ConnectionSettings) {
-		this.client.updateConfig(settings);
+	updateConfig() {
+		this.client.updateConfig();
 	}
 
 	/** Recherche avancée dans un fond (`POST /search`). `request` est le corps d'une recherche : celui du formulaire (`DocumentSearch.toObject()`) ou d'une recherche de référence (`searchQuery` dans `resolver.ts`). */

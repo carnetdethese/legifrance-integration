@@ -48,3 +48,5 @@ IDEES.md
 .excerpts-test.js
 .plan-test.js
 .existing-test.js
+.paths-test.js
+.credentials-test.js
