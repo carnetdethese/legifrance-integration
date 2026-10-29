@@ -1,25 +1,28 @@
-⚠️ [Obsidian Web Clipper](https://obsidian.md/clipper) a rendu ce plugin quelque peu obsolète. En effet, il permet d'enregister directement depuis son navigateur les informations que l'on veut. J'ai écrit un [petit billet de blog](https://carnetdethese.amimms.fr/posts/2025/03/fin-du-game/) pour faire la transition. Dans cette mesure, **je mets en suspens le développement de ce module**. ⚠️
+# Version 2.0 — votre coffre devient une base de références juridiques
 
-
-# MISE À JOUR !
-
-🚨 Si le module ne se lance plus après la mise à jour, désinstallez-le puis réinstallez-le ! 🚨
+Le module ne sert plus seulement à chercher et à créer des notes : il **lit vos notes** (sans LLM !) repère les décisions, lois et articles qu'elles citent, les retrouve sur Légifrance, en garde le texte et vous aide à les exploiter.
 
 ## Nouveautés
 
-Préparation pour le futur de ce module :
-- Recomposition des vues avec la librairie ReactJS - compréhension du code facilitée - meilleur support dans le futur - plus grand contrôle du flow de données - moins de code ;
-- Nouvelle vue pour la création des notes : une page unique qui permet de sélectionner le document de travail et sur laquelle on peut ajouter et supprimer des champs personnalisés. Finis les "Faits", "Procédure" etc. Un seul modèle de note vous permet d'intégrer ce que vous voulez comme information. 
-    - 🚨 Attention : breaking change. **Il faudra modifier vos modèles pour les intégrer dans le modèle unique afin d'éviter toutes pertes de données**. Les informations sont contenues dans une liste (Array) "notes" d'objets avec deux champ : "titreChamp" et "valeurChamp". Voir plus bas pour les spécifications ;
-- Ces différents changements ont conduit à changer la manière dont les documents sont conservés - par conséquent, le module réinitialise à chaque lancement les pages qui étaient ouvertes durant la session précédente. L'historique ne disparait pas : il suffit de rouvrir les pages pour retrouver toutes les informations.
+-   **Références juridiques d'une note** (commande « Afficher les références juridiques ») : panneau latéral qui liste les décisions, textes et articles cités dans la note affichée, avec leur lien Légifrance. Sont reconnus les décisions (Conseil d'État, Cour de cassation, Conseil constitutionnel, Tribunal des conflits…) citées par leur numéro, leur date, leur nom, leur identifiant ou leur ECLI ; les lois, par leur date ou leur nom usuel (« loi Informatique et Libertés ») ; les articles de codes ; les textes de l'Union (RGPD, TFUE, DSA…). Une référence introuvable ou erronée se précise ou se corrige depuis le panneau (le choix manuel n'est jamais écrasé).
+-   **Base de données** (`legifrance.sqlite`, dans le dossier du plugin) : elle enregistre qui cite quoi dans tout le coffre, l'adresse Légifrance, le statut de vigueur et le texte des articles, ainsi que les métadonnées et le **texte intégral des décisions**. Une fois lues, les décisions et articles se consultent sans nouvelle requête. La vue « Afficher la base de données et cycle » montre l'avancement de chaque étape (analyse des notes, textes retrouvés, décisions complétées, généalogie, fiches), ce qui reste « À faire » et le contenu des tables. Les tâches longues (indexer, compléter, actualiser…) se lancent depuis les réglages.
+-   **Fiches de décisions** : une note dont une propriété désigne une décision est une *fiche*. Le bouton « Compléter » renseigne ses propriétés depuis Légifrance (date, formation, solution, ECLI…) et la lie à la décision par son identifiant. La décision est cherchée par numéro ou par nom (Légifrance, ArianeWeb, Revue générale du droit). Les écarts entre fiche et Légifrance sont signalés.
+-   **Analyse de la jurisprudence** : statistiques du corpus, chronologie des décisions, articles les plus appliqués (avec la **version de l'article en vigueur le jour de la décision**), généalogie entre décisions (« revient sur », « précise », « confirme »), recherche plein texte dans les décisions et articles enregistrés.
+-   **Articles de la note** : statut de vigueur, texte, versions, décisions qui appliquent chaque article, et **notes d'articles** créées et tenues à jour automatiquement (seules les parties balisées sont réécrites).
+-   **Insertion dans la note** (commande « Insérer… ») : table des décisions citées, plan « thème → décisions → articles », bibliographie.
+-   **Export de la bibliographie** (commande « Exporter la bibliographie… ») : Markdown, CSV, BibTeX, RIS, pour la note ouverte ou tout le coffre, avec filtre par thème ou par période.
+-   **Création de note sans doublon** : avant de créer une note depuis un document, le module vérifie que le coffre ne l'a pas déjà (par identifiant Légifrance, ou par numéro). Une note trouvée est ouverte ; en cas de doute, vous choisissez la fiche à lier ou demandez une nouvelle note.
+-   **Tous les fonds de l'API** : recherche et lecture des codes, lois et règlements, Journal officiel, circulaires, conventions collectives et accords d'entreprise, en plus de la jurisprudence.
+-   **Palette de commandes simplifiée** : *Nouvelle recherche*, *Afficher les références juridiques*, *Afficher les articles*, *Analyse de la jurisprudence*, *Afficher la base de données et cycle*, *Insérer…*, *Exporter la bibliographie…*. Les opérations de maintenance sont dans les réglages.
 
-## Bugs résolus
+## Pour commencer
 
-- La page de résultat qui s'ouvrait systématiquement dans l'éditeur où se trouvait l'utilisateur est désormais déplacée dans un onglet à part. Permet d'éviter de perdre du temps à retrouver la page précédente ;
-- Le problème de la création d'un double de dossier si le dossier de base était la "racine" du module est maintenant résolu ;
-- Possibilité de lancer le module sur mobile ;
-- Modification de l'*input* pour la date : élément natif HTML que j'aurais dû implanter déjà depuis longtemps.
-- Modifications mineures pour une meilleure gestion du flow de data - et notamment la récupération du token pour l'authentification.
+1. Installez ou mettez à jour le module, puis ouvrez les réglages.
+2. Section « Base de données » : lancez **Indexer le coffre**, puis **Compléter les décisions, articles et textes** (une à deux requêtes par référence ; le débit se règle dans « Requêtes par minute »).
+3. Section « Fiches de décisions » : indiquez la propriété qui désigne vos fiches et celle qui garde l'identifiant Légifrance. Les valeurs par défaut conviennent au modèle de note fourni.
+4. Ouvrez une note et affichez ses références juridiques.
+
+> 🚨 Après la mise à jour, si le module ne se lance plus, désinstallez-le puis réinstallez-le.
 
 # Légifrance Intégration - Module Obsidian
 
@@ -40,7 +43,7 @@ Très simple d'utilisation, ce module vous permet de rechercher parmi les diffé
 Deux solutions pour le lancer :
 
 -   cliquer sur l'icône "⚖️" dans la barre latérale gauche ;
--   lancer la palette de commande (`Cmd+P` / `CTRL+P`) et chercher "Légifrance Intégration".
+-   lancer la palette de commande (`Cmd+P` / `CTRL+P`) et chercher « Nouvelle recherche », « Afficher les références juridiques », etc.
 
 ## Options
 
@@ -77,6 +80,7 @@ _Création de la note automatiquement :_
     -   Client Secret (disponible après inscription au service PISTE);
     -   Hôte API (valeur par défaut) ;
     -   Token API (valeur par défaut).
+-   Références juridiques, base de données et fiches : indexation, complément, actualisation des articles au démarrage, correspondance des propriétés des fiches ;
 -   Personnalisation :
     -   Modèle de note de jurisprudence ;
     -   Modèle du titre des notes de jurisprudence ;
@@ -142,16 +146,16 @@ Vous pouvez installer le module directement depuis le store de l'application. C'
 
 Le plugin tient, dans le dossier du plugin, une base SQLite (`legifrance.sqlite`, via sql.js : elle fonctionne aussi sur mobile) qui recense les références juridiques de **toutes** les notes du coffre : décisions, lois, articles de codes, droit de l'Union. Elle conserve pour chaque note qui cite quoi (et combien de fois), les liens Légifrance retrouvés et le texte des articles.
 
--   **Indexer le coffre** (réglages ou commande) analyse toutes les notes ; ensuite la base suit les créations, modifications, renommages et suppressions de notes.
+-   **Indexer le coffre** (réglages) analyse toutes les notes ; ensuite la base suit les créations, modifications, renommages et suppressions de notes.
 -   **Compléter les fiches de décisions** retrouve chaque décision sur Légifrance et enregistre sa date, sa formation, sa solution, son ECLI et son texte intégral (une requête par décision ; reprenable).
--   Tables : `notes`, `refs`, `citations`, `links`, `misses`, `decisions` — le fichier s'ouvre avec n'importe quel outil SQLite (copiez-le hors du coffre pour le lire).
+-   Tables principales : `notes`, `refs`, `citations`, `links`, `misses`, `decisions`, `decision_articles`, `decision_relations`, `fiches`, `article_versions`, `documents` — le fichier s'ouvre avec n'importe quel outil SQLite (copiez-le hors du coffre pour le lire).
 
 ### Fonctionnalités intéressantes à développer (si le temps le permet)
 
 -   [x] Un _parser_ permettant de lister facilement tous les textes juridiques présents dans le coffre ;
     -   [x] _Parser_ de décisions.
     -   [x] _Parser_ de textes législatifs.
--   [x] Un _parser_ des notes : liste des décisions, textes et articles cités, avec liens Légifrance, dans un panneau latéral (commande « Afficher les références juridiques de la note »). Pistes : reconnaître davantage de formats de citation, ouvrir les documents retrouvés dans le lecteur du plugin.
+-   [x] Un _parser_ des notes : liste des décisions, textes et articles cités, avec liens Légifrance, dans un panneau latéral (commande « Afficher les références juridiques »). Pistes : reconnaître davantage de formats de citation, ouvrir les documents retrouvés dans le lecteur du plugin.
 -   [x] Une prévisualisation des textes (peut-être sous la forme d'un pop-up lorsqu'on passe la souris au dessus d'un lien lié à Légifrance ?)
 
 ## Discord
