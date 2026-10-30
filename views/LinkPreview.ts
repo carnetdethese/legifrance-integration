@@ -1,7 +1,8 @@
 /**
- * Aperçu au survol, dans une note, d'un lien Légifrance ou d'une référence juridique repérée dans le texte : type, titre et
+ * Aperçu au survol (sur mobile : au tap, sans ouvrir Légifrance), dans une note, d'un lien Légifrance ou d'une référence juridique repérée dans le texte : type, titre et
  * début du texte, lus dans la base (aucune requête). Le contenu est posé comme du texte, jamais comme du HTML.
  */
+import { Platform } from "obsidian";
 import { legifranceTarget, stripLinks } from "lib/links";
 import { longDate } from "lib/display";
 import { removeTags } from "lib/tools";
@@ -39,12 +40,30 @@ export class LinkPreview {
 
 	register() {
 		const { plugin } = this;
+		plugin.register(() => this.hide());
+		if (Platform.isMobile) {
+			// Pas de survol au doigt : un tap sur une référence ouvre l'aperçu (et ne la suit pas), un tap ailleurs ou un défilement le ferme.
+			plugin.registerDomEvent(document, "click", (event) => this.tap(event), true);
+			plugin.registerDomEvent(document, "scroll", () => this.hide(), true);
+			return;
+		}
 		plugin.registerDomEvent(document, "mouseover", (event) => this.over(event));
 		plugin.registerDomEvent(document, "mouseout", (event) => this.out(event));
 		plugin.registerDomEvent(document, "mousedown", () => this.hide(), true);
 		plugin.registerDomEvent(document, "keydown", () => this.hide(), true);
 		plugin.registerDomEvent(document, "scroll", () => this.hide(), true);
-		plugin.register(() => this.hide());
+	}
+
+	/** Mobile : un tap sur une référence repérée montre sa carte (un second tap la ferme) ; ailleurs, la carte se ferme. */
+	private tap(event: MouseEvent) {
+		const element = (event.target as Element | null)?.closest?.(".legifrance-cite");
+		if (!element || !element.closest(NOTE_AREAS) || !this.plugin.settings.markReferences) return this.hide();
+		event.preventDefault();
+		if (element === this.anchor) return this.hide();
+		this.hide();
+		this.anchor = element;
+		this.show(element);
+		if (!this.card) this.anchor = undefined;
 	}
 
 	private hoveredIn(event: Event) {
@@ -83,7 +102,7 @@ export class LinkPreview {
 				? [doc.juridiction, longDate(doc.date), doc.numero && `n° ${doc.numero}`, status].filter(Boolean).join(" · ")
 				: status,
 			excerpt: doc?.texteIntegral ?? link?.texte,
-			hint: link ? "Cmd/Ctrl + clic : ouvrir dans le lecteur" : "Pas encore retrouvée sur Légifrance (réglages : « Compléter »)",
+			hint: Platform.isMobile ? "" : link ? "Cmd/Ctrl + clic : ouvrir dans le lecteur" : "Pas encore retrouvée sur Légifrance (réglages : « Compléter »)",
 		};
 	}
 
@@ -112,7 +131,7 @@ export class LinkPreview {
 		card.createDiv({ cls: "legifrance-hover-title", text: info.title });
 		if (info.meta) card.createDiv({ cls: "legifrance-hover-meta", text: info.meta });
 		if (excerpt) card.createDiv({ cls: "legifrance-hover-excerpt", text: excerpt.length > EXCERPT_LENGTH ? `${excerpt.slice(0, EXCERPT_LENGTH).trimEnd()}…` : excerpt });
-		card.createDiv({ cls: "legifrance-hover-hint", text: info.hint });
+		if (info.hint) card.createDiv({ cls: "legifrance-hover-hint", text: info.hint });
 		this.card = card;
 
 		// Sous l'élément, ou au-dessus s'il n'y a pas la place ; jamais hors de la fenêtre.

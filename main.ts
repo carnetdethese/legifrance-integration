@@ -50,6 +50,7 @@ import { REFERENCES_VIEW, ReferencesView } from "views/ReferencesView";
 import { RESEARCH_TEXT_VIEW, ResearchTextView } from "views/ResearchTextView";
 import { SEARCH_RESULT_VIEW, SearchResultView } from "views/SearchResultView";
 import { TEXT_READER_VIEW, TextReaderView } from "views/TextReaderView";
+import { parseCustomLaws, setCustomLaws } from "references/lawAliases";
 import { LinkPreview } from "views/LinkPreview";
 import { markReferencesIn, referenceMarks } from "views/referenceMarks";
 import { recallRef } from "references/refRegistry";
@@ -115,6 +116,12 @@ export default class LegifrancePlugin extends Plugin {
 	private reindexSoon = debounce(() => this.reindexPendingNotes(), 2000, true);
 	/** Met à jour les notes d'articles un instant après le dernier changement de la base. */
 	private refreshArticleNotesSoon!: () => void;
+	/** Le dictionnaire de lois de l'utilisateur a changé : il est repris tout de suite, puis les notes sont relues en local (sans requête). */
+	customLawsChanged = debounce(() => {
+		setCustomLaws(parseCustomLaws(this.settings.customLaws).laws);
+		this.app.workspace.updateOptions(); // les éditeurs ouverts recalculent leurs marques
+		if (this.references.invalidateNotes()) void this.tasks.run(INDEX_TASK, { silent: true });
+	}, 1500, true);
 	private saveGraphSoon = debounce(() => void this.saveSettings(), 800, true);
 
 	async onload() {
@@ -224,6 +231,7 @@ export default class LegifrancePlugin extends Plugin {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved?.settings);
 		this.historiqueDocuments = saved?.data ?? [];
 		this.graphSettings = mergeGraphSettings(saved?.graph);
+		setCustomLaws(parseCustomLaws(this.settings.customLaws).laws);
 		return saved?.references;
 	}
 

@@ -160,7 +160,9 @@ plusieurs décisions peuvent partager la date, d'où le choix proposé (`buildCc
 
 **Textes cités par leur nom** : les lois par leur nom usuel (« loi Informatique et Libertés », « LCEN ») sont dans la
 table `LAW_ALIASES` (`lawAliases.ts`), les textes de l'Union (RGPD, DSA, DMA, ePrivacy…) dans `EU_TEXTS` (`eulaw.ts`) ;
-ajouter une entrée suffit. Un texte de l'Union cité sans article est une mention (`scanEuMentions`) ; les sigles trop
+ajouter une entrée suffit. Chaque utilisateur complète les lois dans les réglages (`customLaws`, une ligne
+`désignation | autre = loi 2004-575`, lue par `parseCustomLaws`) : `setCustomLaws` reconstruit le motif, et
+`customLawsChanged` relance l'analyse locale des notes. Un texte de l'Union cité sans article est une mention (`scanEuMentions`) ; les sigles trop
 courants (`AMBIGUOUS_ACRONYMS`) ne comptent qu'avec un article. Les décisions du Conseil constitutionnel peuvent aussi
 être citées par l'adresse de leur page (`scanCcSiteUrls`).
 

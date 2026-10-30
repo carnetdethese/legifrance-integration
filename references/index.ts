@@ -210,6 +210,13 @@ export class ReferenceIndex {
 		return true;
 	}
 
+	/** Toutes les notes sont à relire (le dictionnaire de lois de l'utilisateur a changé). @returns `true` s'il y a des notes */
+	invalidateNotes() {
+		if (!this.db.get("SELECT 1 FROM notes LIMIT 1")) return false;
+		this.db.run("UPDATE notes SET mtime = 0");
+		return true;
+	}
+
 	/** Des notes attendent d'être relues (relecture interrompue : les notes n'ont pas encore retrouvé leur date d'analyse). */
 	pendingReindex() {
 		return !!this.db.get("SELECT 1 FROM notes WHERE mtime = 0 LIMIT 1");

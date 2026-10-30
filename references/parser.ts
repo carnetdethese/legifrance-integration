@@ -8,7 +8,7 @@ import { ID_PATHS } from "api/urls";
 import { CODE_PATTERN, LEGIFRANCE_PAGES, PREAMBLE_1946, officialCodeName } from "./codes";
 import { FULL_DATE_PATTERN, MONTH_PATTERN, parseCitedDate, plain } from "./dates";
 import { EU_PATTERN, euArticleUrl, euCelexOf, euLabelOf } from "./eulaw";
-import { LAW_ALIAS_PATTERN, lawAliasOf } from "./lawAliases";
+import { lawAliasOf, lawByNameRegex } from "./lawAliases";
 
 /**
  * Version de l'analyse des notes. À incrémenter quand le parseur change ce qu'il reconnaît : au démarrage, les
@@ -88,9 +88,6 @@ const LAW = new RegExp(
 );
 /** Texte cité par sa seule date (« la loi du 6 janvier 1978 »), rattaché à sa citation complète s'il y en a une. */
 const SHORT_LAW = new RegExp(`(?<nature>${NATURES})\\s+(?:en\\s+date\\s+du|du|le)\\s+(?<date>${FULL_DATE_PATTERN})`, "giu");
-/** Loi citée par son nom usuel (« loi Informatique et Libertés »), suivie ou non de sa date. */
-const LAW_BY_NAME = new RegExp(`(?<name>${LAW_ALIAS_PATTERN})(?:\\s*,?\\s*(?:\\(\\s*)?(?:en\\s+date\\s+du|du)\\s+(?<date>${FULL_DATE_PATTERN}))?`, "gu");
-
 const CASSATION = new RegExp(
 	`(?:\\bCass\\.|\\bCour de cassation|\\b(?:Civ|Soc|Com|Crim)\\.|\\bAss\\. plén\\.|\\bCh\\. mixte)${PAYLOAD}(?:pourvoi\\s+)?n\\s?[°º]\\s*(?<number>\\d{2}-\\d{2}[.\\s]?\\d{3})`,
 	"g"
@@ -395,7 +392,7 @@ function scanPreamble(text: string): Candidate[] {
 
 /** Lois citées par leur nom usuel : retrouvées par leur numéro, la date écrite à la suite est reprise dans la citation. */
 function scanLawAliases(text: string): Candidate[] {
-	return [...text.matchAll(LAW_BY_NAME)].flatMap((match) => {
+	return [...text.matchAll(lawByNameRegex())].flatMap((match) => {
 		const alias = lawAliasOf(match.groups!.name);
 		if (!alias) return [];
 		const { nature, number } = alias;
