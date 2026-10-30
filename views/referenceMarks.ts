@@ -75,8 +75,7 @@ export function markReferencesIn(plugin: LegifrancePlugin, root: HTMLElement) {
 			const range = document.createRange();
 			range.setStart(node, span.start);
 			range.setEnd(node, span.end);
-			const mark = document.createElement("span");
-			mark.className = "legifrance-cite";
+			const mark = createSpan({ cls: "legifrance-cite" });
 			mark.dataset.lfKey = span.ref.key;
 			range.surroundContents(mark);
 			limit = span.start;

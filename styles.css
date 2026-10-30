@@ -2385,14 +2385,12 @@
 /* --- Références juridiques repérées dans les notes : un soulignement en pointillés, discret --- */
 
 .legifrance-cite {
-	text-decoration: underline dotted var(--text-faint);
-	text-decoration-thickness: 1px;
-	text-underline-offset: 3px;
+	border-bottom: 1px dotted var(--text-faint);
 }
 
 .legifrance-cite:hover {
 	background: var(--background-modifier-hover);
-	text-decoration-color: var(--interactive-accent);
+	border-bottom-color: var(--interactive-accent);
 }
 
 /* Bouton « Options » du panneau de recherche : sans fond de bouton, un espace net entre la flèche, le mot et la pastille */
@@ -2413,4 +2411,24 @@
 
 .legifrance-search-form .legifrance-options {
 	margin-top: calc(var(--size-4-1) * -1);
+}
+
+/* --- Sélection et copie du texte : Obsidian désactive la sélection dans les vues qui ne sont pas des notes --- */
+
+.legifrance-reader,
+.legifrance-doc,
+.legifrance-article-bar-path,
+.legifrance-result,
+.legifrance-toc-crumbs,
+.legifrance-toc-head h2 {
+	-webkit-user-select: text;
+	user-select: text;
+}
+
+/* Les boutons (actions, lignes de la table des matières) restent des boutons : on n'en sélectionne pas le libellé. */
+.legifrance-reader button,
+.legifrance-result button,
+.legifrance-doc button {
+	-webkit-user-select: none;
+	user-select: none;
 }

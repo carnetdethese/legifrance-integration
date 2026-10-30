@@ -12,7 +12,7 @@ export class CodePickerModal extends FuzzySuggestModal<CodeEntry> {
 	}
 
 	onOpen() {
-		super.onOpen();
+		void super.onOpen();
 		if (!this.plugin.hasCredentials) {
 			new Notice("Renseignez vos identifiants PISTE dans les réglages du plugin.");
 			this.close();

@@ -79,7 +79,7 @@ let codes: CodeEntry[] | undefined;
 /** Codes en vigueur (une requête, gardée pour la session). */
 export async function loadCodes(api: LegifranceApi): Promise<CodeEntry[]> {
 	if (codes) return codes;
-	const response = (await api.listCodes()) as { results?: { id?: string; titre?: string }[] };
+	const response = await api.listCodes<{ results?: { id?: string; titre?: string }[] }>();
 	const list = (response.results ?? []).flatMap((entry) => (isTextId(entry.id) && entry.titre ? [{ id: entry.id, title: entry.titre }] : []));
 	if (list.length > 0) codes = list;
 	return list;
