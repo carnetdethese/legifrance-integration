@@ -82,6 +82,16 @@ export const TodoTab = ({ records }: { records: DecisionRecord[] }) => {
 	const groups = [...new Set(sections.map((entry) => entry.group))];
 	return (
 		<div className="legifrance-todo">
+			{/* Sur petit écran, le menu devient une liste déroulante : il ne prend plus la place du contenu. */}
+			<select className="dropdown legifrance-todo-select" aria-label="Rubrique" value={section} onChange={(event) => setChosen(event.target.value)}>
+				{groups.map((group) => (
+					<optgroup key={group} label={group}>
+						{sections.filter((entry) => entry.group === group).map((entry) => (
+							<option key={entry.id} value={entry.id}>{entry.title} ({entry.count})</option>
+						))}
+					</optgroup>
+				))}
+			</select>
 			<nav className="legifrance-todo-menu" aria-label="Rubriques">
 				{groups.map((group) => (
 					<div key={group}>

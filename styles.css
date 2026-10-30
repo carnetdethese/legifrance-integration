@@ -3,6 +3,12 @@
  * et s'appuient sur les variables CSS d'Obsidian pour suivre le thème actif.
  */
 
+/* Les adaptations aux petites largeurs suivent la largeur du panneau (pas celle de la fenêtre) : un panneau étroit
+   sur ordinateur est traité comme un téléphone. */
+.legifrance-view.view-content {
+	container: legifrance / inline-size;
+}
+
 /* Surlignage des termes recherchés, limité aux vues du plugin. */
 .legifrance-view mark {
 	background-color: var(--text-highlight-bg);
@@ -622,7 +628,7 @@
 	font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 700px) {
+@container legifrance (max-width: 700px) {
 	.legifrance-articles {
 		grid-template-columns: minmax(0, 1fr);
 	}
@@ -1130,7 +1136,7 @@
 	display: none;
 }
 
-@media (max-width: 800px) {
+@container legifrance (max-width: 800px) {
 	.legifrance-graph-body {
 		grid-template-columns: minmax(0, 1fr);
 	}
@@ -1288,7 +1294,7 @@
 	font-weight: var(--font-medium);
 }
 
-@media (max-width: 700px) {
+@container legifrance (max-width: 700px) {
 	.legifrance-todo {
 		grid-template-columns: minmax(0, 1fr);
 	}
@@ -1532,4 +1538,112 @@
 .legifrance-juris .legifrance-stat,
 .legifrance-juris .legifrance-card {
 	background: var(--background-primary);
+}
+
+/* --- Petits écrans (téléphone, tablette étroite) : listes empilées, onglets défilants, rubriques en liste déroulante --- */
+
+.legifrance-todo-select {
+	display: none;
+}
+
+@container legifrance (max-width: 700px) {
+	/* Chiffres clés : trois cases côte à côte, plus compactes */
+	.legifrance-stats {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: var(--size-4-2);
+	}
+
+	.legifrance-stat {
+		padding: var(--size-4-2) var(--size-4-3);
+	}
+
+	.legifrance-stat-value {
+		font-size: var(--font-ui-large);
+	}
+
+	/* Onglets : une seule rangée qui défile, sans que les libellés se chevauchent */
+	.legifrance-juris > .legifrance-tabs {
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		padding-bottom: var(--size-2-1);
+		scrollbar-width: none;
+	}
+
+	.legifrance-juris > .legifrance-tabs button,
+	.legifrance-tab {
+		flex: none;
+		min-width: auto;
+		white-space: nowrap;
+	}
+
+	/* Une ligne : date et titre en pleine largeur, actions en dessous */
+	.legifrance-row,
+	.legifrance-row.is-plain {
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--size-2-2);
+	}
+
+	.legifrance-row-lead {
+		font-size: var(--font-ui-smaller);
+	}
+
+	.legifrance-row-actions {
+		flex-wrap: wrap;
+		justify-content: flex-start;
+	}
+
+	.legifrance-row-actions .clickable-icon,
+	.legifrance-row-slot {
+		width: 36px;
+		height: 36px;
+	}
+
+	/* Une icône vide n'a plus à garder sa place : les actions ne sont plus alignées en colonnes */
+	.legifrance-row-slot {
+		display: none;
+	}
+
+	.legifrance-card {
+		padding: var(--size-4-3);
+	}
+
+	.legifrance-year-items {
+		padding-left: var(--size-4-2);
+	}
+
+	/* À faire : liste déroulante à la place du menu */
+	.legifrance-todo-select {
+		display: block;
+		width: 100%;
+		min-height: 2.6em;
+	}
+
+	.legifrance-todo-menu {
+		display: none;
+	}
+
+	.legifrance-todo {
+		gap: var(--size-4-3);
+	}
+
+	/* Vue Base de données : onglets sur une ligne défilante */
+	.legifrance-database-tabs {
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.legifrance-database-tabs button {
+		flex: none;
+		white-space: nowrap;
+	}
+
+	/* Articles : le filtre et les listes prennent toute la largeur, la liste ne dépasse pas l'écran */
+	.legifrance-article-list {
+		max-height: 45vh;
+	}
+
+	.legifrance-search-bar input[type="search"] {
+		flex-basis: 100%;
+	}
 }
