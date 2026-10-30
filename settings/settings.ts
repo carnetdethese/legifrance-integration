@@ -8,6 +8,7 @@ import LegifrancePlugin from "main";
 import { REFERENCES_EVENT, TASK_EVENT } from "lib/events";
 import { confirmAction } from "views/ConfirmModal";
 import { LiveStatus, renderDataStatus } from "./status";
+import { CUSTOM_LAWS_HELP, parseCustomLaws } from "references/lawAliases";
 import { FICHE_FIELDS, FicheField, FicheMapping, propertiesOf, withProperties } from "references/fiches";
 import { COMPLETE_FICHES_TASK, SIMULATE_FICHES_TASK } from "references/ficheSync";
 import { ARTICLES_TASK, ENRICH_TASK, GENEALOGY_TASK, INDEX_TASK, REFRESH_TASK, RETRY_UNRESOLVED_TASK, Task } from "references/indexer";
@@ -75,6 +76,8 @@ export interface LegifranceSettings {
 	markReferences: boolean;
 	/** Survoler un lien Légifrance d'une note montre un aperçu du texte, pris dans la base. */
 	linkPreview: boolean;
+	/** Lois reconnues en plus de celles du plugin, une par ligne (`désignation | autre = loi 2004-575`, voir `parseCustomLaws`). */
+	customLaws: string;
 	/** Tient à jour les notes d'articles créées par le plugin (texte, statut, décisions, notes qui citent l'article). */
 	articleNotesAutoRefresh: boolean;
 }
@@ -116,8 +119,17 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	interceptLinks: true,
 	linkPreview: true,
 	markReferences: true,
+	customLaws: "",
 }
 
+
+/** Explication du dictionnaire de lois, avec le nombre de lignes retenues et les lignes refusées. */
+function customLawsDescription(text: string) {
+	const { laws, errors } = parseCustomLaws(text);
+	const base = "Vos abréviations et noms usuels de lois, reconnus dans les notes en plus de ceux du plugin (LCEN, loi Informatique et Libertés…). Une loi par ligne : désignations séparées par |, puis = nature et numéro, par exemple « LCEN | loi confiance numérique = loi 2004-575 ». Les notes sont relues après chaque modification (en local, sans requête).";
+	const state = laws.length ? ` ${laws.length} loi${laws.length > 1 ? "s" : ""} reconnue${laws.length > 1 ? "s" : ""}.` : "";
+	return `${base}${state}${errors.length ? ` Ligne${errors.length > 1 ? "s" : ""} non comprise${errors.length > 1 ? "s" : ""} : ${errors.join(", ")}.` : ""}`;
+}
 
 /** Réglages dont la modification demande aussi de reconnaître à nouveau les fiches du coffre. */
 const FICHE_KEYS = new Set<string>([
@@ -197,6 +209,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 		await this.plugin.saveSettings();
 		if (FICHE_KEYS.has(key) || key.startsWith(MAPPING_PREFIX)) this.plugin.fiches.settingsChanged();
 		if (key === "markReferences") this.app.workspace.updateOptions(); // les éditeurs ouverts recalculent leurs marques
+		if (key === "customLaws") this.plugin.customLawsChanged();
 	}
 
 	/** Une ligne d'action : `onClick` s'exécute au clic sur la ligne. */
@@ -269,6 +282,11 @@ export class LegifranceSettingTab extends PluginSettingTab {
 						name: "Retrouver les liens automatiquement",
 						desc: "Interroge l'API pour chaque référence détectée dans la note (décisions, lois, articles). Désactivez pour limiter les requêtes : un bouton permet alors de les lancer à la demande.",
 						control: { type: "toggle", key: "autoResolveRefs" },
+					},
+					{
+						name: "Lois et abréviations personnalisées",
+						desc: customLawsDescription(plugin.settings.customLaws),
+						control: { type: "textarea", key: "customLaws", placeholder: CUSTOM_LAWS_HELP, rows: 8 },
 					},
 					{
 						name: "Mode débogage des références",

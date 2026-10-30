@@ -153,7 +153,8 @@ Vous pouvez installer le module directement depuis le store de l'application. C'
 -   [x] Lecteur : recherche dans le texte (Cmd/Ctrl + F, ou bouton « Rechercher »), plan de navigation, fiche du document détaillée (ECLI, NOR, publication, copie de la citation).
 -   [x] Panneau de recherche : un seul formulaire (termes, fond en liste déroulante, façon de chercher), critères supplémentaires et période sous « Options ».
 -   [x] Liens Légifrance redirigés vers le plugin : un clic (notes en lecture, propriétés, panneaux ; Cmd/Ctrl + clic dans l'éditeur) ouvre le texte dans le lecteur, depuis la base ou l'API ; Maj + clic ouvre le site ; aperçu du texte au survol (réglages « Ouvrir les liens Légifrance dans le plugin » et « Aperçu au survol »).
--   [x] Références juridiques repérées dans le texte des notes (soulignement discret en pointillés, éditeur et lecture), aperçu au survol depuis la base, Cmd/Ctrl + clic pour ouvrir dans le lecteur (réglage « Repérer les références juridiques dans les notes »).
+-   [x] Références juridiques repérées dans le texte des notes (soulignement discret en pointillés, éditeur et lecture), aperçu au survol depuis la base, Cmd/Ctrl + clic pour ouvrir dans le lecteur (sur mobile : un tap ouvre l'aperçu, sans ouvrir Légifrance) (réglage « Repérer les références juridiques dans les notes »).
+-   [x] Dictionnaire de lois personnalisé : vos abréviations et noms usuels (« LCEN | loi confiance numérique = loi 2004-575 ») sont reconnus en plus de ceux du plugin (réglage « Lois et abréviations personnalisées »).
 -   [x] Résultats de recherche refaits : cartes, tri (API ou sur la page), filtre par origine, passages trouvés dans le texte.
 
 ### Base de données des références juridiques

@@ -4,6 +4,7 @@
  * Lancer : `npm test`.
  */
 import { citationSpans, parseCitations, parseReferences } from "./parser";
+import { parseCustomLaws, setCustomLaws } from "./lawAliases";
 const labels = (t: string) => parseReferences(t).map((r) => r.label);
 let fail = 0;
 const eq = (name: string, got: unknown, want: unknown) => { const g = JSON.stringify(got), w = JSON.stringify(want); if (g !== w) { fail++; console.log("ÉCHEC", name, "\n   obtenu :", g, "\n   attendu:", w); } };
@@ -158,6 +159,17 @@ eq("loi Informatique et Libertés sans date", parseReferences("la loi Informatiq
 eq("même clef que la citation par le numéro", parseReferences("loi informatique et libertés")[0].key, parseReferences("loi n° 78-17 du 6 janvier 1978")[0].key);
 eq("loi pour la Confiance dans l'Economie Numérique", parseReferences("Loi de 2004, Loi pour la Confiance dans l'Economie Numérique (v. décision)").map((r) => r.data), [{ nature: "loi", number: "2004-575" }]);
 eq("LCEN", parseReferences("la LCEN prévoit").map((r) => r.data), [{ nature: "loi", number: "2004-575" }]);
+{
+ const custom = parseCustomLaws("# commentaire\nLOPMI | loi d'orientation Intérieur = loi n° 2023-22\nSREN = loi 2024-449\nordonnance Cyber = ordonnance 2021-650\nligne cassée\n");
+ eq("dictionnaire: lignes", custom.laws.map((l) => [l.nature, l.number, l.names]), [["loi", "2023-22", ["LOPMI", "loi d'orientation Intérieur"]], ["loi", "2024-449", ["SREN"]], ["ordonnance", "2021-650", ["ordonnance Cyber"]]]);
+ eq("dictionnaire: erreurs", custom.errors, [5]);
+ eq("dictionnaire: avant", parseReferences("la loi SREN et la LOPMI").length, 0);
+ setCustomLaws(custom.laws);
+ eq("dictionnaire: après", parseReferences("la SREN et la LOPMI, la LCEN").map((r) => r.data), [{ nature: "loi", number: "2024-449" }, { nature: "loi", number: "2023-22" }, { nature: "loi", number: "2004-575" }]);
+ eq("dictionnaire: sigle collé", parseReferences("SRENX").length, 0);
+ setCustomLaws([]);
+ eq("dictionnaire: retiré", parseReferences("la SREN").length, 0);
+}
 eq("apostrophe typographique", parseReferences("loi pour la confiance dans l’économie numérique").map((r) => r.data.number), ["2004-575"]);
 eq("décret « le » une date", parseReferences("Décret le 14 octobre 1991 qui précise les conditions").map((r) => r.data), [{ nature: "décret", date: "14 octobre 1991" }]);
 eq("décret « du » une date inchangé", parseReferences("le décret du 14 octobre 1991").map((r) => r.data), [{ nature: "décret", date: "14 octobre 1991" }]);

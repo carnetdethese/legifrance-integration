@@ -2388,6 +2388,11 @@
 	border-bottom: 1px dotted var(--text-faint);
 }
 
+/* Mobile : sans curseur « main », iOS ne transmet pas le tap d'un texte simple au document. */
+.is-mobile .legifrance-cite {
+	cursor: pointer;
+}
+
 .legifrance-cite:hover {
 	background: var(--background-modifier-hover);
 	border-bottom-color: var(--interactive-accent);
