@@ -4,6 +4,7 @@
 
 Le module ne sert plus seulement à chercher et à créer des notes : il **lit vos notes** (sans LLM !) repère les décisions, lois et articles qu'elles citent, les retrouve sur Légifrance, en garde le texte et vous aide à les exploiter.
 
+
 ### Nouveautés
 
 -   **Références juridiques d'une note** (commande « Afficher les références juridiques ») : panneau latéral qui liste les décisions, textes et articles cités dans la note affichée, avec leur lien Légifrance. Sont reconnus les décisions (Conseil d'État, Cour de cassation, Conseil constitutionnel, Tribunal des conflits…) citées par leur numéro, leur date, leur nom, leur identifiant ou leur ECLI ; les lois, par leur date ou leur nom usuel (« loi Informatique et Libertés ») ; les articles de codes ; les textes de l'Union (RGPD, TFUE, DSA…). Une référence introuvable ou erronée se précise ou se corrige depuis le panneau (le choix manuel n'est jamais écrasé).
