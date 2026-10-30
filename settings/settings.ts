@@ -67,6 +67,14 @@ export interface LegifranceSettings {
 	ficheAutoComplete: boolean;
 	/** À l'ouverture d'Obsidian : ne rien faire, rappeler les articles à revérifier, ou les actualiser en fond. */
 	refreshOnStartup: "off" | "remind" | "run";
+	/** Analyse des notes à l'ouverture, quand la reconnaissance des références a changé : en fond sans notification, avec notification, ou seulement à la demande. */
+	startupIndexing: "quiet" | "notice" | "off";
+	/** Un clic sur un lien Légifrance (notes, panneaux du plugin) ouvre le document dans le lecteur du plugin au lieu du navigateur. */
+	interceptLinks: boolean;
+	/** Repère les références juridiques du texte des notes (soulignement discret, aperçu au survol, Cmd/Ctrl + clic pour ouvrir). */
+	markReferences: boolean;
+	/** Survoler un lien Légifrance d'une note montre un aperçu du texte, pris dans la base. */
+	linkPreview: boolean;
 	/** Tient à jour les notes d'articles créées par le plugin (texte, statut, décisions, notes qui citent l'article). */
 	articleNotesAutoRefresh: boolean;
 }
@@ -103,7 +111,11 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 	ficheOverwrite: false,
 	ficheAutoComplete: false,
 	refreshOnStartup: "remind",
+	startupIndexing: "quiet",
 	articleNotesAutoRefresh: true,
+	interceptLinks: true,
+	linkPreview: true,
+	markReferences: true,
 }
 
 
@@ -184,6 +196,7 @@ export class LegifranceSettingTab extends PluginSettingTab {
 		else record[key] = value ?? "";
 		await this.plugin.saveSettings();
 		if (FICHE_KEYS.has(key) || key.startsWith(MAPPING_PREFIX)) this.plugin.fiches.settingsChanged();
+		if (key === "markReferences") this.app.workspace.updateOptions(); // les éditeurs ouverts recalculent leurs marques
 	}
 
 	/** Une ligne d'action : `onClick` s'exécute au clic sur la ligne. */
@@ -225,6 +238,21 @@ export class LegifranceSettingTab extends PluginSettingTab {
 						name: "Tenir à jour les notes d'articles",
 						desc: "Quand le texte, le statut de vigueur, les décisions ou les notes qui citent un article changent, met à jour la note d'article créée par le plugin. Seuls les passages entre les repères <!-- legifrance:… --> et les propriétés texte, numero, statut et lien sont réécrits : vos remarques ne sont jamais touchées.",
 						control: { type: "toggle", key: "articleNotesAutoRefresh" },
+					},
+					{
+						name: "Ouvrir les liens Légifrance dans le plugin",
+						desc: "Un clic sur un lien Légifrance (dans une note en mode lecture, une propriété, ou un panneau du plugin) ouvre le texte dans le lecteur du plugin : lu dans la base s'il y est, sinon récupéré via l'API. Dans l'éditeur, Cmd/Ctrl + clic. Maj + clic ouvre le site. Sans identifiants PISTE, le lien suit son chemin habituel.",
+						control: { type: "toggle", key: "interceptLinks" },
+					},
+					{
+						name: "Aperçu au survol des liens Légifrance",
+						desc: "Survoler un lien Légifrance d'une note affiche le début du texte s'il est déjà dans la base (aucune requête).",
+						control: { type: "toggle", key: "linkPreview" },
+					},
+					{
+						name: "Repérer les références juridiques dans les notes",
+						desc: "Souligne discrètement, en pointillés, les références reconnues dans le texte (« art. 226-17 C. pén. », « Cass. civ. 1re, 3 mars 2020 »…). Survolées, elles montrent ce que la base en sait ; Cmd/Ctrl + clic ouvre le document dans le lecteur. Le texte des notes n'est jamais modifié.",
+						control: { type: "toggle", key: "markReferences" },
 					},
 				],
 			},
@@ -271,6 +299,11 @@ export class LegifranceSettingTab extends PluginSettingTab {
 							this.update();
 						})
 					),
+					{
+						name: "Analyse des notes au démarrage",
+						desc: "Quand la reconnaissance des références s'améliore (mise à jour du plugin), les notes sont relues en local, sans requête. En fond, sans notification (l'avancement reste visible dans la vue Base de données), avec une notification, ou seulement quand vous lancez « Indexer le coffre ».",
+						control: { type: "dropdown", key: "startupIndexing", options: { quiet: "En fond, sans notification", notice: "Avec notification", off: "Seulement à la demande" } },
+					},
 					{
 						name: "Actualisation au démarrage",
 						desc: "Articles et textes cités dont le lien date de plus de six mois : un rappel avec un bouton, ou une actualisation en fond une minute après l'ouverture (une requête par article, au débit réglé plus haut).",

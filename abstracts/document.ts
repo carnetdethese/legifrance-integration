@@ -47,6 +47,18 @@ export interface LegalDocument {
 	numero?: string;
 	juridiction?: string;
 	formation?: string;
+	/** Identifiant européen de la jurisprudence (`ECLI:FR:CC:2017:2017.623.QPC`). */
+	ecli?: string;
+	/** Numéro d'ordre du Journal officiel (NOR) d'une décision ou d'un texte. */
+	nor?: string;
+	/** Numéros d'affaire ou de pourvoi. */
+	affaires?: string[];
+	/** Publication au Journal officiel (« JORF n°0085 du 9 avril 2017, texte n° 37 »). */
+	publication?: string;
+	/** Nature de la décision (« Contrôle des normes »). */
+	decisionType?: string;
+	/** État juridique du texte trouvé par la recherche (`VIGUEUR`, `ABROGE`…). */
+	status?: string;
 	/** Solution de la décision (« Non conformité partielle », « Rejet »…) ; `abstract` la porte aussi pour les décisions issues d'une recherche. */
 	solution?: string;
 	/** Résumés de la décision (sommaire de l'arrêt) : un élément par entrée du sommaire de l'API. */

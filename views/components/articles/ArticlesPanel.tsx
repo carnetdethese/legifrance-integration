@@ -8,6 +8,7 @@ import { Notice } from "obsidian";
 import { useMemo, useState } from "react";
 import { createMissingArticleNotes, openArticleNote } from "references/articleNotes";
 import { REFERENCES_EVENT } from "lib/events";
+import { stripLinks } from "lib/links";
 import { preciseReference } from "references/refineText";
 import { loadArticleVersions, storeArticleVersion } from "references/articleVersions";
 import { articleExcerpts, countApplying, statusLabel } from "references/corpus";
@@ -78,7 +79,7 @@ const ArticleCard = ({ reference, onNoteChange }: { reference: LegalRef; onNoteC
 	const link = plugin.references.linkFor(reference);
 	const applying = countApplying(plugin.references, reference.key);
 	const notePath = plugin.references.articleNoteFor(reference.key);
-	const text = link?.texte;
+	const text = link?.texte && stripLinks(link.texte);
 
 	async function refresh() {
 		if (link?.manuel) {
@@ -133,7 +134,7 @@ const ArticleCard = ({ reference, onNoteChange }: { reference: LegalRef; onNoteC
 						<RefreshCw size={16} />
 					</button>
 					{link && (
-						<a className="clickable-icon" aria-label="Ouvrir sur Légifrance" href={link.url}>
+						<a className="clickable-icon" aria-label="Ouvrir l'article (Maj + clic : sur Légifrance)" href={link.url}>
 							<ExternalLink size={16} />
 						</a>
 					)}

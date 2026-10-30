@@ -11,6 +11,7 @@ import { sourceState } from "references/lifecycle";
 import { RELATION_LABELS, RELATION_ORDER, RelationItem, relationsFor } from "references/genealogy";
 import { DecisionRecord, displayDate } from "references/timeline";
 import { topTheme } from "references/themes";
+import { openExternal } from "lib/links";
 import { usePlugin } from "views/hooks";
 
 /** Ouvre une note du coffre dans l'onglet courant. */
@@ -114,6 +115,11 @@ export const DecisionRow = ({
 						<button className="clickable-icon" aria-label="Lire le texte de la décision" onClick={() => void plugin.openStoredDocument(record.id)}>
 							<BookOpen size={16} />
 						</button>
+					) : record.url && plugin.hasCredentials ? (
+						// Texte pas encore en base : le lecteur le demande à l'API.
+						<button className="clickable-icon" aria-label="Lire la décision (récupérée via l'API)" onClick={() => void plugin.openLegifrance(record.url!)}>
+							<BookOpen size={16} />
+						</button>
 					) : (
 						<span className="legifrance-row-slot" />
 					)}
@@ -130,7 +136,7 @@ export const DecisionRow = ({
 						<span className="legifrance-row-slot" />
 					)}
 					{record.url ? (
-						<a className="clickable-icon" aria-label="Ouvrir la décision" href={record.url}>
+						<a className="clickable-icon" aria-label="Ouvrir la décision sur Légifrance" data-site="" href={record.url}>
 							<ExternalLink size={16} />
 						</a>
 					) : (
@@ -192,7 +198,7 @@ export const RelatedList = ({ record, records }: { record: DecisionRecord; recor
 				const other = byId.get(item.id);
 				return (
 					<li key={item.id}>
-						<a onClick={() => (other?.fichePath ? openNote(other.fichePath) : other?.url && window.open(other.url))}>{other?.title ?? item.label}</a>
+						<a onClick={() => (other?.fichePath ? openNote(other.fichePath) : other?.url && void plugin.openLegifrance(other.url).then((opened) => !opened && openExternal(other.url!)))}>{other?.title ?? item.label}</a>
 						<div className="legifrance-row-meta">{Math.round(item.score * 100)} % — {item.reasons.join(" — ")}</div>
 					</li>
 				);

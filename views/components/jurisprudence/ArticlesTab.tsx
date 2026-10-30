@@ -47,7 +47,7 @@ const VersionLine = ({ label, versions, date }: { label: string; versions: Artic
 					{found.state === "exact" ? "Version applicable : " : ""}
 					{period(version)} — {statusLabel(version.status)}
 					{version.id !== current.id && <span className="legifrance-chip" title="La version en vigueur aujourd'hui est différente">≠ version actuelle</span>}
-					<a onClick={() => void read(version)}>Lire</a> — <a href={legifranceUrl(version.id)}>Légifrance</a>
+					<a onClick={() => void read(version)}>Lire</a> — <a data-site="" href={legifranceUrl(version.id)}>Légifrance</a>
 				</span>
 			))}
 		</div>

@@ -32,7 +32,7 @@ Le plugin fait deux choses, qui se rejoignent dans la base SQLite :
 | `main.ts` | Point d'entrée : charge les réglages, ouvre la base, enregistre vues et événements, tient l'historique et ouvre les vues. Le reste est délégué (voir ci-dessous). |
 | `commands.ts` | Commandes de la palette et icône du ruban. |
 | `api/` | **Tous les appels à l'API Légifrance** (`legifrance.ts`), transport PISTE (`client.ts` : OAuth, erreurs), limiteur de débit (`rateLimiter.ts`), adresses des pages (`urls.ts`), constantes du formulaire de recherche (`constants.ts`). |
-| `abstracts/` | Partie « recherche » : registre des fonds (`fonds.ts`), construction des requêtes (`searchHandler.ts`, `searches.ts`), lecture des documents (`consult.ts`, `document.ts`, `decisions.ts`). |
+| `abstracts/` | Partie « recherche » : registre des fonds (`fonds.ts`), construction des requêtes (`searchHandler.ts`, `searches.ts`), lecture des documents (`consult.ts`, `document.ts`, `decisions.ts`), codes et textes consolidés : table des matières et contexte d'un article (`toc.ts` pur, `legislation.ts` appels et cache en mémoire). |
 | `creation/` | Création d'une note à partir d'un document (`newNote.ts`, modèles Handlebars). |
 | `references/` | **Le cœur récent** : parseur, base, résolution par l'API, tâches, analyses. Voir §3 à §5. |
 | `references/sources/` | Sources pour retrouver la décision d'une fiche sans identifiant : Légifrance, ArianeWeb, RGD. |
@@ -64,6 +64,8 @@ module ne connaît les chemins (`/search`, `/consult/juri`…) ni le jeton OAuth
 | `search(request, lane?)` | `POST /search` | formulaire de recherche (`searchHandler.ts`) ; recherche d'une décision pour une fiche (`sources/legifrance.ts`). |
 | `consultDecision(textId, { searchedString?, cnil?, lane? })` | `POST /consult/juri` (`/consult/cnil`) | lecture d'une décision (`abstracts/decisions.ts`), analyse (`indexer.ts`), métadonnées d'une fiche. |
 | `consultArticle(id, lane?)` | `POST /consult/getArticle` | texte d'un article (`resolver.ts`), versions (`articleVersions.ts`). |
+| `consultTableOfContents(textId, date, lane?)` | `POST /consult/legi/tableMatieres` | table des matières d'un code ou d'un texte consolidé (`abstracts/legislation.ts` `loadToc`) : vue « Code » et article suivant / précédent du lecteur. |
+| `listCodes(codeName?, lane?)` | `POST /list/code` | liste des codes en vigueur (commande « Parcourir un code »). |
 | `consult(route, params, lane?)` | `POST /consult/<route>` | lecture des autres fonds (`abstracts/consult.ts` choisit la route d'après l'identifiant) ; requêtes de résolution des références (`resolver.ts` : `/search`, ou la route d'un texte). |
 
 Le transport (`api/client.ts`) fait le reste : jeton mis en cache et renouvelé sur un 401 (une seule relance),
@@ -442,3 +444,10 @@ Obsidian, avec `npm run dev`.
 L'onglet « Graphe » de l'analyse de la jurisprudence n'est plus affiché (`GRAPH_ENABLED = false` dans
 `JurisprudencePanel.tsx`) : il n'était pas assez intuitif. Tout le code est conservé (`GraphTab`, `graph.ts`,
 `graphRenderer.ts`, réglages et tests) ; remettre l'indicateur à `true` le réaffiche.
+
+## Lire un code (table des matières, lecteur d'article)
+
+- **Vue Code** (`views/CodeView.tsx`, `components/code/CodeToc.tsx`) : sections qui se déplient (seules les sections ouvertes sont affichées), filtre par numéro d'article ou mot d'un titre (`filterToc`, limité à 300 articles), date de version. Ouverte par `plugin.openCode(textId, titre?, cid?)` : titre d'un code dans les résultats, commande « Parcourir un code », bouton « Dans le code » du lecteur.
+- **Lecteur d'article** (`components/reader/ArticleBar.tsx`) : chemin dans le code, liste des versions, article précédent / suivant, renvois cliquables (liens `LEGIARTI` / `LEGITEXT` ouverts dans le plugin ; les liens relatifs de l'API sont rendus absolus par `lib/links.ts`).
+- **Ouvrir un document** : toujours `plugin.readLegalDocument` (base d'abord, sinon l'API, puis lecteur). La navigation d'article en article passe `history: false` : le texte rejoint la base (`documents`) mais pas l'historique de `data.json`, qui ne grossit donc pas.
+- **Données** : la table des matières (grosse) et le contexte d'un article ne sont gardés qu'en mémoire (`legislation.ts`, quelques entrées), jamais dans la base ni dans le coffre. Les identifiants lus dans l'état d'un onglet sont contrôlés (`isTextId`, `isArticleId`) avant toute requête ; les titres de l'API sont affichés comme du texte, jamais comme du HTML.

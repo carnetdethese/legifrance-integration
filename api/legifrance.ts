@@ -10,6 +10,8 @@
  * | `consultDecision`        | `POST /consult/juri` / `cnil`  | `{ textId, searchedString? }`   |
  * | `consultArticle`         | `POST /consult/getArticle`     | `{ id }`                        |
  * | `consult`                | `POST /consult/<route>`        | selon la route (`consult.ts`)   |
+ * | `consultTableOfContents` | `POST /consult/legi/tableMatieres` | `{ textId, date }`          |
+ * | `listCodes`              | `POST /list/code`              | `{ codeName, states, … }`       |
  *
  * Toutes acceptent une file (`lane`) : `"background"` pour une tâche de fond, qui passe après les requêtes que
  * l'utilisateur attend.
@@ -51,6 +53,16 @@ export class LegifranceApi {
 	/** Un article de code ou de texte (`POST /consult/getArticle`) : texte, versions. */
 	consultArticle<T = object>(id: string, lane?: Lane) {
 		return this.client.fetch<T>({ path: "/consult/getArticle", params: { id }, lane });
+	}
+
+	/** Table des matières d'un texte consolidé (code, loi) telle qu'elle était à `date` (millisecondes) : sections et numéros d'articles, sans leur texte. */
+	consultTableOfContents<T = object>(textId: string, date: number, lane?: Lane) {
+		return this.client.fetch<T>({ path: "/consult/legi/tableMatieres", params: { textId, date }, lane });
+	}
+
+	/** Codes en vigueur dont le nom contient `codeName` (tous si vide). */
+	listCodes<T = object>(codeName = "", lane?: Lane) {
+		return this.client.fetch<T>({ path: "/list/code", params: { codeName, pageNumber: 1, pageSize: 100, states: ["VIGUEUR"] }, lane });
 	}
 
 	/**

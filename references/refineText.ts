@@ -5,6 +5,7 @@
  */
 import { Notice, htmlToMarkdown } from "obsidian";
 import { legifranceUrl } from "api/urls";
+import { fixLinks } from "lib/links";
 import type LegifrancePlugin from "main";
 import { OTHER_CHOICE_KEY, pickCandidate } from "views/CandidateModal";
 import { RefinedText, refineText } from "views/RefineTextModal";
@@ -32,7 +33,7 @@ async function linkFromId(plugin: LegifrancePlugin, ref: LegalRef, id: string) {
 			const response = await plugin.api.consultArticle<{ article?: ArticleBody } & ArticleBody>(id);
 			const article = response.article ?? response;
 			const html = article.texteHtml ?? article.texte;
-			if (html) link.texte = htmlToMarkdown(html).trim().slice(0, MAX_TEXT_LENGTH);
+			if (html) link.texte = fixLinks(htmlToMarkdown(html).trim()).slice(0, MAX_TEXT_LENGTH);
 			link.statut = article.etat;
 		} catch {
 			// Le lien est enregistré sans texte : il pourra être complété plus tard.

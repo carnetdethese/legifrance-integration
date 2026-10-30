@@ -22,12 +22,17 @@ export const ID_PATHS: Record<string, string> = {
 /** Préfixe alphabétique d'un identifiant (« JURITEXT000… » → « JURITEXT »), ou chaîne vide (circulaire : numéro). */
 export const idPrefix = (id: string) => /^[A-Z]+/.exec(id)?.[0] ?? "";
 
+/** Identifiant d'un résultat de recherche sans le suffixe de date de version (`LEGITEXT…_24-10-2025` → `LEGITEXT…`). */
+export const baseId = (id: string | null | undefined) => (id ?? "").replace(/_\d{2}-\d{2}-\d{4}$/, "");
+
 /**
  * Adresse d'un document sur Légifrance. Un texte `LEGITEXT` qui n'est pas un code (loi,
  * Constitution…) a sa page dans `loda` ; une circulaire n'a qu'un numéro.
  */
-export function legifranceUrl(id: string, nature?: string) {
+export function legifranceUrl(rawId: string | null | undefined, nature?: string) {
+	const id = baseId(rawId);
 	const prefix = idPrefix(id);
-	if (prefix === "LEGITEXT" && nature !== "CODE") return `${LEGIFRANCE_URL}/loda/id/${id}`;
+	// L'API écrit la nature d'un code tantôt « CODE », tantôt « code ».
+	if (prefix === "LEGITEXT" && nature?.toUpperCase() !== "CODE") return `${LEGIFRANCE_URL}/loda/id/${id}`;
 	return `${LEGIFRANCE_URL}/${ID_PATHS[prefix] ?? "circulaire/id"}/${id}`;
 }

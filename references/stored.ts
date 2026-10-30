@@ -4,6 +4,7 @@
  */
 import type { LegalDocument } from "abstracts/document";
 import { legifranceUrl } from "api/urls";
+import { fixLinks } from "lib/links";
 import type LegifrancePlugin from "main";
 import { COURT_NAMES } from "./fiches";
 import { CC_SITE, RGD_SITE } from "./ids";
@@ -61,11 +62,11 @@ function fromRow(id: string, row: StoredDocument): LegalDocument {
 	};
 }
 
-/** Paragraphes HTML d'un texte Markdown (articles des citations, conservés sans HTML). */
+/** Paragraphes HTML d'un texte Markdown (articles des citations, conservés sans HTML) ; ses liens `https` restent des liens. */
 const markdownToHtml = (markdown: string) =>
-	markdown
+	fixLinks(markdown)
 		.split(/\n{2,}/)
-		.map((p) => `<p>${p.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>")}</p>`)
+		.map((p) => `<p>${p.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>").replace(/\[([^\]]*)\]\((https?:\/\/[^\s)"]+)\)/g, '<a href="$2">$1</a>')}</p>`)
 		.join("");
 
 /**

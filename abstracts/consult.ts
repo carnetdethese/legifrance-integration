@@ -7,9 +7,11 @@
 import { htmlToMarkdown } from "obsidian";
 import { ApiError } from "api/client";
 import type { LegifranceApi } from "api/legifrance";
-import { idPrefix } from "api/urls";
+import { baseId, idPrefix } from "api/urls";
 import { removeTags } from "lib/tools";
 import { LegalDocument } from "./document";
+import { rememberArticleResponse } from "./legislation";
+import { parseArticleContext } from "./toc";
 
 /** Une route de consultation et le corps de sa requête. */
 interface Route {
@@ -21,7 +23,8 @@ interface Route {
  * Routes à essayer, dans l'ordre, pour un identifiant. `search` est le terme recherché (l'API
  * surligne ses occurrences dans le texte) ; un identifiant sans préfixe est une circulaire.
  */
-export function routesFor(id: string, search: string, date = Date.now()): Route[] {
+export function routesFor(rawId: string, search: string, date = Date.now()): Route[] {
+	const id = baseId(rawId);
 	const withSearch = (params: Record<string, unknown>) => (search ? { ...params, searchedString: search } : params);
 	switch (idPrefix(id)) {
 		case "LEGIARTI":
@@ -30,9 +33,10 @@ export function routesFor(id: string, search: string, date = Date.now()): Route[
 		case "LEGITEXT":
 			return [{ path: "/consult/legiPart", params: withSearch({ textId: id, date }) }];
 		case "JORFTEXT":
+			// Texte consolidé d'abord (avec son texte) ; un texte du Journal officiel sans version consolidée n'a que la liste de ses articles.
 			return [
-				{ path: "/consult/jorf", params: withSearch({ textCid: id }) },
 				{ path: "/consult/lawDecree", params: { textId: id, date } },
+				{ path: "/consult/jorf", params: withSearch({ textCid: id }) },
 			];
 		case "KALITEXT":
 			return [{ path: "/consult/kaliText", params: withSearch({ id }) }];
@@ -42,8 +46,11 @@ export function routesFor(id: string, search: string, date = Date.now()): Route[
 			return [{ path: "/consult/kaliArticle", params: { id } }];
 		case "ACCOTEXT":
 			return [{ path: "/consult/acco", params: withSearch({ id }) }];
-		default:
+		case "":
 			return [{ path: "/consult/circulaire", params: withSearch({ id }) }];
+		default:
+			// Une section (`LEGISCTA…`), un dossier législatif…: pas de page de lecture à leur identifiant.
+			return [];
 	}
 }
 
@@ -134,10 +141,12 @@ export interface Consultation {
 	html: string;
 }
 
+/** Le document dans la réponse : les routes l'enveloppent parfois (`article`, `circulaire`, `acco`, `text`). */
+export const readRoot = (response: Json): Json => ["article", "circulaire", "acco", "text"].map((key) => response[key]).find(isObject) ?? response;
+
 /** Corps d'un document : pièce jointe (circulaire, accord), arbre de sections, ou texte unique. */
 export function readConsultation(response: Json): Consultation {
-	// Les routes enveloppent parfois le document (`article`, `circulaire`, `acco`, `text`).
-	const root = ["article", "circulaire", "acco", "text"].map((key) => response[key]).find(isObject) ?? response;
+	const root = readRoot(response);
 
 	let html = (asString(root.visa) ? toHtml(asString(root.visa)!) : "") + assembleHtml(root);
 
@@ -162,34 +171,73 @@ export function readConsultation(response: Json): Consultation {
 	};
 }
 
+/** Articles d'un texte du Journal officiel que l'API ne donne qu'en liste : on en lit le texte, par petits groupes, jusqu'à cette limite. */
+const MAX_LISTED_ARTICLES = 60;
+const ARTICLES_AT_ONCE = 4;
+
+/** Texte (HTML) des articles que la réponse liste sans leur texte ; vide s'il n'y a pas de liste. */
+async function listedArticlesHtml(response: Json, api: LegifranceApi): Promise<string> {
+	const ids = ordered(readRoot(response).articles)
+		.map((article) => asString(article.id) ?? "")
+		.filter((id) => /^(?:LEGIARTI|JORFARTI)\d{12}$/.test(id));
+	let html = "";
+	for (let start = 0; start < Math.min(ids.length, MAX_LISTED_ARTICLES); start += ARTICLES_AT_ONCE) {
+		const batch = ids.slice(start, Math.min(start + ARTICLES_AT_ONCE, MAX_LISTED_ARTICLES));
+		const texts = await Promise.all(
+			batch.map(async (id) => {
+				try {
+					const fetched = await api.consultArticle<Json>(id);
+					return articleHtml(readRoot(fetched), 2);
+				} catch (error) {
+					if (error instanceof ApiError && [400, 404].includes(error.status ?? 0)) return "";
+					throw error;
+				}
+			})
+		);
+		html += texts.join("");
+	}
+	if (ids.length > MAX_LISTED_ARTICLES) html += `<p><em>${ids.length - MAX_LISTED_ARTICLES} autres articles : voir le texte sur Légifrance.</em></p>`;
+	return html;
+}
+
 /**
  * Consulte le document sur l'API et en complète la fiche (titre, date, numéro, texte). Les routes
  * sont essayées l'une après l'autre : une requête refusée (400/404) passe à la suivante, avec puis
  * sans le terme recherché.
  *
- * @throws Error si aucune route ne donne le document.
+ * @throws Error si aucune route ne donne le document (le message dit laquelle a été refusée).
  */
 export async function consultDocument(document: LegalDocument, search: string, api: LegifranceApi): Promise<LegalDocument> {
-	let failure: unknown;
+	if (!document.id) throw new Error("Ce résultat n'a pas d'identifiant : il ne peut pas être ouvert ici (voir la page Légifrance).");
+	let failure: ApiError | undefined;
+	let failedPath = "";
 	for (const route of routesFor(document.id, search)) {
 		const attempts = "searchedString" in route.params ? [route.params, { ...route.params, searchedString: undefined }] : [route.params];
 		for (const params of attempts) {
 			try {
 				const response = await api.consult<Json>(route.path, params);
-				applyConsultation(document, readConsultation(response));
+				if (idPrefix(document.id) === "LEGIARTI") rememberArticleResponse(baseId(document.id), response);
+				const consultation = readConsultation(response);
+				if (!consultation.html) consultation.html = await listedArticlesHtml(response, api);
+				applyConsultation(document, consultation);
+				const context = idPrefix(document.id) === "LEGIARTI" ? parseArticleContext(response) : null;
+				if (context?.textTitle && context.num) document.titre = `${context.textTitle} — article ${context.num}`;
 				return document;
 			} catch (error) {
 				if (!(error instanceof ApiError) || ![400, 404].includes(error.status ?? 0)) throw error;
 				failure = error;
+				failedPath = route.path;
 			}
 		}
 	}
-	throw failure instanceof Error ? failure : new Error("Document introuvable.");
+	if (!failure) throw new Error(`Ce type de document (${document.id}) ne peut pas être ouvert ici : voir la page Légifrance.`);
+	throw new Error(`${failure.message} sur ${failedPath} pour ${document.id}`);
 }
 
 /** Reporte une consultation sur la fiche du document. */
 function applyConsultation(document: LegalDocument, consultation: Consultation) {
-	if (consultation.title) document.titre = removeTags(consultation.title);
+	// Le titre d'un article (« Code pénal — article 226-17 ») est déjà celui que lui a donné la recherche ou le code : la réponse ne donne que celui du texte.
+	if (consultation.title && !(idPrefix(document.id) === "LEGIARTI" && document.titre)) document.titre = removeTags(consultation.title);
 	if (consultation.date) {
 		document.date = consultation.date;
 		document.annee = Number(consultation.date.slice(0, 4));

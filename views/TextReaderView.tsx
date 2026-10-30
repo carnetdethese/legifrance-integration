@@ -2,8 +2,9 @@
  * Onglet de lecture d'un document : un document de l'historique (`docId`, consulté sur l'API) ou un texte déjà dans
  * la base (`storedId` : décision, article, texte). L'état de l'onglet est restauré par Obsidian au redémarrage.
  */
-import { ViewStateResult } from "obsidian";
+import { Scope, ViewStateResult, WorkspaceLeaf } from "obsidian";
 import { ReactNode } from "react";
+import type LegifrancePlugin from "main";
 import { removeTags } from "lib/tools";
 import { storedLegalDocument } from "references/stored";
 import { ReaderView } from "./components/reader/ReaderView";
@@ -17,6 +18,8 @@ interface ReaderState extends Record<string, unknown> {
 	docId?: string;
 	/** Document de la base de données (décision, article, texte), par son identifiant ou son adresse. */
 	storedId?: string;
+	/** Texte composé à la demande (section de code), gardé en mémoire le temps de la session. */
+	composedId?: string;
 }
 
 /**
@@ -28,6 +31,21 @@ interface ReaderState extends Record<string, unknown> {
 export class TextReaderView extends ReactItemView {
 	document?: DocumentData;
 	private storedId?: string;
+	private composedId?: string;
+
+	/** Demandes de recherche dans le texte (Cmd/Ctrl + F) : le lecteur ouvre sa barre quand le nombre change. */
+	private findRequests = 0;
+
+	constructor(leaf: WorkspaceLeaf, plugin: LegifrancePlugin) {
+		super(leaf, plugin);
+		// Cmd/Ctrl + F dans cet onglet cherche dans le texte du document (Obsidian ne le fait pas pour une vue du plugin).
+		this.scope = new Scope(this.app.scope);
+		this.scope.register(["Mod"], "f", () => {
+			this.findRequests++;
+			this.update();
+			return false;
+		});
+	}
 
 	getViewType() {
 		return TEXT_READER_VIEW;
@@ -42,12 +60,17 @@ export class TextReaderView extends ReactItemView {
 	}
 
 	getState(): ReaderState {
+		if (this.composedId) return { composedId: this.composedId };
 		return this.storedId ? { storedId: this.storedId } : { docId: this.document?.data.id };
 	}
 
 	async setState(state: ReaderState, result: ViewStateResult) {
 		this.storedId = state?.storedId;
-		if (this.storedId) {
+		this.composedId = state?.composedId;
+		if (this.composedId) {
+			const data = this.plugin.composedDocument(this.composedId);
+			this.document = data ? { id: 0, data } : undefined;
+		} else if (this.storedId) {
 			const data = storedLegalDocument(this.plugin, this.storedId);
 			this.document = data ? { id: 0, data } : undefined;
 		} else {
@@ -57,12 +80,20 @@ export class TextReaderView extends ReactItemView {
 		this.update();
 	}
 
+	protected contentClasses() {
+		return ["is-reader"];
+	}
+
 	protected renderContent(): ReactNode {
 		return this.document ? (
-			<ReaderView data={this.document.data} />
+			<ReaderView data={this.document.data} leaf={this.leaf} findRequest={this.findRequests} />
 		) : (
 			<p className="legifrance-empty">
-				{this.storedId ? "Ce document n'est plus dans la base de données." : "Ce document ne figure plus dans l'historique."}
+				{this.composedId
+					? "Ce texte était composé à la demande et n'est plus en mémoire : rouvrez-le depuis la table des matières."
+					: this.storedId
+						? "Ce document n'est plus dans la base de données."
+						: "Ce document ne figure plus dans l'historique."}
 			</p>
 		);
 	}

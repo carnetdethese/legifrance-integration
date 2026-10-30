@@ -72,5 +72,9 @@ export const fondDef = (code: string): FondDef =>
 export const dateFacetOf = (fond: FondDef, sort: string) =>
 	typeof fond.dateFacet === "function" ? fond.dateFacet(sort) : fond.dateFacet;
 
+/** Nom lisible de l'origine d'un résultat (champ `origin` : `LEGI` pour la législation consolidée, `JORF`, `CETAT`…). */
+export const originLabel = (origin: string) =>
+	({ LEGI: "Législation consolidée", JORF: "Journal officiel", CIRC: "Circulaire", KALI: "Convention collective", ACCO: "Accord d'entreprise", CNIL: "CNIL" })[origin] ?? BY_CODE.get(origin)?.label ?? origin;
+
 /** Les documents de cette origine (champ `origin` d'un résultat) sont-ils des décisions de justice ? */
 export const isCaselawOrigin = (origin: string) => FONDS.some((fond) => fond.caselaw && fond.code === origin);

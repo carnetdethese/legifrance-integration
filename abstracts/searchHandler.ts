@@ -18,6 +18,8 @@ export const MAX_CRITERES = 4;
 export class DocumentSearch {
 	recherche: AdvancedSearch; // Initialise l'objet qui contiendra les critères de recherche
 	fond: string; // Définit le fond dans lequel sera effectué la recherche
+	/** Filtres par facette choisis dans les résultats (nature, état, code…) : facette → valeurs retenues. */
+	facetFilters: Record<string, string[]> = {};
 	criteresTri: Record<string, string> = {}; // Contient les critères de tri en fonction du fond - voir la documentation de l'API.
 
 	constructor() {
@@ -154,26 +156,42 @@ export class DocumentSearch {
 	 * est une date de version unique (en millisecondes), par défaut aujourd'hui.
 	 */
 	toObject() {
+		// Filtres par facette, après le filtre de date s'il y en a un.
+		const facets = Object.entries(this.facetFilters)
+			.filter(([, valeurs]) => valeurs.length > 0)
+			.map(([facette, valeurs]) => ({ facette, valeurs }));
 		const [filter] = this.recherche.filtres;
-		if (!filter) return { recherche: this.recherche, fond: this.fond };
+		if (!filter) return { recherche: { ...this.recherche, filtres: facets }, fond: this.fond };
 
 		if (fondDef(this.fond).dateMode === "single") {
 			const day = filter.dates.end.toString();
 			const singleDate = day ? new Date(day).getTime() : Date.now();
 			return {
-				recherche: { ...this.recherche, filtres: [{ facette: filter.facette, singleDate }] },
+				recherche: { ...this.recherche, filtres: [{ facette: filter.facette, singleDate }, ...facets] },
 				fond: this.fond,
 			};
 		}
 
 		filter.dates.end = filter.dates.end.toString();
 		filter.dates.start = filter.dates.start.toString();
-		return { recherche: this.recherche, fond: this.fond };
+		return { recherche: { ...this.recherche, filtres: [filter, ...facets] }, fond: this.fond };
+	}
+
+	/** Retient ou retire une valeur d'une facette des résultats. */
+	toggleFacet(facette: string, value: string) {
+		const values = this.facetFilters[facette] ?? [];
+		const next = values.includes(value) ? values.filter((v) => v !== value) : [...values, value];
+		this.facetFilters = { ...this.facetFilters, [facette]: next };
+	}
+
+	clearFacets() {
+		this.facetFilters = {};
 	}
 
 	/** Change de fond : filtre de date et critères de tri sont ceux du nouveau fond. */
 	updatingFond(selection: string, returnValue: boolean) {
 		this.fond = selection;
+		this.facetFilters = {}; // les facettes d'un fond n'ont pas de sens dans un autre
 		const def = fondDef(selection);
 
 		if (def.dateMode === "none") this.resetDate();
@@ -265,6 +283,7 @@ export class DocumentSearch {
 		newSearch.recherche = { ...this.recherche };
 		newSearch.criteresTri = { ...this.criteresTri };
 		newSearch.fond = this.fond;
+		newSearch.facetFilters = { ...this.facetFilters };
 
 		return newSearch
 	}

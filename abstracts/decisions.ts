@@ -30,6 +30,8 @@ export async function getDecisionInfo(document: LegalDocument, search: string, a
 	document.titre = removeTags(document.titre);
 	const text = response.text;
 	if (!text) return undefined;
+	// Document ouvert par un lien (sans résultat de recherche) : le titre vient de la réponse.
+	if (!document.titre) document.titre = removeTags(String((text as unknown as Record<string, unknown>).titre ?? "")).trim();
 
 	document.texteIntegralHTML = text.texteHtml;
 	if (text.texteHtml) document.texteIntegral = htmlToMarkdown(text.texteHtml);
@@ -54,6 +56,16 @@ export async function getDecisionInfo(document: LegalDocument, search: string, a
 		document.numero = document.origin === "CONSTIT" ? `${number} ${text.nature}` : number;
 	}
 	if (document.origin === "CONSTIT") document.urlCC = text.urlCC;
+
+	// Compléments de la réponse, pour la fiche du lecteur (champs absents selon la juridiction).
+	const raw = text as unknown as Record<string, unknown>;
+	const str = (value: unknown) => (typeof value === "string" && value.trim() ? removeTags(value).trim() : undefined);
+	document.ecli = str(raw.ecli);
+	document.nor = str(raw.nor);
+	document.publication = str(raw.titreJo);
+	document.decisionType = str(raw.typeDecision) ?? str(raw.natureQualifiee);
+	const affaires = (Array.isArray(raw.numeroAffaire) ? raw.numeroAffaire : []).map(str).filter((value): value is string => !!value);
+	if (affaires.length) document.affaires = affaires;
 
 	return document;
 }

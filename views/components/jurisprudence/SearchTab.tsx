@@ -68,7 +68,7 @@ export const SearchTab = () => {
 							key={`${hit.kind}-${hit.id}`}
 							title={<a onClick={() => void plugin.openStoredDocument(hit.id)}>{hit.title}</a>}
 							meta={[KINDS[hit.kind], hit.date && hit.date.slice(0, 10), hit.kind === "article" && hit.detail ? statusLabel(hit.detail) : hit.detail].filter(Boolean).join(" — ")}
-							actions={hit.url && <a className="clickable-icon" aria-label="Ouvrir sur Légifrance" href={hit.url}><ExternalLink size={16} /></a>}
+							actions={hit.url && <a className="clickable-icon" aria-label="Ouvrir (Maj + clic : sur Légifrance)" href={hit.url}><ExternalLink size={16} /></a>}
 						>
 							{hit.snippets.map((parts, i) => (
 								<div key={i} className="legifrance-snippet">

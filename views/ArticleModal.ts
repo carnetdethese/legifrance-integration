@@ -1,4 +1,5 @@
 import { App, Component, MarkdownRenderer, Modal } from "obsidian";
+import { fixLinks } from "lib/links";
 import { LegalRef } from "references/parser";
 import { ResolvedLink } from "references/resolver";
 
@@ -19,7 +20,7 @@ export class ArticleModal extends Modal {
 		this.component.load();
 		this.setTitle(this.reference.label);
 		const body = this.contentEl.createDiv({ cls: "legifrance-article-text" });
-		void MarkdownRenderer.render(this.app, this.link.texte ?? "", body, "", this.component);
+		void MarkdownRenderer.render(this.app, fixLinks(this.link.texte ?? ""), body, "", this.component);
 
 		this.contentEl.createEl("a", {
 			text: "Ouvrir sur Légifrance",

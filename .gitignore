@@ -50,3 +50,7 @@ IDEES.md
 .existing-test.js
 .paths-test.js
 .credentials-test.js
+.links-test.js
+.toc-test.js
+.outline-test.js
+.display-test.js

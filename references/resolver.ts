@@ -15,6 +15,7 @@ import { findAriaDecision } from "./ariane";
 import { LEGIFRANCE_TEXTS } from "./codes";
 import { FULL_DATE_PATTERN, isoDay, matchesDate, parseCitedDate, plain, significantWords, titleDates } from "./dates";
 import { LegalRef } from "./parser";
+import { fixLinks } from "lib/links";
 import { datedTextMatches, stripMarks } from "./textMatch";
 
 export const BASE_URL = "https://www.legifrance.gouv.fr";
@@ -426,7 +427,7 @@ export async function fetchArticleText(api: LegifranceApi, id: string, lane?: La
 	const response = await api.consultArticle<{ article?: ArticleBody } & ArticleBody>(id, lane);
 	const article = response.article ?? response;
 	const html = article.texteHtml ?? article.texte;
-	return html ? htmlToMarkdown(html).trim().slice(0, MAX_TEXT_LENGTH) : undefined;
+	return html ? fixLinks(htmlToMarkdown(html).trim()).slice(0, MAX_TEXT_LENGTH) : undefined;
 }
 
 interface ArticleBody {

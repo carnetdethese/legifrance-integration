@@ -147,6 +147,13 @@ Vous pouvez installer le module directement depuis le store de l'application. C'
 -   [x] S'assurer que les _views_ persistent après redémarrage.
 -   [x] Gestionnaire d'historique.
 -   [x] Meilleur moteur d'affichage des résultats.
+-   [x] Lecture d'un code par sa table des matières (commande « Parcourir un code », ou clic sur le titre d'un code dans les résultats) : sections dépliables, filtre par numéro d'article, version à une date.
+-   [x] Lecteur d'article : chemin dans le code, choix de la version, article précédent / suivant, renvois cliquables.
+-   [x] Lecteur : recherche dans le texte (Cmd/Ctrl + F, ou bouton « Rechercher »), plan de navigation, fiche du document détaillée (ECLI, NOR, publication, copie de la citation).
+-   [x] Panneau de recherche : un seul formulaire (termes, fond en liste déroulante, façon de chercher), critères supplémentaires et période sous « Options ».
+-   [x] Liens Légifrance redirigés vers le plugin : un clic (notes en lecture, propriétés, panneaux ; Cmd/Ctrl + clic dans l'éditeur) ouvre le texte dans le lecteur, depuis la base ou l'API ; Maj + clic ouvre le site ; aperçu du texte au survol (réglages « Ouvrir les liens Légifrance dans le plugin » et « Aperçu au survol »).
+-   [x] Références juridiques repérées dans le texte des notes (soulignement discret en pointillés, éditeur et lecture), aperçu au survol depuis la base, Cmd/Ctrl + clic pour ouvrir dans le lecteur (réglage « Repérer les références juridiques dans les notes »).
+-   [x] Résultats de recherche refaits : cartes, tri (API ou sur la page), filtre par origine, passages trouvés dans le texte.
 
 ### Base de données des références juridiques
 

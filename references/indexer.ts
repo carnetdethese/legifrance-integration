@@ -22,6 +22,8 @@ export type Progress = (done: number, total: number, label: string) => void;
 
 /** Notes traitées avant de rendre la main à l'interface. */
 const NOTES_PER_BATCH = 25;
+/** Notes analysées entre deux enregistrements de la base. */
+const CHECKPOINT_EVERY = 500;
 const pause = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 /** Résultat de l'indexation du coffre. */
@@ -48,6 +50,9 @@ export async function indexVault(plugin: LegifrancePlugin, progress: Progress): 
 		if (!index.cached(file.path, file.stat.mtime)) {
 			await plugin.getReferences(file);
 			analyzed++;
+			// Point de reprise : l'enregistrement différé attend un répit, qui ne vient qu'à la fin ; une application fermée
+			// (ou suspendue, sur mobile) en cours de route perdrait tout le travail.
+			if (analyzed % CHECKPOINT_EVERY === 0) await plugin.saveDatabase();
 		}
 		if (i % NOTES_PER_BATCH === 0) {
 			progress(i, files.length, file.path);

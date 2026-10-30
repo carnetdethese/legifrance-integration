@@ -210,6 +210,11 @@ export class ReferenceIndex {
 		return true;
 	}
 
+	/** Des notes attendent d'être relues (relecture interrompue : les notes n'ont pas encore retrouvé leur date d'analyse). */
+	pendingReindex() {
+		return !!this.db.get("SELECT 1 FROM notes WHERE mtime = 0 LIMIT 1");
+	}
+
 	rename(oldPath: string, newPath: string) {
 		this.db.transaction(() => {
 			this.db.run("UPDATE notes SET path = ? WHERE path = ?", [newPath, oldPath]);

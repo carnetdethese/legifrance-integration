@@ -13,16 +13,19 @@
  * | tâches longues                     | `references/taskRunner.ts` (`plugin.tasks`)           |
  * | événements pour les vues           | `lib/events.ts` (`plugin.events`)                     |
  */
-import { Events, Notice, Plugin, TFile, debounce } from "obsidian";
+import { Events, Notice, Plugin, TFile, WorkspaceLeaf, debounce } from "obsidian";
 import type { ConnectionSettings } from "api/client";
 import { LegifranceApi } from "api/legifrance";
-import { LegalDocument } from "abstracts/document";
+import { LegalDocument, getDocumentInfo } from "abstracts/document";
+import { isCaselawOrigin } from "abstracts/fonds";
+import { isTextId } from "abstracts/legislation";
 import { DocumentSearch } from "abstracts/searchHandler";
 import { registerCommands } from "commands";
 import { migrateCredentials } from "settings/credentials";
 import { shouldCreateNote } from "creation/linkExisting";
 import { createNote } from "creation/newNote";
 import { HISTORY_EVENT, REFERENCES_EVENT } from "lib/events";
+import { legifranceTarget, openExternal } from "lib/links";
 import { ReferenceIndex } from "references";
 import { analyzeStoredDecisions } from "references/corpus";
 import { DatabaseFile } from "references/databaseFile";
@@ -35,9 +38,10 @@ import { refreshOnStartup } from "references/startup";
 import { LinkResolver } from "references/linkResolver";
 import { MigrationReport } from "references/migrate";
 import { ResolvedLink } from "references/resolver";
-import { storedLegalDocument } from "references/stored";
+import { documentRow, storedLegalDocument } from "references/stored";
 import { TaskRunner } from "references/taskRunner";
 import { DEFAULT_SETTINGS, LegifranceSettings, LegifranceSettingTab } from "settings/settings";
+import { CODE_VIEW, CodeView } from "views/CodeView";
 import { DATABASE_VIEW, DatabaseView } from "views/DatabaseView";
 import { JURISPRUDENCE_VIEW, JurisprudenceView } from "views/JurisprudenceView";
 import { NOTE_TAKING_VIEW, NoteTakingView } from "views/NoteTakingView";
@@ -46,6 +50,9 @@ import { REFERENCES_VIEW, ReferencesView } from "views/ReferencesView";
 import { RESEARCH_TEXT_VIEW, ResearchTextView } from "views/ResearchTextView";
 import { SEARCH_RESULT_VIEW, SearchResultView } from "views/SearchResultView";
 import { TEXT_READER_VIEW, TextReaderView } from "views/TextReaderView";
+import { LinkPreview } from "views/LinkPreview";
+import { markReferencesIn, referenceMarks } from "views/referenceMarks";
+import { recallRef } from "references/refRegistry";
 import { DocumentData } from "views/viewsData";
 
 /** Contenu de `data.json`. */
@@ -58,6 +65,23 @@ interface PluginData {
 	/** Anciens liens de références, avant la base SQLite : repris une fois puis abandonnés. */
 	references?: { links?: Record<string, ResolvedLink>; misses?: Record<string, number> };
 }
+
+/** Origine (fond) d'un document d'après le préfixe de son identifiant. */
+const LINK_ORIGINS: Record<string, string> = {
+	JURITEXT: "JURI",
+	CETATEXT: "CETAT",
+	CONSTEXT: "CONSTIT",
+	JUFITEXT: "JUFI",
+	CNILTEXT: "CNIL",
+	LEGIARTI: "LEGI",
+	LEGITEXT: "LEGI",
+	JORFARTI: "JORF",
+	JORFTEXT: "JORF",
+	KALITEXT: "KALI",
+	KALICONT: "KALI",
+	KALIARTI: "KALI",
+	ACCOTEXT: "ACCO",
+};
 
 export default class LegifrancePlugin extends Plugin {
 	static instance: LegifrancePlugin;
@@ -107,11 +131,19 @@ export default class LegifrancePlugin extends Plugin {
 		this.registerView(ARTICLES_VIEW, (leaf) => new ArticlesView(leaf, this));
 		this.registerView(DATABASE_VIEW, (leaf) => new DatabaseView(leaf, this));
 		this.registerView(JURISPRUDENCE_VIEW, (leaf) => new JurisprudenceView(leaf, this));
+		this.registerView(CODE_VIEW, (leaf) => new CodeView(leaf, this));
 		this.registerView(NOTE_TAKING_VIEW, (leaf) => new NoteTakingView(leaf, this));
 		registerCommands(this);
 		this.addSettingTab(new LegifranceSettingTab(this.app, this));
 
 		this.watchVault();
+		// Liens Légifrance : un clic ouvre le document dans le plugin (en phase de capture : avant le traitement d'Obsidian), un survol l'aperçoit.
+		this.registerDomEvent(document, "click", (event) => this.onLinkClick(event), true);
+		new LinkPreview(this).register();
+		// Références juridiques du texte des notes : soulignement discret (éditeur, lecture) ; Cmd/Ctrl + clic ouvre le document.
+		this.registerEditorExtension(referenceMarks(this));
+		this.registerMarkdownPostProcessor((element) => markReferencesIn(this, element));
+		this.registerDomEvent(document, "click", (event) => this.onReferenceClick(event), true);
 		// Les notes d'articles suivent la base (texte, statut, décisions) ; rafale d'événements : on attend qu'elle se calme.
 		const refreshArticleNotesSoon = debounce(() => this.settings.articleNotesAutoRefresh && void refreshArticleNotes(this), 5000, true);
 		this.registerEvent(this.events.on(REFERENCES_EVENT, refreshArticleNotesSoon));
@@ -158,16 +190,20 @@ export default class LegifrancePlugin extends Plugin {
 		this.fiches.sync();
 		this.fiches.refreshButtons();
 		// Références réécrites au démarrage : les notes sont relues en local (aucune requête) pour les rattacher aux clefs actuelles.
+		// La relecture des notes est locale (aucune requête) ; sa notification est facultative (réglage `startupIndexing`).
+		const mode = this.settings.startupIndexing;
+		const silent = mode !== "notice";
 		if (this.migration) {
 			const { rewritten, merged } = this.migration;
 			this.migration = undefined;
 			new Notice(`Références mises à jour : ${rewritten} réécrites, ${merged} doublons fusionnés. Les notes sont relues. Une copie de la base est conservée (legifrance.sqlite.avant-migration-v2).`, 12000);
-			void this.tasks.run(INDEX_TASK);
-		}
-		// Parseur amélioré depuis la dernière analyse : les notes sont relues (en local) avec ses nouvelles règles.
-		if (this.references.parserChanged(PARSER_VERSION)) {
-			new Notice("Reconnaissance des références améliorée : les notes sont relues (aucune requête).", 8000);
-			void this.tasks.run(INDEX_TASK);
+			void this.tasks.run(INDEX_TASK, { silent });
+		} else if (mode !== "off") {
+			// Parseur amélioré depuis la dernière analyse, ou relecture interrompue la fois d'avant : les notes sont relues avec ses règles actuelles.
+			if (this.references.parserChanged(PARSER_VERSION) || this.references.pendingReindex()) {
+				if (!silent) new Notice("Reconnaissance des références améliorée : les notes sont relues (aucune requête).", 8000);
+				void this.tasks.run(INDEX_TASK, { silent });
+			}
 		}
 		// Textes déjà enregistrés : vocabulaire et articles visés, en local (décisions proches).
 		if (analyzeStoredDecisions(this.references) > 0) this.events.trigger(REFERENCES_EVENT);
@@ -175,6 +211,11 @@ export default class LegifrancePlugin extends Plugin {
 		refreshOnStartup(this);
 		// Notes d'articles : une passe au démarrage, la base a pu changer pendant que le plugin était fermé.
 		this.refreshArticleNotesSoon();
+	}
+
+	/** Écrit tout de suite le fichier de la base (point de reprise d'une tâche longue : l'enregistrement différé attend un répit). */
+	saveDatabase() {
+		return this.databaseFile.save();
 	}
 
 	/** Charge les réglages et l'historique ; renvoie les anciennes données de références, à reprendre. */
@@ -364,16 +405,132 @@ export default class LegifrancePlugin extends Plugin {
 	 * article ou d'un texte), en réutilisant l'onglet déjà ouvert.
 	 * @returns `false` si la base n'a pas le texte de ce document.
 	 */
-	async openStoredDocument(id: string) {
+	async openStoredDocument(id: string, inLeaf?: WorkspaceLeaf) {
 		if (!storedLegalDocument(this, id)) {
 			new Notice("Le texte de ce document n'est pas encore dans la base (tâche « Compléter »).");
 			return false;
 		}
 		const { workspace } = this.app;
-		const leaf = this.getReaderLeaves(id)[0] ?? workspace.getLeaf("tab");
+		const leaf = inLeaf ?? this.getReaderLeaves(id)[0] ?? workspace.getLeaf("tab");
 		await leaf.setViewState({ type: TEXT_READER_VIEW, state: { storedId: id }, active: true });
 		await workspace.revealLeaf(leaf);
 		return true;
+	}
+
+	/**
+	 * Lit un document trouvé par la recherche ou par un code : la base d'abord (un document déjà connu n'est pas redemandé
+	 * à l'API), sinon la consultation, dont le texte rejoint la base. `search` est le terme à surligner.
+	 * Par défaut le document est ajouté à l'historique ; `history: false` (navigation d'article en article) le lit
+	 * depuis la base sans rien ajouter à l'historique, dans `leaf` s'il est donné (l'onglet courant est alors remplacé).
+	 */
+	async readLegalDocument(selected: LegalDocument, { search = "", history = true, leaf }: { search?: string; history?: boolean; leaf?: WorkspaceLeaf } = {}): Promise<boolean> {
+		try {
+			let doc = storedLegalDocument(this, selected.id);
+			if (!doc) {
+				doc = await getDocumentInfo(selected, search, this.api);
+				if (!doc) throw new Error("Document vide");
+				if (doc.texteIntegralHTML || doc.texteIntegral) this.references.saveDocument(documentRow(doc));
+			}
+			if (!history && storedLegalDocument(this, doc.id)) {
+				await this.openStoredDocument(doc.id, leaf);
+				return true;
+			}
+			await this.openDocument(await this.addToHistory(doc));
+			return true;
+		} catch (error) {
+			console.error("Erreur lors de l'ouverture du document :", error);
+			new Notice(`Impossible de récupérer ce document (${error instanceof Error ? error.message : "erreur inconnue"}).`);
+			return false;
+		}
+	}
+
+	/**
+	 * Ouvre dans le plugin le document que désigne une adresse de Légifrance : un texte consolidé par sa table des matières,
+	 * une section de code à sa place, un article ou une décision dans le lecteur (lu dans la base s'il y est, sinon demandé
+	 * à l'API ; dans `leaf` s'il est donné). Sans identifiants PISTE, seuls les documents déjà en base s'ouvrent.
+	 * @returns `false` si l'adresse n'est pas un document ou si le plugin ne peut pas l'ouvrir : le lien suit alors son chemin (navigateur).
+	 */
+	async openLegifrance(href: string, leaf?: WorkspaceLeaf): Promise<boolean> {
+		const target = legifranceTarget(href);
+		if (!target) return false;
+		const { id, sectionId } = target;
+		if (id.startsWith("LEGITEXT") && this.hasCredentials) {
+			await this.openCode(id, undefined, undefined, sectionId);
+			return true;
+		}
+		if (sectionId) return false;
+		if (!storedLegalDocument(this, id) && !this.hasCredentials) return false;
+		const origin = LINK_ORIGINS[id.slice(0, 8)] ?? "";
+		const doc: LegalDocument = {
+			id,
+			fond: origin,
+			origin,
+			type: isCaselawOrigin(origin) ? "jurisprudence" : "document",
+			titre: "",
+			texte: "",
+			lien: href,
+			titreNote: "",
+		};
+		return this.readLegalDocument(doc, { history: false, leaf });
+	}
+
+	/** Cmd/Ctrl + clic sur une référence repérée dans une note : son document s'ouvre dans le lecteur (sinon la recherche Légifrance). */
+	private onReferenceClick(event: MouseEvent) {
+		if (!this.settings.markReferences || event.button !== 0 || !(event.metaKey || event.ctrlKey)) return;
+		const mark = (event.target as Element | null)?.closest?.<HTMLElement>(".legifrance-cite");
+		const ref = recallRef(mark?.dataset.lfKey);
+		if (!mark || !ref) return;
+		event.preventDefault();
+		event.stopPropagation();
+		const link = this.references.linkFor(ref);
+		void (link ? this.openLegifrance(link.url) : Promise.resolve(false)).then((opened) => {
+			if (!opened) openExternal(this.links.urlFor(ref));
+		});
+	}
+
+	/** Clic sur un lien Légifrance : ouvert dans le plugin (réglage `interceptLinks`) ; Maj + clic le laisse suivre son chemin, et dans l'éditeur seul Cmd/Ctrl + clic suit un lien. */
+	private onLinkClick(event: MouseEvent) {
+		if (!this.settings.interceptLinks || event.defaultPrevented || event.shiftKey || event.button !== 0) return;
+		const anchor = (event.target as Element | null)?.closest?.("a[href]");
+		// `data-site` : lien voulu vers le site (vérifier une page sur Légifrance).
+		if (!anchor || (anchor as HTMLElement).dataset.site !== undefined) return;
+		if (anchor.closest(".cm-editor") && !(event.metaKey || event.ctrlKey)) return;
+		const href = anchor.getAttribute("href") ?? "";
+		if (!legifranceTarget(href)) return;
+		event.preventDefault();
+		event.stopPropagation();
+		// Un renvoi cliqué dans le texte d'un document remplace ce document dans son onglet (on navigue de lien en lien).
+		const leaf = anchor.closest(".legifrance-reader") ? this.app.workspace.getActiveViewOfType(TextReaderView)?.leaf : undefined;
+		void this.openLegifrance(href, leaf).then((opened) => {
+			if (!opened) openExternal(href);
+		});
+	}
+
+	/** Textes composés à la demande (une section de code lue d'un seul tenant) : en mémoire, jamais dans la base ni dans l'historique. */
+	private composed = new Map<string, LegalDocument>();
+
+	composedDocument(id: string) {
+		return this.composed.get(id);
+	}
+
+	/** Ouvre dans le lecteur un texte composé à la demande (les huit derniers sont gardés). */
+	async openComposedDocument(doc: LegalDocument) {
+		this.composed.delete(doc.id);
+		this.composed.set(doc.id, doc);
+		if (this.composed.size > 8) this.composed.delete(this.composed.keys().next().value as string);
+		const { workspace } = this.app;
+		const leaf = this.getReaderLeaves(doc.id)[0] ?? workspace.getLeaf("tab");
+		await leaf.setViewState({ type: TEXT_READER_VIEW, state: { composedId: doc.id }, active: true });
+		await workspace.revealLeaf(leaf);
+	}
+
+	/** Ouvre la table des matières d'un code ou d'un texte consolidé, en réutilisant l'onglet déjà ouvert pour ce texte ; `focus` est le `cid` d'un article à montrer, `section` l'identifiant d'une section à ouvrir. */
+	async openCode(textId: string, title?: string, focus?: string, section?: string) {
+		if (!isTextId(textId)) return;
+		const { workspace } = this.app;
+		const leaf = workspace.getLeavesOfType(CODE_VIEW).find((l) => (l.view as CodeView).textId === textId) ?? workspace.getLeaf("tab");
+		await leaf.setViewState({ type: CODE_VIEW, state: { textId, title, focus, section }, active: true });
+		await workspace.revealLeaf(leaf);
 	}
 
 	/** Ouvre l'éditeur de note ; `newTab` force un nouvel onglet s'il n'est pas déjà ouvert. */

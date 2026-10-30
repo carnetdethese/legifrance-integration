@@ -20,6 +20,7 @@ import { openArticleNote } from "references/articleNotes";
 import { preciseReference } from "references/refineText";
 import { LinkedFiche, decisionsOf, linkedFiches } from "references/insights";
 import { legifranceUrl } from "api/urls";
+import { stripLinks } from "lib/links";
 import { displayDate } from "references/timeline";
 import { ExcerptQuote, Genealogy, RelatedList, SourceBadge } from "views/components/jurisprudence/Shared";
 import { useDatabaseVersion, useNoteReferences, usePlugin } from "views/hooks";
@@ -206,7 +207,8 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 	const applying = reference.kind === "article" ? countApplying(plugin.references, reference.key) : 0;
 	const inForce = !link?.statut || ["VIGUEUR", "VIGUEUR_DIFF"].includes(link.statut);
 
-	const texte = link?.texte;
+	// Textes déjà en cache : les liens des renvois entre articles y sont encore à l'ancienne mode.
+	const texte = link?.texte && stripLinks(link.texte);
 	// Texte déjà en base (décision complétée, article retrouvé) : lisible dans le lecteur, sans requête.
 	const documentId = link ? decisionKey(link.url) ?? /(?:LEGIARTI|LEGITEXT|JORFTEXT|JORFARTI)\d{12}/.exec(link.url)?.[0] : undefined;
 	const readable = !!documentId && !!storedLegalDocument(plugin, documentId);
@@ -309,7 +311,7 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 				)}
 				<a
 					className="clickable-icon"
-					aria-label={link ? "Ouvrir sur Légifrance" : "Rechercher sur Légifrance"}
+					aria-label={link ? "Ouvrir le document (Maj + clic : sur Légifrance)" : "Rechercher sur Légifrance"}
 					href={plugin.links.urlFor(reference)}
 				>
 					<ExternalLink size={16} />
@@ -364,7 +366,7 @@ const LinkedFicheItem = ({ fiche }: { fiche: LinkedFiche }) => {
 					<FileText size={16} />
 				</button>
 				{url && (
-					<a className="clickable-icon" aria-label="Ouvrir sur Légifrance" href={url}>
+					<a className="clickable-icon" aria-label="Ouvrir le document (Maj + clic : sur Légifrance)" href={url}>
 						<ExternalLink size={16} />
 					</a>
 				)}

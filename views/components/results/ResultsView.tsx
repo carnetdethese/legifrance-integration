@@ -1,17 +1,17 @@
 /**
- * Résultats d'une recherche : liste paginée (`ResultCard`, `ResultsNav`). Ouvrir un résultat le lit dans la base s'il y
- * est déjà (aucune requête) ; sinon `getDocumentInfo` consulte l'API, le texte est enregistré dans la base, puis le
- * document est ajouté à l'historique et ouvert dans le lecteur.
+ * Résultats d'une recherche : liste paginée (`ResultCard`, `ResultsNav`). Ouvrir un résultat passe par
+ * `plugin.readLegalDocument` (base d'abord, sinon l'API, puis historique et lecteur) ; un code s'ouvre par sa table des matières.
  */
 import { Notice } from "obsidian";
 import { useEffect, useState } from "react";
-import { getDocumentInfo, LegalDocument } from "abstracts/document";
+import { LegalDocument } from "abstracts/document";
 import { DocumentSearch } from "abstracts/searchHandler";
 import { SearchResults } from "abstracts/searches";
-import { documentRow, storedLegalDocument } from "references/stored";
+import { removeTags } from "lib/tools";
 import { usePlugin } from "views/hooks";
 import { ResultCard } from "./ResultCard";
-import { ResultsNav } from "./ResultsNav";
+import { Facet, FacetFilters } from "./FacetFilters";
+import { Pager, ResultsNav } from "./ResultsNav";
 
 interface ResultsViewProps {
 	searchHandler: DocumentSearch;
@@ -25,6 +25,10 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 	const [results, setResults] = useState<LegalDocument[]>([]);
 	const [totalResults, setTotalResults] = useState(0);
 	const [status, setStatus] = useState<Status>("loading");
+	/** Tri fait sur la page (`client:…`), vide si c'est celui de l'API. */
+	const [pageSort, setPageSort] = useState("");
+	/** Facettes de la recherche (nature, état, code…) : celles d'une facette filtrée restent celles d'avant, pour pouvoir changer de choix. */
+	const [facets, setFacets] = useState<Facet[]>([]);
 
 	const pageSize = searchHandler.getPageSize();
 	const totalPages = Math.ceil(totalResults / pageSize);
@@ -40,6 +44,9 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 		try {
 			const data = await searchHandler.search();
 			setTotalResults(data.totalResultNumber);
+			setFacets((previous) =>
+				(data.facets ?? []).map((facet) => (searchHandler.facetFilters[facet.facetElem]?.length ? previous.find((p) => p.facetElem === facet.facetElem) ?? facet : facet))
+			);
 			setResults(new SearchResults(data).listeResultats());
 			setStatus("done");
 		} catch (error) {
@@ -60,57 +67,95 @@ export const ResultsView = ({ searchHandler }: ResultsViewProps) => {
 	}
 
 	async function openDocument(selected: LegalDocument) {
-		try {
-			// La base d'abord : un document déjà connu (cité dans le coffre, ou consulté avant) n'est pas redemandé à l'API.
-			const stored = storedLegalDocument(plugin, selected.id);
-			if (stored) {
-				await plugin.openDocument(await plugin.addToHistory(stored));
-				return;
-			}
-			const full = await getDocumentInfo(selected, searchHandler.getSearchedString(), plugin.api);
-			if (!full) throw new Error("Document vide");
-			// Le texte consulté rejoint la base : le lecteur et les fiches pourront le relire sans requête.
-			if (full.texteIntegralHTML || full.texteIntegral) plugin.references.saveDocument(documentRow(full));
-			await plugin.openDocument(await plugin.addToHistory(full));
-		} catch (error) {
-			console.error("Erreur lors de l'ouverture du document :", error);
-			new Notice(`Impossible de récupérer ce document (${error instanceof Error ? error.message : "erreur inconnue"}).`);
+		// Un code entier est trop vaste pour une page de lecture : on l'ouvre par sa table des matières.
+		if (selected.id.startsWith("LEGITEXT") && selected.nature?.toUpperCase() === "CODE") {
+			await plugin.openCode(selected.id, removeTags(selected.titre));
+			return;
 		}
+		await plugin.readLegalDocument(selected, { search: searchHandler.getSearchedString() });
 	}
 
+	/** Valeur du sélecteur de tri : le tri fait ici sur la page s'il y en a un, sinon celui de l'API. */
+	const sortValue = pageSort || searchHandler.getFacette();
+
+	function changeSort(value: string) {
+		if (value.startsWith("client:")) {
+			setPageSort(value);
+			return;
+		}
+		setPageSort("");
+		updateAndFetch(() => {
+			searchHandler.updateFacette(value);
+			searchHandler.updatePageNumber(1);
+		});
+	}
+
+	// Tri de la page, fait ici : la page affichée est celle que l'API a donnée.
+	const visible = results
+		.slice()
+		.sort((a, b) => {
+			if (pageSort === "client:title") return removeTags(a.titre).localeCompare(removeTags(b.titre), "fr");
+			if (pageSort === "client:date-desc" || pageSort === "client:date-asc") {
+				// Sans date, à la fin dans les deux sens.
+				if (!a.date || !b.date) return a.date ? -1 : b.date ? 1 : 0;
+				return pageSort === "client:date-desc" ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date);
+			}
+			return 0;
+		});
+	const currentPage = searchHandler.getCurrentPageNumber();
+	const goToPage = (page: number) => {
+		updateAndFetch(() => searchHandler.updatePageNumber(page));
+	};
+
 	return (
-		<>
+		<div className="legifrance-results">
 			<h2>Résultats</h2>
 			<ResultsNav
 				totalResults={totalResults}
-				totalPageNumber={totalPages}
-				currentPage={searchHandler.getCurrentPageNumber()}
+				shown={visible.length}
 				resultsPerPage={pageSize}
-				sort={searchHandler.getFacette()}
+				sort={sortValue}
 				critereTri={searchHandler.criteresTri}
-				onPageChange={(page) => updateAndFetch(() => searchHandler.updatePageNumber(page))}
+				onSortChange={changeSort}
 				onPageSizeChange={(size) =>
 					updateAndFetch(() => {
 						searchHandler.updatePageSize(size);
 						searchHandler.updatePageNumber(1);
 					})
 				}
-				onSortChange={(sort) =>
+			/>
+			<FacetFilters
+				facets={facets}
+				selected={searchHandler.facetFilters}
+				onToggle={(facette, value) =>
 					updateAndFetch(() => {
-						searchHandler.updateFacette(sort);
+						searchHandler.toggleFacet(facette, value);
+						searchHandler.updatePageNumber(1);
+					})
+				}
+				onClear={() =>
+					updateAndFetch(() => {
+						searchHandler.clearFacets();
 						searchHandler.updatePageNumber(1);
 					})
 				}
 			/>
+			{status === "done" && facets.length === 0 && searchHandler.fond === "ALL" && (
+				<p className="legifrance-row-meta">Pour affiner par nature (lois, décrets…), par état ou par code, choisissez un fond précis dans le formulaire (« Lois et règlements », « Codes »…).</p>
+			)}
 			{status === "loading" && <p className="legifrance-empty">Recherche en cours…</p>}
 			{status === "error" && <p className="legifrance-empty">La recherche a échoué.</p>}
-			{status === "done" && results.length === 0 && (
-				<p className="legifrance-empty">Aucun résultat.</p>
-			)}
+			{status === "done" && results.length === 0 && <p className="legifrance-empty">Aucun résultat.</p>}
 			{status === "done" &&
-				results.map((result) => (
-					<ResultCard key={result.id} result={result} onOpen={(selected) => void openDocument(selected)} />
+				visible.map((result, index) => (
+					<ResultCard
+						key={`${result.id}-${index}`}
+						result={result}
+						onOpen={(selected) => void openDocument(selected)}
+						onOpenToc={(selected) => void plugin.openCode(selected.id, removeTags(selected.titre))}
+					/>
 				))}
-		</>
+			<Pager current={currentPage} total={totalPages} onPageChange={goToPage} />
+		</div>
 	);
 };

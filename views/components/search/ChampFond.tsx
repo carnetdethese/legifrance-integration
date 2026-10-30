@@ -1,5 +1,5 @@
 import { FONDS, FondGroup } from "abstracts/fonds";
-import { SettingRow } from "../SettingRow";
+import { Field } from "./Field";
 
 interface ChampFondProps {
 	fond: string;
@@ -9,9 +9,9 @@ interface ChampFondProps {
 /** Groupes de fonds, dans l'ordre d'affichage. */
 const GROUPS = [...new Set(FONDS.map((fond) => fond.group))] as FondGroup[];
 
-/** Sélecteur du fond de données (jurisprudence, législation…). */
+/** Liste déroulante du fond de données (jurisprudence, législation…). */
 export const ChampFond = ({ fond, onChange }: ChampFondProps) => (
-	<SettingRow name="Fond" htmlFor="legifrance-fond">
+	<Field label="Chercher dans" htmlFor="legifrance-fond">
 		<select id="legifrance-fond" className="dropdown" value={fond} onChange={(e) => onChange(e.target.value)}>
 			{GROUPS.map((group) => (
 				<optgroup key={group} label={group}>
@@ -23,5 +23,5 @@ export const ChampFond = ({ fond, onChange }: ChampFondProps) => (
 				</optgroup>
 			))}
 		</select>
-	</SettingRow>
+	</Field>
 );
