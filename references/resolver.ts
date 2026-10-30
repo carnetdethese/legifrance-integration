@@ -95,6 +95,9 @@ export function field(typeChamp: string, valeur: string, typeRecherche = "EXACTE
 	return { typeChamp, operateur: "ET", criteres: [{ typeRecherche, valeur, operateur: "ET" }] };
 }
 
+/** Page d'un texte : les textes non consolidés (identifiant `JORFTEXT`) vivent côté Journal officiel. */
+const textUrl = (id: string) => `${BASE_URL}/${id.startsWith("JORFTEXT") ? "jorf" : "loda"}/id/${id}`;
+
 /** Requête `POST /search` sur un fond. */
 export function searchQuery(fond: string, champs: object[], filtres: object[] = []): Query {
 	return {
@@ -193,13 +196,15 @@ function buildDated(ref: LegalRef): Resolution | null {
 		queries: [
 			searchQuery("LODA_DATE", [field("ALL", `${ref.data.nature} du ${text}`)], [...natureFilter, { facette: "DATE_SIGNATURE", dates: { start: day, end: day } }]),
 			searchQuery("LODA_DATE", [field("ALL", `du ${text}`)], natureFilter),
+			// Les textes non consolidés (lois anciennes, textes abrogés) ne sont que dans le fond du Journal officiel.
+			searchQuery("JORF", [field("TITLE", `${ref.data.nature} ${text}`, "TOUS_LES_MOTS_DANS_UN_CHAMP")], [...natureFilter, { facette: "DATE_SIGNATURE", dates: { start: day, end: day } }]),
 		],
 		// Plusieurs textes le même jour : on ne devine pas, l'utilisateur choisit (`findTextCandidates`).
 		read: (raw) => {
 			const found = datedTextMatches((raw as SearchResponse).results ?? [], ref.data.nature, cited);
-			return found.length === 1 ? { url: `${BASE_URL}/loda/id/${found[0].id}`, titre: found[0].title } : null;
+			return found.length === 1 ? { url: textUrl(found[0].id), titre: found[0].title } : null;
 		},
-		candidates: (raw) => datedTextMatches((raw as SearchResponse).results ?? [], ref.data.nature, cited).map((m) => ({ url: `${BASE_URL}/loda/id/${m.id}`, titre: m.title })),
+		candidates: (raw) => datedTextMatches((raw as SearchResponse).results ?? [], ref.data.nature, cited).map((m) => ({ url: textUrl(m.id), titre: m.title })),
 	};
 }
 
@@ -289,21 +294,26 @@ function buildText(ref: LegalRef): Resolution | null {
 	const { data } = ref;
 	if (!data.number) return buildDated(ref);
 	const nature = LAW_NATURES[data.nature];
+	const natureFilter = nature ? [{ facette: "NATURE", valeurs: [nature] }] : [];
 	return {
-		queries: [searchQuery("LODA_DATE", [field("NUM", data.number)], nature ? [{ facette: "NATURE", valeurs: [nature] }] : [])],
+		queries: [
+			searchQuery("LODA_DATE", [field("NUM", data.number)], natureFilter),
+			// Repli : le fond du Journal officiel contient aussi les textes qui ne sont pas consolidés.
+			searchQuery("JORF", [field("NUM", data.number)], natureFilter),
+		],
 		read: (raw) => {
 			const response = raw as SearchResponse;
 			for (const result of response.results ?? []) {
 				for (const title of result.titles ?? []) {
 					const id = title.cid || title.id;
-					if (id) return { url: `${BASE_URL}/loda/id/${id}`, titre: stripMarks(title.title ?? ref.label) };
+					if (id) return { url: textUrl(id), titre: stripMarks(title.title ?? ref.label) };
 				}
 			}
 			return null;
 		},
 		candidates: (raw) =>
 			((raw as SearchResponse).results ?? []).flatMap((result) =>
-				(result.titles ?? []).flatMap((title) => (title.cid || title.id ? [{ url: `${BASE_URL}/loda/id/${title.cid || title.id}`, titre: stripMarks(title.title ?? ref.label) }] : []))
+				(result.titles ?? []).flatMap((title) => (title.cid || title.id ? [{ url: textUrl(title.cid || title.id!), titre: stripMarks(title.title ?? ref.label) }] : []))
 			),
 	};
 }
