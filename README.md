@@ -7,17 +7,15 @@ Le module ne sert plus seulement à chercher et à créer des notes : il **lit v
 
 ### Nouveautés
 
--   **Références juridiques d'une note** (commande « Afficher les références juridiques ») : panneau latéral qui liste les décisions, textes et articles cités dans la note affichée, avec leur lien Légifrance. Sont reconnus les décisions (Conseil d'État, Cour de cassation, Conseil constitutionnel, Tribunal des conflits…) citées par leur numéro, leur date, leur nom, leur identifiant ou leur ECLI ; les lois, par leur date ou leur nom usuel (« loi Informatique et Libertés ») ; les articles de codes ; les textes de l'Union (RGPD, TFUE, DSA…). Une référence introuvable ou erronée se précise ou se corrige depuis le panneau (le choix manuel n'est jamais écrasé).
--   **Base de données** (`legifrance.sqlite`, dans le dossier du plugin) : elle enregistre qui cite quoi dans tout le coffre, l'adresse Légifrance, le statut de vigueur et le texte des articles, ainsi que les métadonnées et le **texte intégral des décisions**. Une fois lues, les décisions et articles se consultent sans nouvelle requête. La vue « Afficher la base de données et cycle » montre l'avancement de chaque étape (analyse des notes, textes retrouvés, décisions complétées, généalogie, fiches), ce qui reste « À faire » et le contenu des tables. Les tâches longues (indexer, compléter, actualiser…) se lancent depuis les réglages.
--   **Fiches de décisions** : une note dont une propriété désigne une décision est une *fiche*. Le bouton « Compléter » renseigne ses propriétés depuis Légifrance (date, formation, solution, ECLI…) et la lie à la décision par son identifiant. La décision est cherchée par numéro ou par nom (Légifrance, ArianeWeb, Revue générale du droit). Les écarts entre fiche et Légifrance sont signalés.
--   **Analyse de la jurisprudence** : statistiques du corpus, chronologie des décisions, articles les plus appliqués (avec la **version de l'article en vigueur le jour de la décision**), généalogie entre décisions (« revient sur », « précise », « confirme »), recherche plein texte dans les décisions et articles enregistrés.
--   **Articles de la note** : statut de vigueur, texte, versions, décisions qui appliquent chaque article, et **notes d'articles** créées et tenues à jour automatiquement (seules les parties balisées sont réécrites).
--   **Insertion dans la note** (commande « Insérer… ») : table des décisions citées, plan « thème → décisions → articles », bibliographie.
--   **Export de la bibliographie** (commande « Exporter la bibliographie… ») : Markdown, CSV, BibTeX, RIS, pour la note ouverte ou tout le coffre, avec filtre par thème ou par période.
--   **Création de note sans doublon** : avant de créer une note depuis un document, le module vérifie que le coffre ne l'a pas déjà (par identifiant Légifrance, ou par numéro). Une note trouvée est ouverte ; en cas de doute, vous choisissez la fiche à lier ou demandez une nouvelle note.
--   **Tous les fonds de l'API** : recherche et lecture des codes, lois et règlements, Journal officiel, circulaires, conventions collectives et accords d'entreprise, en plus de la jurisprudence.
--   **Identifiants PISTE dans le trousseau d'Obsidian** : le client ID et la clef secrète ne sont plus écrits dans `data.json` mais dans le trousseau (*Réglages → Légifrance Intégration → Connexion à PISTE*). Vos identifiants actuels y sont déplacés automatiquement au premier lancement. Le trousseau est propre à chaque appareil : sur un autre appareil (mobile compris), il faut choisir ou saisir à nouveau les secrets. **Nécessite Obsidian 1.13.2 ou plus.**
--   **Palette de commandes simplifiée** : *Nouvelle recherche*, *Afficher les références juridiques*, *Afficher les articles*, *Analyse de la jurisprudence*, *Afficher la base de données et cycle*, *Insérer…*, *Exporter la bibliographie…*. Les opérations de maintenance sont dans les réglages.
+-   **Références juridiques d'une note** (commande « Afficher les références juridiques ») : un panneau liste les décisions, lois, articles de codes et textes de l'Union cités dans la note, avec leur lien Légifrance. Une référence erronée se corrige depuis le panneau.
+-   **Base de données** (`legifrance.sqlite`, dans le dossier du plugin) : qui cite quoi dans le coffre, les liens Légifrance, le statut de vigueur, le texte des articles et le **texte intégral des décisions**, consultables sans nouvelle requête.
+-   **Fiches de décisions** : le bouton « Compléter » renseigne les propriétés d'une fiche depuis Légifrance (date, formation, solution, ECLI…) et signale les écarts.
+-   **Analyse de la jurisprudence** : chronologie, articles les plus appliqués (dans la version en vigueur le jour de la décision), généalogie entre décisions, recherche plein texte.
+-   **Articles de la note** : statut de vigueur, versions, décisions qui les appliquent, et notes d'articles tenues à jour (seules les parties balisées sont réécrites).
+-   **Insertion et export** : table des décisions, plan, bibliographie (Markdown, CSV, BibTeX, RIS).
+-   **Création de note sans doublon** : le module vérifie que le coffre n'a pas déjà le document.
+-   **Tous les fonds de l'API** : jurisprudence, codes, lois et règlements, Journal officiel, circulaires, conventions collectives.
+-   **Identifiants PISTE dans le trousseau d'Obsidian** (*Réglages → Connexion à PISTE*), propre à chaque appareil. **Nécessite Obsidian 1.13.2 ou plus.**
 
 ### Pour commencer
 
@@ -140,21 +138,14 @@ Vous pouvez installer le module directement depuis le store de l'application. C'
 
 ### Sans identifiants PISTE (mode sans API)
 
-Les identifiants PISTE sont facultatifs. Sans eux, le module reste utilisable, en mode réduit, et rien n'est bloqué par un message d'erreur :
+Les identifiants sont facultatifs. Sans eux :
 
-| Fonction | Sans identifiants | Avec identifiants |
-|---|---|---|
-| Repérage des références dans les notes (soulignement, aperçu, dictionnaire de lois) | ✅ | ✅ |
-| Panneau des références de la note et analyse du coffre (« Indexer le coffre ») | ✅ (références seulement) | ✅ avec liens exacts et textes |
-| Ouvrir une référence (Cmd/Ctrl + clic, ou icône du panneau) | ouvre la **recherche** sur legifrance.gouv.fr (ou la page du texte pour la Constitution et la Déclaration de 1789) | ouvre le document dans le lecteur du plugin |
-| Recherche | s'ouvre sur le site de Légifrance, dans le navigateur | résultats dans Obsidian, tous les fonds |
-| Lecture d'un texte ou d'une décision | seulement ce qui est déjà dans la base | tous les documents |
-| Table des matières d'un code, contexte d'un article | ❌ | ✅ |
-| Aperçu au survol / au tap | seulement ce qui est déjà dans la base | texte des articles et décisions retrouvés |
-| Décisions hors Légifrance (ArianeWeb, Revue générale du droit, site du Conseil constitutionnel) | ✅ | ✅ |
-| Retrouver les liens exacts, compléter les décisions et les fiches, statut de vigueur, notes d'articles tenues à jour | ❌ | ✅ |
+-   **Ça marche** : le repérage des références dans les notes (soulignement, aperçu, dictionnaire de lois), le panneau des références, l'indexation du coffre, ArianeWeb, la Revue générale du droit et le site du Conseil constitutionnel.
+-   **Ça ouvre le site** : une référence (Cmd/Ctrl + clic, ou icône du panneau) et la recherche ouvrent legifrance.gouv.fr dans le navigateur.
+-   **Seulement si déjà en base** : la lecture d'un texte ou d'une décision, et l'aperçu.
+-   **Il faut des identifiants** pour les liens exacts, la table des matières des codes, le complément des décisions et des fiches, le statut de vigueur et les notes d'articles.
 
-Le mode sans API est celui du module tant qu'aucun secret n'est choisi dans *Connexion à PISTE*. On passe à l'autre mode en saisissant ses identifiants, à tout moment : rien n'est à réinstaller.
+Saisir ses identifiants plus tard suffit, sans rien réinstaller.
 
 Ces étapes sont aussi dans les réglages du plugin (*Connexion à PISTE → Premiers pas*). Le bouton **Tester la connexion** vérifie vos identifiants puis l'accès à l'API Légifrance, et indique l'étape à corriger en cas d'échec (identifiants refusés, consentement ou activation de l'API manquants, PISTE injoignable).
 
@@ -206,33 +197,15 @@ https://discord.gg/ha3Vsk6DNQ
 
 ### Idées (à trier)
 
-**Reconnaissance et dictionnaires**
-- [ ] Dictionnaire d'abréviations pour les codes (« CPC », « C. trav. », « le Code de la conso »), sur le modèle du dictionnaire de lois.
-- [ ] Import / export du dictionnaire (copier-coller ou fichier du coffre) pour le partager entre appareils ; suggestion des sigles en capitales fréquents dans le coffre et non reconnus.
-- [ ] Citations coupées par une mise en forme (gras, italique) : repérées aussi en mode lecture.
-- [ ] Plus de formats de citation : revues (JCP, D., RTD civ.), conclusions, circulaires.
-- [ ] Commande de diagnostic « Pourquoi cette citation n'est-elle pas reconnue ? » (ce que le parseur a vu et rejeté).
-- [ ] Article d'une loi retrouvé dans l'arbre du texte (aujourd'hui, le lien est celui de la loi entière).
-
-**Aperçu et mobile**
-- [ ] Mobile : bouton « Ouvrir » dans la carte d'aperçu, pour aller au lecteur à la demande.
-- [ ] Aperçu au tap sur les liens Légifrance explicites (aujourd'hui, le tap ouvre le lecteur).
-- [ ] Création à la volée de la fiche de décision ou de la note d'article depuis la carte (ou un clic droit sur la référence).
-
-**Veille et analyse**
-- [ ] Références obsolètes marquées dans le texte (article abrogé ou modifié : soulignement d'une autre couleur, mention dans la carte).
-- [ ] Version applicable à la date des faits pour un article cité.
-- [ ] « Où ai-je cité ça ? » : depuis un article ou une décision du lecteur, lister les notes qui le citent.
-- [ ] Table des décisions, textes et articles cités d'un chapitre (annexe de thèse), générée en un clic.
-- [ ] Signaler les revirements cités sans la décision revue (à partir de la généalogie de la jurisprudence).
-
-**Accès à l'API**
-- [x] Faciliter la création des identifiants PISTE : assistant pas à pas et test des identifiants (réglages, « Premiers pas »).
-- [x] Mode sans API : références repérées, recherche et liens ouverts sur legifrance.gouv.fr, indications dans le panneau.
-- [ ] Import de données ouvertes (DILA) pour une lecture hors ligne sans API.
-
-**Qualité**
-- [ ] Tests de l'interface (aperçu, réglages, comportement mobile).
+-   [ ] Dictionnaire d'abréviations pour les codes (« CPC », « C. trav. »), import / export des dictionnaires, suggestion des sigles non reconnus.
+-   [ ] Citations coupées par du gras ou de l'italique en mode lecture ; plus de formats (JCP, D., RTD civ., circulaires) ; commande « Pourquoi cette citation n'est-elle pas reconnue ? ».
+-   [ ] Article d'une loi retrouvé dans l'arbre du texte (aujourd'hui, le lien est celui de la loi entière).
+-   [ ] Mobile : bouton « Ouvrir » dans la carte ; aperçu au tap sur les liens Légifrance.
+-   [ ] Création de la fiche ou de la note d'article depuis la carte d'aperçu.
+-   [ ] Références abrogées ou modifiées marquées dans le texte ; version applicable à la date des faits.
+-   [ ] « Où ai-je cité ça ? » dans le lecteur ; table des textes cités d'un chapitre ; revirements cités sans la décision revue.
+-   [ ] Téléchargement des archives ouvertes de la DILA, pour lire hors ligne sans API.
+-   [ ] Tests de l'interface.
 
 ## Confidentialité et divulgations
 
