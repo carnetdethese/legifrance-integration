@@ -186,6 +186,34 @@ https://discord.gg/ha3Vsk6DNQ
 - [ ] Ajout de Judilibre dans les sources
 - [ ] Ajout d'autres fonds (si vous avez des idées / besoins, n'hésitez pas !)
 
+### Idées (à trier)
+
+**Reconnaissance et dictionnaires**
+- [ ] Dictionnaire d'abréviations pour les codes (« CPC », « C. trav. », « le Code de la conso »), sur le modèle du dictionnaire de lois.
+- [ ] Import / export du dictionnaire (copier-coller ou fichier du coffre) pour le partager entre appareils ; suggestion des sigles en capitales fréquents dans le coffre et non reconnus.
+- [ ] Citations coupées par une mise en forme (gras, italique) : repérées aussi en mode lecture.
+- [ ] Plus de formats de citation : revues (JCP, D., RTD civ.), conclusions, circulaires.
+- [ ] Commande de diagnostic « Pourquoi cette citation n'est-elle pas reconnue ? » (ce que le parseur a vu et rejeté).
+- [ ] Article d'une loi retrouvé dans l'arbre du texte (aujourd'hui, le lien est celui de la loi entière).
+
+**Aperçu et mobile**
+- [ ] Mobile : bouton « Ouvrir » dans la carte d'aperçu, pour aller au lecteur à la demande.
+- [ ] Aperçu au tap sur les liens Légifrance explicites (aujourd'hui, le tap ouvre le lecteur).
+- [ ] Création à la volée de la fiche de décision ou de la note d'article depuis la carte (ou un clic droit sur la référence).
+
+**Veille et analyse**
+- [ ] Références obsolètes marquées dans le texte (article abrogé ou modifié : soulignement d'une autre couleur, mention dans la carte).
+- [ ] Version applicable à la date des faits pour un article cité.
+- [ ] « Où ai-je cité ça ? » : depuis un article ou une décision du lecteur, lister les notes qui le citent.
+- [ ] Table des décisions, textes et articles cités d'un chapitre (annexe de thèse), générée en un clic.
+- [ ] Signaler les revirements cités sans la décision revue (à partir de la généalogie de la jurisprudence).
+
+**Accès à l'API**
+- [ ] Faciliter la création des identifiants PISTE (assistant pas à pas, test des identifiants, fonctionnement dégradé sans identifiants…).
+
+**Qualité**
+- [ ] Tests de l'interface (aperçu, réglages, comportement mobile).
+
 ## Confidentialité et divulgations
 
 - **Réseau** : le plugin n'envoie de requêtes qu'à Légifrance (API PISTE : `api.piste.gouv.fr`, `oauth.piste.gouv.fr`) et, pour retrouver une décision absente de Légifrance, à ArianeWeb (`conseil-etat.fr`), à la Revue générale du droit (`revuegeneraledudroit.eu`, via `public-api.wordpress.com`) et au site du Conseil constitutionnel (`conseil-constitutionnel.fr`). Aucune donnée n'est envoyée ailleurs et le plugin n'a ni télémétrie ni publicité. Le contenu de vos notes ne quitte jamais votre ordinateur : seules les références juridiques repérées (« Cass. civ. 1re, 3 mars 2020, n° 19-12.345 ») servent à formuler les requêtes.

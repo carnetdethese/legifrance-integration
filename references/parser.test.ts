@@ -160,6 +160,16 @@ eq("même clef que la citation par le numéro", parseReferences("loi informatiqu
 eq("loi pour la Confiance dans l'Economie Numérique", parseReferences("Loi de 2004, Loi pour la Confiance dans l'Economie Numérique (v. décision)").map((r) => r.data), [{ nature: "loi", number: "2004-575" }]);
 eq("LCEN", parseReferences("la LCEN prévoit").map((r) => r.data), [{ nature: "loi", number: "2004-575" }]);
 {
+ const labelsOf = (t: string) => parseReferences(t).map((r) => r.label);
+ eq("articles de loi: date", labelsOf("les articles 8, 9, 21, 22 et 26 de la loi du 6 janvier 1978"), ["loi du 6 janvier 1978, art. 8", "loi du 6 janvier 1978, art. 9", "loi du 6 janvier 1978, art. 21", "loi du 6 janvier 1978, art. 22", "loi du 6 janvier 1978, art. 26"]);
+ eq("articles de loi: numéro", labelsOf("l'article 4 de la loi n° 78-17 du 6 janvier 1978"), ["loi n° 78-17, art. 4"]);
+ eq("articles de loi: nom", labelsOf("Article 6 de la loi Informatique et Libertés ; art. 6 de la LCEN"), ["loi n° 78-17, art. 6", "loi n° 2004-575, art. 6"]);
+ eq("articles de loi: décret", labelsOf("art. 3 du décret n° 2019-536"), ["décret n° 2019-536, art. 3"]);
+ eq("articles de loi: plage unique", citationSpans("les articles 8 et 9 de la loi du 6 janvier 1978").map((s) => s.start + "-" + s.end), ["4-47", "4-47"]);
+ eq("articles de loi: code inchangé", labelsOf("art. 1240 du Code civil"), ["Code civil, art. 1240"]);
+ eq("articles de loi: loi seule", labelsOf("la loi du 6 janvier 1978"), ["loi du 6 janvier 1978"]);
+}
+{
  const custom = parseCustomLaws("# commentaire\nLOPMI | loi d'orientation Intérieur = loi n° 2023-22\nSREN = loi 2024-449\nordonnance Cyber = ordonnance 2021-650\nligne cassée\n");
  eq("dictionnaire: lignes", custom.laws.map((l) => [l.nature, l.number, l.names]), [["loi", "2023-22", ["LOPMI", "loi d'orientation Intérieur"]], ["loi", "2024-449", ["SREN"]], ["ordonnance", "2021-650", ["ordonnance Cyber"]]]);
  eq("dictionnaire: erreurs", custom.errors, [5]);

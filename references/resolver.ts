@@ -387,6 +387,8 @@ function buildDecision(ref: LegalRef, useRgd: boolean): Resolution | null {
 function build(ref: LegalRef, useRgd = true): Resolution | null {
 	switch (ref.kind) {
 		case "article":
+			// Article d'une loi, d'un décret… : le lien est celui du texte (l'article n'est pas retrouvé dans son arbre).
+			if (ref.data.nature) return buildText({ ...ref, data: { nature: ref.data.nature, ...(ref.data.lawNumber ? { number: ref.data.lawNumber } : { date: ref.data.date }) } });
 			if (LEGIFRANCE_TEXTS[ref.data.code]) return buildTextArticle(ref);
 			return ref.data.code.startsWith("Code ") ? buildCodeArticle(ref) : null;
 		case "texte":

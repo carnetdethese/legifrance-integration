@@ -8,13 +8,13 @@ import { ID_PATHS } from "api/urls";
 import { CODE_PATTERN, LEGIFRANCE_PAGES, PREAMBLE_1946, officialCodeName } from "./codes";
 import { FULL_DATE_PATTERN, MONTH_PATTERN, parseCitedDate, plain } from "./dates";
 import { EU_PATTERN, euArticleUrl, euCelexOf, euLabelOf } from "./eulaw";
-import { lawAliasOf, lawByNameRegex } from "./lawAliases";
+import { lawAliasOf, lawAliasSource, lawByNameRegex } from "./lawAliases";
 
 /**
  * Version de l'analyse des notes. À incrémenter quand le parseur change ce qu'il reconnaît : au démarrage, les
  * notes sont alors relues (en local) pour que leurs références soient celles du nouveau parseur.
  */
-export const PARSER_VERSION = 3;
+export const PARSER_VERSION = 4;
 
 export type RefKind = "decision" | "texte" | "article" | "eu" | "identifiant";
 
@@ -315,6 +315,7 @@ function candidate(
 function scan(text: string): Candidate[] {
 	return [
 		...scanCodeArticles(text),
+		...scanLawArticles(text),
 		...scanEuArticles(text),
 		...scanPreamble(text),
 		...scanLawAliases(text),
@@ -351,6 +352,54 @@ function scanCodeArticles(text: string): Candidate[] {
 						fallbackUrl: page,
 					})
 				);
+			}
+		}
+	}
+	return found;
+}
+
+const CAPITALIZED_NATURES = NATURES.replace(/(^|\|)(\w)/g, (_, bar: string, letter: string) => `${bar}[${letter.toUpperCase()}${letter}]`);
+
+/** Motifs des articles d'une loi, par son nom usuel ou par sa nature (numéro et/ou date) ; refaits quand le dictionnaire de lois change. */
+let lawArticlePatterns: { source: string; patterns: RegExp[] } | undefined;
+function lawArticleRegexes() {
+	const aliases = lawAliasSource();
+	if (lawArticlePatterns?.source === aliases) return lawArticlePatterns.patterns;
+	const head = `${ART}\\s*(?<numbers>${NUMBERS})${PRECISION}${LINK}(?:(?:la|le|l['’])\\s*)?`;
+	const date = `(?:\\s*,?\\s*(?:\\(\\s*)?(?:en\\s+date\\s+du|du)\\s+(?<date>${FULL_DATE_PATTERN}))?`;
+	const patterns = [
+		new RegExp(`${head}(?<name>${aliases})${date}`, "gu"),
+		new RegExp(`${head}(?<nature>${CAPITALIZED_NATURES})\\s+(?:(?:n\\s?[°ºo]\\s*)?(?<number>\\d{2,4}-\\d+)${date}|(?:en\\s+date\\s+du|du|le)\\s+(?<onlyDate>${FULL_DATE_PATTERN}))`, "gu"),
+	];
+	lawArticlePatterns = { source: aliases, patterns };
+	return patterns;
+}
+
+/**
+ * Articles d'une loi, d'un décret… citée par son nom usuel, son numéro ou sa date (« les articles 8, 9, 21 et 26 de la loi du
+ * 6 janvier 1978 ») : une référence par article. Le texte est retrouvé comme une loi citée seule ; la plage est celle de toute
+ * la citation, ce qui l'emporte sur la loi seule.
+ */
+function scanLawArticles(text: string): Candidate[] {
+	const found: Candidate[] = [];
+	for (const pattern of lawArticleRegexes()) {
+		for (const match of text.matchAll(pattern)) {
+			const g = match.groups!;
+			let nature = g.nature ? clean(g.nature).toLowerCase().replace(/\s+/g, " ") : "";
+			let number = g.number ?? "";
+			const date = clean(g.date ?? g.onlyDate ?? "");
+			if (g.name) {
+				const alias = lawAliasOf(g.name);
+				if (!alias) continue;
+				({ nature, number } = alias);
+			}
+			const law = number ? `${nature} n° ${number}` : `${nature} du ${date}`;
+			for (const item of g.numbers.matchAll(NUMBER_ITEM)) {
+				const articleNo = articleNumber(item[0]);
+				const data: Record<string, string> = { code: law, number: articleNo, nature };
+				if (number) data.lawNumber = number;
+				else data.date = date;
+				found.push(candidate(match, "article", `${law}, art. ${articleNo}`, `${law} article ${articleNo}`, data));
 			}
 		}
 	}

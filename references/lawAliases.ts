@@ -30,6 +30,7 @@ const normalize = (text: string) => text.toLowerCase().normalize("NFD").replace(
 let customLaws: LawAlias[] = [];
 let byName = new Map<string, LawAlias>();
 let byNameRegex: RegExp;
+let aliasSource = "";
 
 /** Loi désignée par `designation` (« loi Informatique et Libertés »), si elle est dans la table. */
 export const lawAliasOf = (designation: string) => byName.get(normalize(designation));
@@ -62,12 +63,16 @@ export function setCustomLaws(laws: LawAlias[]) {
 	customLaws = laws;
 	const all = [...LAW_ALIASES, ...customLaws];
 	byName = new Map(all.flatMap((alias) => alias.names.map((name): [string, LawAlias] => [normalize(name), alias])));
-	byNameRegex = new RegExp(`(?<name>${aliasPatternOf(all)})(?:\\s*,?\\s*(?:\\(\\s*)?(?:en\\s+date\\s+du|du)\\s+(?<date>${FULL_DATE_PATTERN}))?`, "gu");
+	aliasSource = aliasPatternOf(all);
+	byNameRegex = new RegExp(`(?<name>${aliasSource})(?:\\s*,?\\s*(?:\\(\\s*)?(?:en\\s+date\\s+du|du)\\s+(?<date>${FULL_DATE_PATTERN}))?`, "gu");
 }
 setCustomLaws([]);
 
 /** Motif d'une loi citée par son nom usuel, suivi ou non de sa date (groupes `name` et `date`). */
 export const lawByNameRegex = () => byNameRegex;
+
+/** Alternance des désignations connues (sans groupe nommé), pour les motifs qui les combinent à autre chose. */
+export const lawAliasSource = () => aliasSource;
 
 /** Lois ajoutées par l'utilisateur, telles que retenues (pour le compte rendu des réglages). */
 export const currentCustomLaws = () => customLaws;
