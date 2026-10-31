@@ -3,9 +3,11 @@
  * réglages d'Obsidian (`LegifranceSettingTab`) qui les présente de façon déclarative (`getSettingDefinitions`, Obsidian
  * 1.13) : Obsidian les affiche et les indexe pour sa recherche de réglages. L'état de la base et des tâches est dans `status.ts`.
  */
-import { App, EventRef, PluginSettingTab, SettingDefinition, SettingDefinitionItem, SettingPage, debounce } from "obsidian";
+import { App, EventRef, Notice, PluginSettingTab, SettingDefinition, SettingDefinitionItem, SettingPage, debounce } from "obsidian";
 import LegifrancePlugin from "main";
 import { REFERENCES_EVENT, TASK_EVENT } from "lib/events";
+import type { ConnectionCheck } from "api/connectionCheck";
+import { openExternal } from "lib/links";
 import { confirmAction } from "views/ConfirmModal";
 import { LiveStatus, renderDataStatus } from "./status";
 import { CUSTOM_LAWS_HELP, parseCustomLaws } from "references/lawAliases";
@@ -123,6 +125,22 @@ export const DEFAULT_SETTINGS: LegifranceSettings = {
 }
 
 
+const PISTE_URL = "https://piste.gouv.fr/";
+
+/** Les étapes pour obtenir des identifiants sur PISTE : titre, puis détail. */
+const PISTE_STEPS: [title: string, detail: string][] = [
+	["Créez un compte sur PISTE", "Sur la plateforme piste.gouv.fr (gratuit). Le bouton ci-dessous l'ouvre."],
+	["Créez une application", "Dans l'onglet « Applications », créez une nouvelle application."],
+	["Renseignez-la et sauvegardez", "Donnez le nom que vous voulez à cette connexion, remplissez les informations demandées et laissez la case « Activer l'application » cochée. Cliquez sur « Sauvegarder l'application »."],
+	["Acceptez les conditions d'utilisation", "Cliquez sur « Cliquez ici pour accéder à la page de consentement » : c'est une étape importante. Sélectionnez le service Légifrance et acceptez les conditions d'utilisation."],
+	["Activez l'API Légifrance", "Retournez sur la page de l'application créée, sélectionnez l'API « Légifrance » pour activer l'accès, et validez."],
+	["Récupérez vos identifiants", "Dans l'onglet « Authentification » de l'application, repérez la section OAuth (le deuxième volet). Copiez le Client ID et le Client Secret (cliquez sur « Consulter le client secret ») et gardez-les en lieu sûr : eux seuls vous identifient."],
+	["Saisissez-les dans les réglages, puis testez", "Revenez dans « Connexion à PISTE » : choisissez ou créez un secret pour chacun, puis lancez « Tester la connexion »."],
+];
+
+/** Dernier résultat du test de connexion, gardé le temps de la session pour l'afficher dans les réglages. */
+let lastCheck: ConnectionCheck | undefined;
+
 /** Explication du dictionnaire de lois, avec le nombre de lignes retenues et les lignes refusées. */
 function customLawsDescription(text: string) {
 	const { laws, errors } = parseCustomLaws(text);
@@ -217,6 +235,47 @@ export class LegifranceSettingTab extends PluginSettingTab {
 		return { name, desc, action: () => void onClick() };
 	}
 
+	/** Teste les identifiants du trousseau et l'accès à l'API, et en montre le verdict. */
+	private async testConnection() {
+		const { plugin } = this;
+		if (!plugin.hasCredentials) {
+			new Notice("Choisissez d'abord un secret pour l'identifiant client et pour la clef secrète (voir « Premiers pas »).", 8000);
+			return;
+		}
+		new Notice("Test de la connexion à PISTE…", 3000);
+		plugin.api.updateConfig();
+		lastCheck = await plugin.api.checkConnection();
+		new Notice(`${lastCheck.ok ? "✓" : "✗"} ${lastCheck.title}\n${lastCheck.detail}`, lastCheck.ok ? 6000 : 15000);
+		this.update();
+	}
+
+	/** Page « Premiers pas » : les étapes pour obtenir des identifiants, et le test de la connexion. */
+	private pisteGuidePage(): Extract<SettingDefinitionItem, { type: "page" }> {
+		return {
+			type: "page",
+			name: "Premiers pas : obtenir des identifiants",
+			desc: "Pas encore d'identifiants ? Les étapes pour les créer sur PISTE (gratuit, quelques minutes).",
+			items: [
+				{
+					type: "group",
+					heading: "Créer vos identifiants PISTE",
+					items: [
+						{ name: "Ouvrir PISTE", desc: "Ouvre piste.gouv.fr dans votre navigateur.", action: () => openExternal(PISTE_URL) },
+						...PISTE_STEPS.map(([title, detail], index) => ({ name: `${index + 1}. ${title}`, desc: detail })),
+					],
+				},
+				{
+					type: "group",
+					heading: "Vérifier",
+					items: [
+						this.actionSetting("Tester la connexion", "Vérifie les identifiants et l'accès à l'API Légifrance, et dit quelle étape corriger en cas d'échec.", () => this.testConnection()),
+						{ name: "Sans identifiants ?", desc: "Les références juridiques de vos notes restent repérées et renvoient vers la recherche Légifrance ; ArianeWeb, la Revue générale du droit et le site du Conseil constitutionnel fonctionnent sans identifiants. Les identifiants servent à lire les textes, retrouver les articles et compléter les fiches." },
+					],
+				},
+			],
+		};
+	}
+
 	getSettingDefinitions(): SettingDefinitionItem[] {
 		const { plugin } = this;
 		return [
@@ -224,6 +283,12 @@ export class LegifranceSettingTab extends PluginSettingTab {
 				type: "group",
 				heading: "Connexion à PISTE",
 				items: [
+					this.pisteGuidePage(),
+					this.actionSetting(
+						"Tester la connexion",
+						lastCheck ? `${lastCheck.ok ? "✓" : "✗"} ${lastCheck.title}. ${lastCheck.detail}` : plugin.hasCredentials ? "Vérifie les identifiants et l'accès à l'API Légifrance." : "Aucun identifiant pour l'instant : suivez « Premiers pas » ci-dessus.",
+						() => this.testConnection()
+					),
 					{ name: "Identifiant client", desc: "Client ID de votre application sur piste.gouv.fr (compte gratuit).", control: { type: "secret", key: "clientIdSecret" } },
 					{ name: "Clef secrète", desc: "Client secret de la même application.", control: { type: "secret", key: "clientSecretSecret" } },
 					{ name: "Où sont gardés les identifiants ?", desc: "Dans le trousseau d'Obsidian, pas dans les données du plugin : choisissez un secret existant ou créez-en un. Le trousseau est propre à chaque appareil." },

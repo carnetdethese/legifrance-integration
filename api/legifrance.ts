@@ -37,6 +37,11 @@ export class LegifranceApi {
 		this.client.updateConfig();
 	}
 
+	/** Teste les identifiants et l'accès à l'API Légifrance (deux requêtes), avec le conseil à suivre en cas d'échec. */
+	checkConnection() {
+		return this.client.check();
+	}
+
 	/** Recherche avancée dans un fond (`POST /search`). `request` est le corps d'une recherche : celui du formulaire (`DocumentSearch.toObject()`) ou d'une recherche de référence (`searchQuery` dans `resolver.ts`). */
 	search<T = object>(request: object, lane?: Lane) {
 		return this.client.fetch<T>({ path: "/search", params: request, lane });

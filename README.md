@@ -139,6 +139,8 @@ Vous pouvez installer le module directement depuis le store de l'application. C'
 6. Récupérez les identifiants de connexion dans l'onglet de l'application `Authentification`. Il y a là deux types de codes - il faut sauvegarder, dans un lieu secret et accessible de vous uniquement, le `Client ID` et le `Client Secret` (il faut cliquer sur `Consulter le client secret`) de la section OAuth (deuxième volet des identifiants) ;
 7. Une fois ces identifiants récupérés, vous pouvez les insérer dans les paramètres du module ! C'est tout !
 
+Ces étapes sont aussi dans les réglages du plugin (*Connexion à PISTE → Premiers pas*). Le bouton **Tester la connexion** vérifie vos identifiants puis l'accès à l'API Légifrance, et indique l'étape à corriger en cas d'échec (identifiants refusés, consentement ou activation de l'API manquants, PISTE injoignable).
+
 ## TO-DO
 
 -   [x] Intégration d'un éditeur de fiche d'arrêt.
@@ -209,7 +211,8 @@ https://discord.gg/ha3Vsk6DNQ
 - [ ] Signaler les revirements cités sans la décision revue (à partir de la généalogie de la jurisprudence).
 
 **Accès à l'API**
-- [ ] Faciliter la création des identifiants PISTE (assistant pas à pas, test des identifiants, fonctionnement dégradé sans identifiants…).
+- [x] Faciliter la création des identifiants PISTE : assistant pas à pas et test des identifiants (réglages, « Premiers pas »).
+- [ ] Fonctionnement dégradé sans identifiants mieux visible ; import de données ouvertes pour une lecture hors ligne.
 
 **Qualité**
 - [ ] Tests de l'interface (aperçu, réglages, comportement mobile).

@@ -1,5 +1,6 @@
 import { requestUrl, RequestUrlResponse } from "obsidian";
 import { LegifranceSettings } from "settings/settings";
+import { ConnectionCheck, interpretCheck } from "./connectionCheck";
 import { Lane, RateLimiter } from "./rateLimiter";
 
 /** Paramètres de connexion : les identifiants (lus dans le trousseau d'Obsidian) et les réglages de l'API. */
@@ -54,14 +55,10 @@ export class DilaApiClient {
 		this.limiter.setLimit(connection.maxRequestsPerMinute);
 	}
 
-	/** Récupère (ou réutilise) un jeton via le flux `client_credentials`. */
-	private async getAccessToken(lane?: Lane): Promise<string> {
-		if (this.token) return this.token;
-		this.updateConfig();
-
+	/** Demande un jeton à PISTE (flux `client_credentials`) avec les identifiants courants. */
+	private requestToken(): Promise<RequestUrlResponse> {
 		const { tokenHost, clientId, clientSecret } = this.connection;
-		await this.limiter.acquire(lane);
-		const response = await requestUrl({
+		return requestUrl({
 			url: tokenHost + TOKEN_PATH,
 			method: "POST",
 			contentType: "application/x-www-form-urlencoded",
@@ -74,6 +71,56 @@ export class DilaApiClient {
 			}).toString(),
 			throw: false,
 		});
+	}
+
+	/**
+	 * Teste la connexion : un jeton, puis une recherche minimale (une seule réponse demandée), pour distinguer des identifiants
+	 * refusés d'une application PISTE qui n'a pas accès à l'API Légifrance. Le jeton obtenu est conservé.
+	 */
+	async check(): Promise<ConnectionCheck> {
+		this.token = undefined;
+		this.updateConfig();
+		let tokenResponse: RequestUrlResponse;
+		try {
+			tokenResponse = await this.requestToken();
+		} catch {
+			return interpretCheck(undefined);
+		}
+		if (tokenResponse.status !== 200) return interpretCheck(tokenResponse.status);
+		this.token = tokenResponse.json.access_token as string;
+		try {
+			const response = await requestUrl({
+				url: `${this.connection.apiHost.replace(/\/+$/, "")}/search`,
+				method: "POST",
+				contentType: "application/json",
+				headers: { Authorization: `Bearer ${this.token}` },
+				body: JSON.stringify({
+					fond: "LODA_DATE",
+					recherche: {
+						champs: [{ typeChamp: "ALL", operateur: "ET", criteres: [{ typeRecherche: "EXACTE", valeur: "loi", operateur: "ET" }] }],
+						filtres: [],
+						pageNumber: 1,
+						pageSize: 1,
+						operateur: "ET",
+						sort: "PERTINENCE",
+						typePagination: "DEFAUT",
+					},
+				}),
+				throw: false,
+			});
+			return interpretCheck(200, response.status);
+		} catch {
+			return interpretCheck(200);
+		}
+	}
+
+	/** Récupère (ou réutilise) un jeton via le flux `client_credentials`. */
+	private async getAccessToken(lane?: Lane): Promise<string> {
+		if (this.token) return this.token;
+		this.updateConfig();
+
+		await this.limiter.acquire(lane);
+		const response = await this.requestToken();
 
 		if (response.status === 429) {
 			const seconds = Number(response.headers?.["retry-after"]) || 60;
