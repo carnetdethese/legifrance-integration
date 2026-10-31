@@ -2,6 +2,8 @@ import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Notice } from "obsidian";
 import { useState } from "react";
 import { typeRecherche } from "api/constants";
+import { openExternal } from "lib/links";
+import { searchUrl } from "references/parser";
 import { DocumentSearch } from "abstracts/searchHandler";
 import { usePlugin } from "views/hooks";
 import { ChampFond } from "./ChampFond";
@@ -28,6 +30,12 @@ export const ResearchView = () => {
 	function submit() {
 		if (!recherche.fond) {
 			new Notice("Choisissez un fond.");
+			return;
+		}
+		// Sans identifiants PISTE, pas de recherche dans l'API : la recherche s'ouvre sur le site de Légifrance.
+		if (!plugin.hasCredentials) {
+			if (first.valeur.trim()) openExternal(searchUrl(first.valeur.trim()));
+			else new Notice("Saisissez les termes à rechercher.");
 			return;
 		}
 		void plugin.activateResultsView(recherche);
@@ -74,8 +82,13 @@ export const ResearchView = () => {
 				{showOptions && <SearchOptions recherche={recherche} onChange={setRecherche} onSubmit={submit} />}
 
 				<button type="submit" className="mod-cta legifrance-submit">
-					Rechercher
+					{plugin.hasCredentials ? "Rechercher" : "Rechercher sur legifrance.gouv.fr"}
 				</button>
+				{!plugin.hasCredentials && (
+					<p className="legifrance-empty">
+						Mode sans API : la recherche s'ouvre dans votre navigateur. Avec des identifiants PISTE (réglages, « Premiers pas »), les résultats s'affichent ici et les textes se lisent dans Obsidian.
+					</p>
+				)}
 			</form>
 
 			<HistoriqueView />

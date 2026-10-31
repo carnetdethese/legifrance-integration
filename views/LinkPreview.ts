@@ -102,7 +102,7 @@ export class LinkPreview {
 				? [doc.juridiction, longDate(doc.date), doc.numero && `n° ${doc.numero}`, status].filter(Boolean).join(" · ")
 				: status,
 			excerpt: doc?.texteIntegral ?? link?.texte,
-			hint: Platform.isMobile ? "" : link ? "Cmd/Ctrl + clic : ouvrir dans le lecteur" : "Pas encore retrouvée sur Légifrance (réglages : « Compléter »)",
+			hint: Platform.isMobile ? "" : link ? "Cmd/Ctrl + clic : ouvrir dans le lecteur" : this.plugin.hasCredentials ? "Pas encore retrouvée sur Légifrance (réglages : « Compléter »)" : "Cmd/Ctrl + clic : chercher sur Légifrance (mode sans API)",
 		};
 	}
 

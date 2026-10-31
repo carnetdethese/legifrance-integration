@@ -26,14 +26,13 @@ Le module ne sert plus seulement à chercher et à créer des notes : il **lit v
 3. Section « Fiches de décisions » : indiquez la propriété qui désigne vos fiches et celle qui garde l'identifiant Légifrance. Les valeurs par défaut conviennent au modèle de note fourni.
 4. Ouvrez une note et affichez ses références juridiques.
 
+> 💡 Pas encore d'identifiants PISTE ? Le module fonctionne aussi **sans API**, en mode réduit (voir [Sans identifiants PISTE](#sans-identifiants-piste-mode-sans-api)).
+
 > 🚨 Après la mise à jour, si le module ne se lance plus, désinstallez-le puis réinstallez-le.
 
-<!--  
+## Présentation
 
-
-# Légifrance Intégration v. 1 - Module Obsidian
-
-Un tuto-vidéo est disponible ici :
+Un tuto-vidéo (réalisé pour la première version du module) est disponible ici :
 
 [![OBSIDIAN - Légifrance Intégration](https://img.youtube.com/vi/yfMnuPNtTqM/0.jpg)](https://www.youtube.com/watch?v=yfMnuPNtTqM)
 
@@ -139,6 +138,24 @@ Vous pouvez installer le module directement depuis le store de l'application. C'
 6. Récupérez les identifiants de connexion dans l'onglet de l'application `Authentification`. Il y a là deux types de codes - il faut sauvegarder, dans un lieu secret et accessible de vous uniquement, le `Client ID` et le `Client Secret` (il faut cliquer sur `Consulter le client secret`) de la section OAuth (deuxième volet des identifiants) ;
 7. Une fois ces identifiants récupérés, vous pouvez les insérer dans les paramètres du module ! C'est tout !
 
+### Sans identifiants PISTE (mode sans API)
+
+Les identifiants PISTE sont facultatifs. Sans eux, le module reste utilisable, en mode réduit, et rien n'est bloqué par un message d'erreur :
+
+| Fonction | Sans identifiants | Avec identifiants |
+|---|---|---|
+| Repérage des références dans les notes (soulignement, aperçu, dictionnaire de lois) | ✅ | ✅ |
+| Panneau des références de la note et analyse du coffre (« Indexer le coffre ») | ✅ (références seulement) | ✅ avec liens exacts et textes |
+| Ouvrir une référence (Cmd/Ctrl + clic, ou icône du panneau) | ouvre la **recherche** sur legifrance.gouv.fr (ou la page du texte pour la Constitution et la Déclaration de 1789) | ouvre le document dans le lecteur du plugin |
+| Recherche | s'ouvre sur le site de Légifrance, dans le navigateur | résultats dans Obsidian, tous les fonds |
+| Lecture d'un texte ou d'une décision | seulement ce qui est déjà dans la base | tous les documents |
+| Table des matières d'un code, contexte d'un article | ❌ | ✅ |
+| Aperçu au survol / au tap | seulement ce qui est déjà dans la base | texte des articles et décisions retrouvés |
+| Décisions hors Légifrance (ArianeWeb, Revue générale du droit, site du Conseil constitutionnel) | ✅ | ✅ |
+| Retrouver les liens exacts, compléter les décisions et les fiches, statut de vigueur, notes d'articles tenues à jour | ❌ | ✅ |
+
+Le mode sans API est celui du module tant qu'aucun secret n'est choisi dans *Connexion à PISTE*. On passe à l'autre mode en saisissant ses identifiants, à tout moment : rien n'est à réinstaller.
+
 Ces étapes sont aussi dans les réglages du plugin (*Connexion à PISTE → Premiers pas*). Le bouton **Tester la connexion** vérifie vos identifiants puis l'accès à l'API Légifrance, et indique l'étape à corriger en cas d'échec (identifiants refusés, consentement ou activation de l'API manquants, PISTE injoignable).
 
 ## TO-DO
@@ -181,7 +198,6 @@ Pour venir discuter du plugin ou de l'utilisation, en général, des outils num�
 
 https://discord.gg/ha3Vsk6DNQ
 
--->
 
 ## Roadmap
 
@@ -212,7 +228,8 @@ https://discord.gg/ha3Vsk6DNQ
 
 **Accès à l'API**
 - [x] Faciliter la création des identifiants PISTE : assistant pas à pas et test des identifiants (réglages, « Premiers pas »).
-- [ ] Fonctionnement dégradé sans identifiants mieux visible ; import de données ouvertes pour une lecture hors ligne.
+- [x] Mode sans API : références repérées, recherche et liens ouverts sur legifrance.gouv.fr, indications dans le panneau.
+- [ ] Import de données ouvertes (DILA) pour une lecture hors ligne sans API.
 
 **Qualité**
 - [ ] Tests de l'interface (aperçu, réglages, comportement mobile).

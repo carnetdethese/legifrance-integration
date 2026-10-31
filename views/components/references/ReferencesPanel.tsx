@@ -82,6 +82,12 @@ export const ReferencesPanel = () => {
 				</Section>
 			)}
 
+			{!plugin.hasCredentials && (
+				<p className="legifrance-empty">
+					Mode sans API : les références sont repérées dans la note, et chacune ouvre une recherche sur legifrance.gouv.fr. Avec des identifiants PISTE (réglages, « Premiers pas »), le plugin retrouve le texte exact et garde ce qu'il lit.
+				</p>
+			)}
+
 			{plugin.settings.debugRefs && (
 				<div className="legifrance-debug-bar">
 					<button disabled={busy} onClick={() => void resolve(refs.filter((ref) => canResolve(ref)))}>
@@ -91,7 +97,7 @@ export const ReferencesPanel = () => {
 				</div>
 			)}
 
-			{missing.length > 0 && !plugin.settings.autoResolveRefs && (
+			{missing.length > 0 && !plugin.settings.autoResolveRefs && plugin.hasCredentials && (
 				<button disabled={busy} onClick={() => void resolve(missing)}>
 					{busy ? "Recherche…" : `Retrouver ${missing.length} lien${missing.length > 1 ? "s" : ""} via l'API`}
 				</button>
@@ -299,7 +305,7 @@ const ReferenceItem = ({ reference, disabled, onResolve }: ReferenceItemProps) =
 						<SlidersHorizontal size={16} />
 					</button>
 				)}
-				{!link && !pending && canResolve(reference) && (
+				{!link && !pending && canResolve(reference) && plugin.hasCredentials && (
 					<button
 						className="clickable-icon"
 						aria-label="Retrouver le document via l'API"
